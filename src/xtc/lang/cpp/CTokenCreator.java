@@ -31,7 +31,7 @@ import xtc.lang.cpp.Syntax.Text;
  * @author Paul Gazzillo
  * @version $Revision: 1.5 $
  */
-class CTokenCreator implements TokenCreator {
+public class CTokenCreator implements TokenCreator {
 
   public Language<?> createStringLiteral(String str) {
     return new Text<CTag>(CTag.STRINGliteral, str);

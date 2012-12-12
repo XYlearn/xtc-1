@@ -28,7 +28,7 @@ import xtc.lang.cpp.Syntax.Language;
  * @author Paul Gazzillo
  * @version $Revision: 1.4 $
  */
-interface TokenCreator {
+public interface TokenCreator {
 
   /**
    * Create a string literal language token.

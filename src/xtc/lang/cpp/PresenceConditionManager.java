@@ -37,7 +37,7 @@ import net.sf.javabdd.BDD;
   * @author Paul Gazzillo
   * @version $Revision: 1.2 $
   */
-class PresenceConditionManager {
+public class PresenceConditionManager {
 
   /** The BDD factory. */
   private BDDFactory B;
