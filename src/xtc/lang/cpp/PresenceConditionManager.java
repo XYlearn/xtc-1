@@ -43,7 +43,7 @@ public class PresenceConditionManager {
   private BDDFactory B;
 
   /** The variable name manager. */
-  private Variables vars;
+  public Variables vars;
   
   /** The stack of nested presence conditions. */
   private LinkedList<BDD> stack;
@@ -302,6 +302,8 @@ public class PresenceConditionManager {
   public class PresenceCondition {
     private BDD bdd;
     private int refs;
+
+    public PresenceConditionManager getPCManager() { return PresenceConditionManager.this; }
     
     /** Creates a new PresenceCondition out of the given bdd.  Make sure the bdd
       * is not shared by anyone else.
