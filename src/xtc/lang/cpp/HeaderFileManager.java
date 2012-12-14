@@ -231,7 +231,7 @@ public class HeaderFileManager implements Stream {
                                MacroTable macroTable) throws IOException {
     PFile header;
 
-    header = findHeader(headerName, sysHeader, includeNext);
+    header = findHeader(headerName, sysHeader, includeNext, presenceConditionManager);
     
     if (null == header) {
 
@@ -541,10 +541,11 @@ public class HeaderFileManager implements Stream {
    * @return a header descriptor.
    */
   private PFile findHeader(String headerName, boolean sysHeader,
-                             boolean includeNext) {
+                             boolean includeNext, PresenceConditionManager presenceConditionManager) {
     if (includeNext && includes.isEmpty()) {
       if (showErrors) {
-        System.err.println("error: include_next can only be used in "
+          runtime.error(presenceConditionManager.reference(),
+                "error: include_next can only be used in "
                            + "header files");
       }
       
@@ -616,7 +617,7 @@ public class HeaderFileManager implements Stream {
       }
       
       if (showErrors) {
-        System.err.println("error: header " + headerName + " not found");
+        runtime.error(presenceConditionManager.reference(),"error: header " + headerName + " not found");
       }
       
       return null;
@@ -980,7 +981,7 @@ public class HeaderFileManager implements Stream {
             }
             
             headerName = str.substring(1, str.length() - 1);
-            pfile = findHeader(headerName, sysHeader, includeNext);
+            pfile = findHeader(headerName, sysHeader, includeNext, presenceConditionManager);
 
 
             break;
@@ -988,7 +989,7 @@ public class HeaderFileManager implements Stream {
           
           if (null == pfile) {
             if (showErrors) {
-              System.err.println("error: invalid header from computed "
+              runtime.error(presenceConditionManager.reference(),"error: invalid header from computed "
                                  + "include, " + str);
             }
             // File does not exist or invalid header string.  Try the

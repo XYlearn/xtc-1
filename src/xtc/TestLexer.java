@@ -194,7 +194,7 @@ public class TestLexer {
         "Show scope changes and identifier bindings.").*/
       /*bool("traceIncludes", "traceInclude", false,
         "Show every header entrance and exit.").*/
-              bool("showErrors", "showErrors", false,
+              bool("showErrors", "showErrors", true,
               "Emit preprocessing and parsing errors to standard err.").
                 bool("showAccepts", "showAccepts", false,
                         "Emit ACCEPT messages when a subparser accepts input.").

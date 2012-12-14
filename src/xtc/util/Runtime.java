@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import xtc.lang.cpp.PresenceConditionManager;
 import xtc.parser.ParseError;
 import xtc.parser.PParser;
 import xtc.parser.Result;
@@ -990,6 +991,12 @@ public class Runtime {
   public void error() {
     errors++;
   }
+
+
+    public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
+        errConsole.p("error["+pc.toString()+"]: ").pln(msg).flush();
+        errors++;
+    }
 
   /**
    * Print the specified error message.

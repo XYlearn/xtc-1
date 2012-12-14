@@ -462,7 +462,7 @@ public class Preprocessor implements Stream {
             // The paste was unsuccessful.  Add a space between
             // the tokens.
             if (showErrors) {
-              runtime.error("pasting "
+              runtime.error(presenceConditionManager.reference(), "pasting "
                             + syntax.getTokenText() + " and "
                             + next.getTokenText()
                             + " does not give a valid preprocessing"
@@ -584,7 +584,7 @@ public class Preprocessor implements Stream {
 
           } else {
             if (showErrors) {
-              runtime.error("pasting " + left.getTokenText()
+              runtime.error(presenceConditionManager.reference(),"pasting " + left.getTokenText()
                                  + " and " + first.getTokenText()
                                  + " does not give a valid preprocessing "
                                  + "token");
@@ -616,7 +616,7 @@ public class Preprocessor implements Stream {
           } else {
             // Don't expand tokens of the invalid paste.
             if (showErrors) {
-              runtime.error("pasting " + last.getTokenText()
+              runtime.error(presenceConditionManager.reference(),"pasting " + last.getTokenText()
                                  + " and " + left.getTokenText()
                                  + " does not give a valid preprocessing "
                                  + "token");
@@ -683,7 +683,7 @@ public class Preprocessor implements Stream {
                 } else {
                   // Don't expand tokens of the invalid paste.
                   if (showErrors) {
-                    runtime.error("pasting " + left.getTokenText()
+                    runtime.error(presenceConditionManager.reference(),"pasting " + left.getTokenText()
                                   + " and " + first.getTokenText()
                                   + " does not give a valid preprocessing "
                                   + "token");
@@ -785,7 +785,7 @@ public class Preprocessor implements Stream {
 
     default:
       if (showErrors) {
-        runtime.error("invalid preprocessor directive");
+        runtime.error(presenceConditionManager.reference(),"invalid preprocessor directive");
       }
       return EMPTY;
     }
@@ -810,7 +810,7 @@ public class Preprocessor implements Stream {
     // Evalute the directive.
     if (s >= directive.size()) {
       if (showErrors) {
-        runtime.error("empty if directive");
+        runtime.error(presenceConditionManager.reference(),"empty if directive");
       }
       return EMPTY;
 
@@ -1041,7 +1041,7 @@ public class Preprocessor implements Stream {
     
     if (s >= directive.size()) {
       if (showErrors) {
-        runtime.error("empty ifdef directive");
+        runtime.error(presenceConditionManager.reference(),"empty ifdef directive");
       }
       return EMPTY;
 
@@ -1053,7 +1053,7 @@ public class Preprocessor implements Stream {
       } else {
 
         if (showErrors) {
-          runtime.error("invalid macro name in ifdef");
+          runtime.error(presenceConditionManager.reference(),"invalid macro name in ifdef");
         }
 
         return EMPTY;
@@ -1101,7 +1101,7 @@ public class Preprocessor implements Stream {
     if (s >= directive.size()) {
 
       if (showErrors) {
-        runtime.error("empty ifndef directive");
+        runtime.error(presenceConditionManager.reference(),"empty ifndef directive");
       }
 
       return EMPTY;
@@ -1112,7 +1112,7 @@ public class Preprocessor implements Stream {
 
       } else {
         if (showErrors) {
-          runtime.error("invalid macro name in ifdef");
+          runtime.error(presenceConditionManager.reference(),"invalid macro name in ifdef");
         }
         return EMPTY;
       }
@@ -1160,7 +1160,7 @@ public class Preprocessor implements Stream {
     if (s >= directive.size()) {
 
       if (showErrors) {
-        runtime.error("empty if directive");
+        runtime.error(presenceConditionManager.reference(),"empty if directive");
       }
 
       return EMPTY;
@@ -1300,7 +1300,7 @@ public class Preprocessor implements Stream {
 
     if (str.length() == 0) {
       if (showErrors) {
-        runtime.error("empty include directive");
+        runtime.error(presenceConditionManager.reference(),"empty include directive");
       }
 
       return EMPTY;
@@ -1431,13 +1431,13 @@ public class Preprocessor implements Stream {
 
     if (s >= directive.size()) {
       if (showErrors) {
-        runtime.error("empty define directive");
+        runtime.error(presenceConditionManager.reference(),"empty define directive");
       }
       return;
 
     } else if (! ((Syntax) directive.get(s)).toLanguage().tag().hasName()) {
       if (showErrors) {
-        runtime.error("defining a non-identifier token");
+        runtime.error(presenceConditionManager.reference(),"defining a non-identifier token");
       }
 
     } else {
@@ -1485,7 +1485,7 @@ public class Preprocessor implements Stream {
                   .tag().ppTag() == PreprocessorTag.ELLIPSIS) {
                 if (null != variadic) {
                   if (showErrors) {
-                    runtime.error("no args allowed after " +
+                    runtime.error(presenceConditionManager.reference(),"no args allowed after " +
                                        "variadic");
                   }
                   return;
@@ -1503,7 +1503,7 @@ public class Preprocessor implements Stream {
               // The formal argument is variadic.
               if (null != variadic) {
                 if (showErrors) {
-                  runtime.error("no args allowed after variadic");
+                  runtime.error(presenceConditionManager.reference(),"no args allowed after variadic");
                 }
                 return;
               }
@@ -1521,7 +1521,7 @@ public class Preprocessor implements Stream {
               break;
             } else {
               if (showErrors) {
-                runtime.error("parameter name missing");
+                runtime.error(presenceConditionManager.reference(),"parameter name missing");
               }
               return;
             }
@@ -1534,7 +1534,7 @@ public class Preprocessor implements Stream {
 
             if (s >= directive.size()) {
               if (showErrors) {
-                runtime.error("missing end parenthesis");
+                runtime.error(presenceConditionManager.reference(),"missing end parenthesis");
               }
               return;
             }
@@ -1554,7 +1554,7 @@ public class Preprocessor implements Stream {
 
             } else {
               if (showErrors) {
-                runtime.error("missing end parenthesis or comma");
+                runtime.error(presenceConditionManager.reference(),"missing end parenthesis or comma");
               }
               return;
             }
@@ -1613,7 +1613,7 @@ public class Preprocessor implements Stream {
               
               if (! valid) {
                 if (showErrors) {
-                  runtime.error("'#' is not followed by a macro " +
+                  runtime.error(presenceConditionManager.reference(),"'#' is not followed by a macro " +
                                      "parameter");
                 }
               }
@@ -1627,7 +1627,7 @@ public class Preprocessor implements Stream {
               // be the first token of the definition.
               if (null == definition) {
                 if (showErrors) {
-                  runtime.error(pasteError);
+                  runtime.error(presenceConditionManager.reference(),pasteError);
                 }
                 return;
               }
@@ -1690,7 +1690,7 @@ public class Preprocessor implements Stream {
             // The token-pasting operator can't appear at the end of a
             // definition since it's a binary operator.
             if (showErrors) {
-              runtime.error(pasteError);
+              runtime.error(presenceConditionManager.reference(),pasteError);
             }
             return;
           }
@@ -1736,7 +1736,7 @@ public class Preprocessor implements Stream {
     
     // Evaluate the undef directive as long as it's valid.
     if (s >= directive.size()) {
-      if (showErrors) runtime.error("empty undef directive");
+      if (showErrors) runtime.error(presenceConditionManager.reference(),"empty undef directive");
 
     } else {
       Syntax token = (Syntax) directive.get(s);
@@ -1752,7 +1752,7 @@ public class Preprocessor implements Stream {
                             macroTable.countDefinitions(name));
         }
       } else {
-        if (showErrors) runtime.error("macro names must be identifiers");
+        if (showErrors) runtime.error(presenceConditionManager.reference(),"macro names must be identifiers");
       }
     }
   }
@@ -1779,7 +1779,7 @@ public class Preprocessor implements Stream {
    */
   private void errorDirective(Directive directive, int s) {
     if (showErrors) {
-      runtime.error(directive.getTokenText());
+      runtime.error(presenceConditionManager.reference(),directive.getTokenText());
     }
 
     if (EMPTY_INVALID_BRANCHES) {
@@ -2825,7 +2825,7 @@ public class Preprocessor implements Stream {
 
       case INCOMPLETE_ARGUMENTS:
         if (showErrors) {
-          runtime.error("unterminated argument list " +
+          runtime.error(presenceConditionManager.reference(),"unterminated argument list " +
                         "invoking macro " + token.getTokenText());
         }
 
@@ -3012,7 +3012,7 @@ public class Preprocessor implements Stream {
 
         case INCOMPLETE_ARGUMENTS:
           if (showErrors) {
-            runtime.error("unterminated argument list " +
+            runtime.error(presenceConditionManager.reference(),"unterminated argument list " +
                           "invoking macro " + token.getTokenText());
           }
 
@@ -3504,7 +3504,7 @@ public class Preprocessor implements Stream {
           // formal arguments.
 
           if (showErrors) {
-            runtime.error("macro \"" + name + "\" passed "
+            runtime.error(presenceConditionManager.reference(),"macro \"" + name + "\" passed "
                                + (null == args ? "0" : args.size())
                                + " arguments, but takes just "
                                + (null == f.formals ? "0" : f.formals.size()));
@@ -4249,7 +4249,7 @@ public class Preprocessor implements Stream {
 
       case EOF:
         if (showErrors) {
-          runtime.error("real EOF in argument expansion");
+          runtime.error(presenceConditionManager.reference(),"real EOF in argument expansion");
         }
 
         done = true;
