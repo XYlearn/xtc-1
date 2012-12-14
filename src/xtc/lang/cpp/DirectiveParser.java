@@ -123,7 +123,10 @@ public class DirectiveParser implements Stream {
           break;
 
         } else if (syntax.kind() == Kind.LANGUAGE) {
-          break;
+            break;
+        }
+       else if (syntax.kind() == Kind.EOF) {
+            break;
         }
       } while (true);
 
