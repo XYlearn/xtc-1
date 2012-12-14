@@ -34,22 +34,24 @@ public class TestLexer {
         public final String msg;
 
         public XtcLexerException(PresenceConditionManager.PresenceCondition pc, String msg) {
+            super("error[" + pc.toString() + "] " + msg);
             this.pc = pc;
             this.msg = msg;
         }
+
     }
 
     static interface ErrorHandler {
         void error(PresenceConditionManager.PresenceCondition pc, String msg);
     }
 
-    static class ExceptionErrorHandler implements ErrorHandler {
+    public static class ExceptionErrorHandler implements ErrorHandler {
         public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
             throw new XtcLexerException(pc, msg);
         }
     }
 
-    static class PrintErrorHandler implements ErrorHandler {
+    public static class PrintErrorHandler implements ErrorHandler {
         public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
             System.err.format("error[%s] %s\n", pc.toString(), msg);
         }
@@ -89,6 +91,7 @@ public class TestLexer {
         List<String> iquote = new ArrayList<String>();
         List<String> I = new ArrayList<String>();
         List<String> sysdirs = new ArrayList<String>();
+        I.add(file.getParentFile().getAbsolutePath());
 
         fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
                 tokenCreator, lexerTimer);
@@ -104,7 +107,7 @@ public class TestLexer {
     public static void print(Stream p) throws IOException {
         Syntax s = p.scan();
         while (s.kind() != Syntax.Kind.EOF) {
-            System.out.println(s);
+            System.out.print(s);
 
             s = p.scan();
         }
