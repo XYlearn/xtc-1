@@ -19,16 +19,45 @@ import java.util.List;
 public class TestLexer {
 
 
-    /** Preprocessor support for token-creation. */
+    /**
+     * Preprocessor support for token-creation.
+     */
     private final static TokenCreator tokenCreator = new CTokenCreator();
 
     public static void main(String[] args) throws Exception {
         File f = new File(args[0]);
-        print(createLexer(new FileReader(f),f));
+        print(createLexer(new FileReader(f), f, new PrintErrorHandler()));
     }
 
+    static class XtcLexerException extends RuntimeException {
+        public final PresenceConditionManager.PresenceCondition pc;
+        public final String msg;
 
-    public static Stream createLexer(Reader in, File file) throws FileNotFoundException {
+        public XtcLexerException(PresenceConditionManager.PresenceCondition pc, String msg) {
+            this.pc = pc;
+            this.msg = msg;
+        }
+    }
+
+    static interface ErrorHandler {
+        void error(PresenceConditionManager.PresenceCondition pc, String msg);
+    }
+
+    static class ExceptionErrorHandler implements ErrorHandler {
+        public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
+            throw new XtcLexerException(pc, msg);
+        }
+    }
+
+    static class PrintErrorHandler implements ErrorHandler {
+        public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
+            System.err.format("error[%s] %s\n", pc.toString(), msg);
+        }
+    }
+
+    private final static ErrorHandler defaultHandler = new PrintErrorHandler();
+
+    public static Stream createLexer(Reader in, File file, final ErrorHandler errorHandler) throws FileNotFoundException {
 
 //        Reader in = new FileReader(file);
 
@@ -40,7 +69,13 @@ public class TestLexer {
         StopWatch parserTimer = null, preprocessorTimer = null, lexerTimer = null;
 
 
-        xtc.util.Runtime runtime = new Runtime();
+        xtc.util.Runtime runtime = new Runtime() {
+            @Override
+            public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
+                errorHandler.error(pc, msg);
+                errors++;
+            }
+        };
         init(runtime);
         runtime.initDefaultValues();
 
@@ -67,15 +102,14 @@ public class TestLexer {
     }
 
     public static void print(Stream p) throws IOException {
-        Syntax s=p.scan();
-        while (s.kind()!= Syntax.Kind.EOF) {
+        Syntax s = p.scan();
+        while (s.kind() != Syntax.Kind.EOF) {
             System.out.println(s);
 
-            s=p.scan();
+            s = p.scan();
         }
 
     }
-
 
 
     public static void init(Runtime runtime) {
