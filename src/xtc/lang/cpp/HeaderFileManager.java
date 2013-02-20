@@ -511,16 +511,18 @@ public class HeaderFileManager implements Stream {
       //If the header is guarded and we have not seen this macro
       //before.
 
-      if (header.hasGuard() && ! macroTable.contains(header.getGuard())) {
-        if (! guards.containsKey(header.file.toString())) {
-          guards.put(header.file.toString(), header.getGuard());
-        }
-        macroTable.rectifyGuard(header.guardMacro, presenceConditionManager);
-      } else {
+      //XXX: Changed for TypeChef. This is an unsound heuristic
+
+//      if (header.hasGuard() && ! macroTable.contains(header.getGuard())) {
+//        if (! guards.containsKey(header.file.toString())) {
+//          guards.put(header.file.toString(), header.getGuard());
+//        }
+//        macroTable.rectifyGuard(header.guardMacro, presenceConditionManager);
+//      } else {
         // The header does not have a guard macro or the guard macro
         // has already been used as a macro before.
         unguarded.add(header.file.toString());
-      }
+//      }
 
       header.open();
     }
