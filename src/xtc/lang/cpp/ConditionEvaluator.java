@@ -134,6 +134,7 @@ public class ConditionEvaluator extends Visitor {
         
       } catch (Exception e) {
         e.printStackTrace();
+        runtime.error(presenceConditionManager.reference(),"could not parse conditional expression "+e);
         System.err.println("could not parse conditional expression");
         expressionBDD = B.zero();
         tree = null;
