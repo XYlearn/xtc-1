@@ -108,7 +108,7 @@ public class ConditionEvaluator extends Visitor {
   public BDD evaluate(String expression) {
     BDD expressionBDD;
     
-    try {
+//    try {
       ConditionParser parser;
       StringReader reader;
       Result result;
@@ -142,10 +142,10 @@ public class ConditionEvaluator extends Visitor {
       
       reader.close();
       parser = null;
-    }
-    catch (Exception e) {
-      expressionBDD = B.zero();
-    }
+//    }
+//    catch (Exception e) {
+//      expressionBDD = B.zero();
+//    }
     
     return expressionBDD;
   }
