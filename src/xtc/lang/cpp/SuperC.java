@@ -128,7 +128,7 @@ public class SuperC extends Tool {
            "Add a system directory to the header file search path.").
       word("iquote", "iquote", true,
            "Add a quote directory to the header file search path.").
-      bool("nostdinc", "nostdinc", false,
+      bool("nostdinc", "nostdinc", true,
            "Don't use the standard include paths.").
       word("D", "D", true, "Define a macro.").
       word("U", "U", true, "Undefine a macro.  Occurs after all -D arguments "
@@ -136,7 +136,7 @@ public class SuperC extends Tool {
       word("include", "include", true, "Include a header.").
       
       // Extra preprocessor arguments.
-      bool("nobuiltins", "nobuiltins", false,
+      bool("nobuiltins", "nobuiltins", true,
            "Disable gcc built-in macros.").
       bool("nocommandline", "nocommandline", false,
            "Do not process command-line defines (-D), undefines (-U), or " +
@@ -212,7 +212,7 @@ public class SuperC extends Tool {
            "Report a list of all configuration variables.  A configuration " +
            "variable is a macro used in a conditional expression before or " +
            "without being defined").
-      bool("headerGuards", "headerGuards", false,
+      bool("headerGuards", "headerGuards", true,
            "Report a list of all header guard macros.  Header guards are " +
            "found with gcc's idiom: #ifndef MACRO\\n#define MACRO\\n...\\n" +
            "#endif.").
@@ -234,7 +234,7 @@ public class SuperC extends Tool {
         "Show scope changes and identifier bindings.").*/
       /*bool("traceIncludes", "traceInclude", false,
         "Show every header entrance and exit.").*/
-      bool("showErrors", "showErrors", false,
+      bool("showErrors", "showErrors", true,
            "Emit preprocessing and parsing errors to standard err.").
       bool("showAccepts", "showAccepts", false,
            "Emit ACCEPT messages when a subparser accepts input.").
