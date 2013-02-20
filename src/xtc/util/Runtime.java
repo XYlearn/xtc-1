@@ -46,9 +46,7 @@ import xtc.parser.PParser;
 import xtc.parser.Result;
 import xtc.parser.SemanticValue;
 
-import xtc.tree.Attribute;
-import xtc.tree.Node;
-import xtc.tree.Printer;
+import xtc.tree.*;
 
 /**
  * A tool's runtime.  This helper class processes command line
@@ -993,8 +991,8 @@ public class Runtime {
   }
 
 
-    public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
-        errConsole.p("error["+pc.toString()+"]: ").pln(msg).flush();
+    public void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable loc) {
+        errConsole.loc(loc).p("error[" + pc.toString() + "]: ").pln(msg).flush();
         errors++;
     }
 

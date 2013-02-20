@@ -1,8 +1,8 @@
 package xtc;
 
 import xtc.lang.cpp.*;
-import xtc.util.*;
-import xtc.tree.Node;
+import xtc.tree.Locatable;
+import xtc.tree.Location;
 import xtc.util.Runtime;
 
 import java.io.*;
@@ -16,65 +16,87 @@ import java.util.List;
  * Time: 9:50 AM
  * To change this template use File | Settings | File Templates.
  */
-public class TestLexer {
-
+public class LexerInterface {
 
     /**
      * Preprocessor support for token-creation.
      */
     private final static TokenCreator tokenCreator = new CTokenCreator();
 
-    public static void main(String[] args) throws Exception {
-        File f = new File(args[0]);
-        print(createLexer(new FileReader(f), f, new PrintErrorHandler()));
-    }
+//    public static void main(String[] args) throws Exception {
+//        File f = new File(args[0]);
+//        print(createLexer(new FileReader(f), f, new PrintErrorHandler()));
+//    }
 
     static class XtcLexerException extends RuntimeException {
         public final PresenceConditionManager.PresenceCondition pc;
         public final String msg;
+        public final Locatable location;
 
-        public XtcLexerException(PresenceConditionManager.PresenceCondition pc, String msg) {
+        public XtcLexerException(PresenceConditionManager.PresenceCondition pc, String msg, Locatable loc) {
             super("error[" + pc.toString() + "] " + msg);
             this.pc = pc;
             this.msg = msg;
+            this.location = loc;
+        }
+
+        public String toString() {
+            if (location.hasLocation())
+                return String.format("error %s:%d:%d if %s\n\t%s\n", location.getLocation().file, location.getLocation().line, location.getLocation().column, pc.toString(), msg);
+            else
+                return String.format("error if %s\n\t%s\n", pc.toString(), msg);
         }
 
     }
 
     static interface ErrorHandler {
-        void error(PresenceConditionManager.PresenceCondition pc, String msg);
+        void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable location);
     }
 
     public static class ExceptionErrorHandler implements ErrorHandler {
-        public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
-            throw new XtcLexerException(pc, msg);
+        public void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable location) {
+            throw new XtcLexerException(pc, msg, location);
         }
     }
 
     public static class PrintErrorHandler implements ErrorHandler {
-        public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
-            System.err.format("error[%s] %s\n", pc.toString(), msg);
+        public void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable location) {
+            if (location.hasLocation())
+                System.err.format("error %s:%d:%d if %s\n\t%s\n", location.getLocation().file, location.getLocation().line, location.getLocation().column, pc.toString(), msg);
+            else
+                System.err.format("error if %s\n\t%s\n", pc.toString(), msg);
         }
     }
 
     private final static ErrorHandler defaultHandler = new PrintErrorHandler();
 
-    public static Stream createLexer(Reader in, File file, final ErrorHandler errorHandler) throws FileNotFoundException {
+
+    /**
+     * all files to be loaded before the main file (and all macros to be initialized)
+     * are initialized through a virtual file "commandline".
+     * <p/>
+     * The file is read with a separate preprocessor, that's why we may return multiple here
+     * continue with the second after the first is done.
+     */
+    public static List<Stream> createLexer(String commandlineStr,
+                                           Reader in,
+                                           File file,
+                                           final ErrorHandler errorHandler,
+                                           List<String> iquote,
+                                           List<String> I,
+                                           List<String> sysdirs,
+                                           XtcMacroFilter macroFilter) throws FileNotFoundException {
 
 //        Reader in = new FileReader(file);
+        List<Stream> result = new ArrayList<Stream>();
 
-        HeaderFileManager fileManager;
-        MacroTable macroTable;
-        PresenceConditionManager presenceConditionManager;
-        Stream preprocessor;
-        Node result = null;
-        StopWatch parserTimer = null, preprocessorTimer = null, lexerTimer = null;
+        StopWatch lexerTimer = null;
 
 
         xtc.util.Runtime runtime = new Runtime() {
             @Override
-            public void error(PresenceConditionManager.PresenceCondition pc, String msg) {
-                errorHandler.error(pc, msg);
+            public void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable location) {
+                errorHandler.error(pc, msg, location);
                 errors++;
             }
         };
@@ -85,21 +107,40 @@ public class TestLexer {
         // Initialize the preprocessor with built-ins and command-line
         // macros and includes.
 
-        macroTable = new MacroTable(runtime, tokenCreator);
-        presenceConditionManager = new PresenceConditionManager();
+        final MacroTable macroTable = new MacroTable(runtime, tokenCreator);
+        final PresenceConditionManager presenceConditionManager = new PresenceConditionManager();
 
-        List<String> iquote = new ArrayList<String>();
-        List<String> I = new ArrayList<String>();
-        List<String> sysdirs = new ArrayList<String>();
-        I.add(file.getParentFile().getAbsolutePath());
 
-        fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
+        if (null != commandlineStr || commandlineStr.isEmpty()) {
+            Syntax syntax;
+            StringReader commandline = new StringReader(commandlineStr);
+
+            try {
+                commandline.reset();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            HeaderFileManager fileManager = new HeaderFileManager(commandline,
+                    new File("<command-line>"),
+                    iquote, I, sysdirs, runtime,
+                    tokenCreator, lexerTimer);
+            Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+                    tokenCreator, runtime, macroFilter);
+
+            result.add(preprocessor);
+        }
+
+
+        HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
                 tokenCreator, lexerTimer);
 
-        preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                tokenCreator, runtime);
+        Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+                tokenCreator, runtime, macroFilter);
 
-        return preprocessor;
+        result.add(preprocessor);
+
+        return result;
 
 
     }

@@ -67,8 +67,8 @@ public class MacroTable {
   
   /** Records unique header guard names. */
   Set<String> headerGuards;
-  
-  /** Make a new empty macro table */
+
+    /** Make a new empty macro table */
   public MacroTable(Runtime runtime, TokenCreator tokenCreator) {
     this.runtime = runtime;
     this.tokenCreator = tokenCreator;

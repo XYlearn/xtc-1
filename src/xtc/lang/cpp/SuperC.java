@@ -491,7 +491,7 @@ public class SuperC extends Tool {
                                           iquote, I, sysdirs, runtime,
                                           tokenCreator, lexerTimer);
       preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                                      tokenCreator, runtime);
+                                      tokenCreator, runtime, null);
 
       if (runtime.test("time")) {
         preprocessor = new StreamTimer(preprocessor, preprocessorTimer);
@@ -508,7 +508,7 @@ public class SuperC extends Tool {
                                         tokenCreator, lexerTimer);
 
     preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                                    tokenCreator, runtime);
+                                    tokenCreator, runtime, null);
     
     if (runtime.test("time")) {
       preprocessor = new StreamTimer(preprocessor, preprocessorTimer);

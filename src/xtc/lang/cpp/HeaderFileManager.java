@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
 
+import xtc.tree.Locatable;
 import xtc.util.Runtime;
 
 import xtc.lang.cpp.Syntax.Kind;
@@ -228,10 +229,10 @@ public class HeaderFileManager implements Stream {
   public Syntax includeHeader(String headerName, boolean sysHeader,
                                boolean includeNext,
                                PresenceConditionManager presenceConditionManager,
-                               MacroTable macroTable) throws IOException {
+                               MacroTable macroTable, Locatable where) throws IOException {
     PFile header;
 
-    header = findHeader(headerName, sysHeader, includeNext, presenceConditionManager);
+    header = findHeader(headerName, sysHeader, includeNext, presenceConditionManager, where);
     
     if (null == header) {
 
@@ -543,12 +544,12 @@ public class HeaderFileManager implements Stream {
    * @return a header descriptor.
    */
   private PFile findHeader(String headerName, boolean sysHeader,
-                             boolean includeNext, PresenceConditionManager presenceConditionManager) {
+                             boolean includeNext, PresenceConditionManager presenceConditionManager, Locatable where) {
     if (includeNext && includes.isEmpty()) {
       if (showErrors) {
           runtime.error(presenceConditionManager.reference(),
                 "error: include_next can only be used in "
-                           + "header files");
+                           + "header files", where);
       }
       
       return null;
@@ -619,7 +620,7 @@ public class HeaderFileManager implements Stream {
       }
       
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"error: header " + headerName + " not found");
+        runtime.error(presenceConditionManager.reference(),"error: header " + headerName + " not found", where);
       }
       
       return null;
@@ -646,11 +647,11 @@ public class HeaderFileManager implements Stream {
                                        List<PresenceCondition> presenceConditions,
                                        boolean includeNext,
                                        PresenceConditionManager presenceConditionManager,
-                                       MacroTable macroTable) {
+                                       MacroTable macroTable, Locatable where) {
     includes.push(include);
     
     include = new Computed(completed, presenceConditions, includeNext, presenceConditionManager,
-                           macroTable);
+                           macroTable, where);
 
 
     if (statisticsCollection) {
@@ -927,11 +928,12 @@ public class HeaderFileManager implements Stream {
 
     /** The location of the last-scanned token. */
     public Location location = null;
-    
-    /** Construct a new computed header. */
+      private final Locatable where;
+
+      /** Construct a new computed header. */
     public Computed(List<String> completed, List<PresenceCondition> presenceConditions,
                     boolean includeNext, PresenceConditionManager presenceConditionManager,
-                    MacroTable macroTable) {
+                    MacroTable macroTable, Locatable where) {
       this.completed = completed;
       this.presenceConditions = presenceConditions;
       this.includeNext = includeNext;
@@ -942,6 +944,7 @@ public class HeaderFileManager implements Stream {
       this.stream = null;
       this.i = -1; // We increment before checking the filename.
       this.nvalid = 0;
+        this.where=where;
     }
     
     /**
@@ -983,7 +986,7 @@ public class HeaderFileManager implements Stream {
             }
             
             headerName = str.substring(1, str.length() - 1);
-            pfile = findHeader(headerName, sysHeader, includeNext, presenceConditionManager);
+            pfile = findHeader(headerName, sysHeader, includeNext, presenceConditionManager, where);
 
 
             break;
@@ -992,7 +995,7 @@ public class HeaderFileManager implements Stream {
           if (null == pfile) {
             if (showErrors) {
               runtime.error(presenceConditionManager.reference(),"error: invalid header from computed "
-                                 + "include, " + str);
+                                 + "include, " + str, where);
             }
             // File does not exist or invalid header string.  Try the
             // next header file name.
