@@ -1,5 +1,5 @@
-JAVA_DEV_ROOT=~/xtc
-CLASSPATH=~/xtc/classes:~/xtc/bin/junit.jar:~/xtc/bin/javabdd.jar
+JAVA_DEV_ROOT=~/work/TypeChef/xtc
+CLASSPATH=$JAVA_DEV_ROOT/classes:$JAVA_DEV_ROOT/lib/junit-4.11.jar:$JAVA_DEV_ROOT/lib/javabdd-1.0b2.jar
 JAVA_HOME=/usr/bin
 PATH_SEP=:
 export JAVA_DEV_ROOT CLASSPATH JAVA_HOME PATH_SEP
