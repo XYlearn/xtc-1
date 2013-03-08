@@ -49,7 +49,7 @@ public class LexerInterface {
 
     }
 
-    static interface ErrorHandler {
+    public static interface ErrorHandler {
         void error(PresenceConditionManager.PresenceCondition pc, String msg, Locatable location);
     }
 
