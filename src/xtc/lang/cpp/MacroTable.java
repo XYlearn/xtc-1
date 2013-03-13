@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
 
+import xtc.XtcMacroFilter;
 import xtc.lang.cpp.Syntax.LanguageTag;
 import xtc.lang.cpp.Syntax.Layout;
 import xtc.lang.cpp.Syntax.Language;
@@ -68,10 +69,13 @@ public class MacroTable {
   /** Records unique header guard names. */
   Set<String> headerGuards;
 
+    final XtcMacroFilter macroFilter;
+
     /** Make a new empty macro table */
-  public MacroTable(Runtime runtime, TokenCreator tokenCreator) {
+  public MacroTable(Runtime runtime, TokenCreator tokenCreator, XtcMacroFilter macroFilter) {
     this.runtime = runtime;
     this.tokenCreator = tokenCreator;
+      this.macroFilter=macroFilter;
 
     table = new HashMap<String, List<Entry>>();
     disabled = new HashSet<String>();
@@ -169,8 +173,7 @@ public class MacroTable {
         
         negation = presenceCondition.not();
         if (runtime.test("cppmode")
-            || (null != runtime.getString("TypeChef-x")
-                && ! name.startsWith(runtime.getString("TypeChef-x")))) {
+            || (!isVariable(name))) {
 
           // Assume the macro is undefined.
 
@@ -463,9 +466,15 @@ public class MacroTable {
 
     return count;
   }
-  
 
-  /** A macro definition */
+    public boolean isVariable(String parameter) {
+        if (macroFilter == null)
+            return true;
+        return macroFilter.isVariable(parameter);
+    }
+
+
+    /** A macro definition */
   public static class Macro {
     /** The macro definition */
     protected List<Syntax> definition;

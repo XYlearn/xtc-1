@@ -209,7 +209,7 @@ public class Preprocessor implements Stream {
   /** Create a new macro preprocessor */
   public Preprocessor(HeaderFileManager fileManager, MacroTable macroTable,
                       PresenceConditionManager presenceConditionManager, TokenCreator tokenCreator,
-                      Runtime runtime, XtcMacroFilter macroFilter) {
+                      Runtime runtime) {
     this.fileManager = fileManager;
     this.macroTable = macroTable;
     this.presenceConditionManager = presenceConditionManager;
@@ -217,7 +217,7 @@ public class Preprocessor implements Stream {
     this.runtime = runtime;
 
     this.evaluator
-      = new ConditionEvaluator(presenceConditionManager, macroTable, runtime, macroFilter);
+      = new ConditionEvaluator(presenceConditionManager, macroTable, runtime);
     this.stackOfBuffers = new LinkedList<TokenBuffer>();
     this.prescanning = 0;
     if (EMPTY_INVALID_BRANCHES) {
@@ -992,7 +992,11 @@ public class Preprocessor implements Stream {
           string.append(" ");
         }
 
-        BDD bdd = evaluator.evaluate(string.toString());
+        Syntax firstToken = null;
+          if (!tokenlist.isEmpty())
+              firstToken=tokenlist.get(0);
+
+        BDD bdd = evaluator.evaluate(string.toString(), firstToken);
 
         if (! bdd.isZero()) {
           terms.add(bdd.and(presenceCondition.getBDD()));
@@ -1063,7 +1067,7 @@ public class Preprocessor implements Stream {
       String str = presenceConditionManager.getVariableManager()
         .createDefinedVariable(((Syntax) directive.get(s)).getTokenText());
       
-      BDD bdd = evaluator.evaluate(str);
+      BDD bdd = evaluator.evaluate(str,directive);
       
       presenceConditionManager.push();
       presenceConditionManager.enter(bdd);
@@ -1121,7 +1125,7 @@ public class Preprocessor implements Stream {
       String str = presenceConditionManager.getVariableManager()
         .createNotDefinedVariable(((Syntax) directive.get(s)).getTokenText());
       
-      BDD bdd = evaluator.evaluate(str);
+      BDD bdd = evaluator.evaluate(str, directive);
 
       presenceConditionManager.push();
       presenceConditionManager.enter(bdd);

@@ -776,6 +776,7 @@ class CLexer {
    * @param   in  the java.io.Reader to read input from.
    */
   CLexer(java.io.Reader in) {
+      assert(in!=null);
     this.zzReader = in;
   }
 
@@ -839,6 +840,7 @@ class CLexer {
     }
 
     /* finally: fill the buffer with new input */
+      assert(zzReader!=null);
     int numRead = zzReader.read(zzBuffer, zzEndRead,
                                             zzBuffer.length-zzEndRead);
 
@@ -885,6 +887,7 @@ class CLexer {
    * @param reader   the new input stream 
    */
   public final void yyreset(java.io.Reader reader) {
+      assert(reader!=null);
     zzReader = reader;
     zzAtBOL  = true;
     zzAtEOF  = false;

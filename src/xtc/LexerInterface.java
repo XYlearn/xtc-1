@@ -107,7 +107,7 @@ public class LexerInterface {
         // Initialize the preprocessor with built-ins and command-line
         // macros and includes.
 
-        final MacroTable macroTable = new MacroTable(runtime, tokenCreator);
+        final MacroTable macroTable = new MacroTable(runtime, tokenCreator, macroFilter);
         final PresenceConditionManager presenceConditionManager = new PresenceConditionManager();
 
 
@@ -126,7 +126,7 @@ public class LexerInterface {
                     iquote, I, sysdirs, runtime,
                     tokenCreator, lexerTimer);
             Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                    tokenCreator, runtime, macroFilter);
+                    tokenCreator, runtime);
 
             result.add(preprocessor);
         }
@@ -136,7 +136,7 @@ public class LexerInterface {
                 tokenCreator, lexerTimer);
 
         Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                tokenCreator, runtime, macroFilter);
+                tokenCreator, runtime);
 
         result.add(preprocessor);
 
@@ -183,12 +183,12 @@ public class LexerInterface {
                         "Include the given header file even if nocommandline is on.").
                 bool("cppmode", "cppmode", false,
                         "Preprocess without preserving configurations.").
-                word("TypeChef-x", "TypeChef-x", false,
-                        "Restricts free macros to those that have the given prefix").
+//                word("TypeChef-x", "TypeChef-x", false,
+//                        "Restricts free macros to those that have the given prefix").//replaced my MacroFilter in MacroTable
 
-                // SuperC component selection.
-                        bool("E", "E", false,
-                        "Just do configuration-preserving preprocessing.").
+        // SuperC component selection.
+        bool("E", "E", false,
+        "Just do configuration-preserving preprocessing.").
                 bool("lexer", "lexer", false,
                         "Just do lexing and print out the tokens.").
                 bool("lexerNoPrint", "lexerNoPrint", false,

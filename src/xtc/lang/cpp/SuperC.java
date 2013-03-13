@@ -145,8 +145,8 @@ public class SuperC extends Tool {
            "Include the given header file even if nocommandline is on.").
       bool("cppmode", "cppmode", false,
            "Preprocess without preserving configurations.").
-      word("TypeChef-x", "TypeChef-x", false,
-           "Restricts free macros to those that have the given prefix").
+//      word("TypeChef-x", "TypeChef-x", false,
+//           "Restricts free macros to those that have the given prefix").   .//replaced my MacroFilter in MacroTable
 
       // SuperC component selection.
       bool("E", "E", false,
@@ -473,7 +473,7 @@ public class SuperC extends Tool {
     // Initialize the preprocessor with built-ins and command-line
     // macros and includes.
     
-    macroTable = new MacroTable(runtime, tokenCreator);
+    macroTable = new MacroTable(runtime, tokenCreator, null);
     presenceConditionManager = new PresenceConditionManager();
 
     if (null != commandline) {
@@ -491,7 +491,7 @@ public class SuperC extends Tool {
                                           iquote, I, sysdirs, runtime,
                                           tokenCreator, lexerTimer);
       preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                                      tokenCreator, runtime, null);
+                                      tokenCreator, runtime);
 
       if (runtime.test("time")) {
         preprocessor = new StreamTimer(preprocessor, preprocessorTimer);
@@ -508,7 +508,7 @@ public class SuperC extends Tool {
                                         tokenCreator, lexerTimer);
 
     preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                                    tokenCreator, runtime, null);
+                                    tokenCreator, runtime);
     
     if (runtime.test("time")) {
       preprocessor = new StreamTimer(preprocessor, preprocessorTimer);

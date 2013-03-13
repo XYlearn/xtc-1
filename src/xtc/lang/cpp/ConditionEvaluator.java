@@ -23,12 +23,8 @@ import java.util.List;
 import java.io.StringReader;
 
 import xtc.XtcMacroFilter;
+import xtc.tree.*;
 import xtc.util.Runtime;
-
-import xtc.tree.GNode;
-import xtc.tree.Node;
-import xtc.tree.Token;
-import xtc.tree.Visitor;
 
 import xtc.type.C;
 import xtc.type.Type;
@@ -91,25 +87,26 @@ public class ConditionEvaluator extends Visitor {
    * subexpression.
    */
   private boolean nonboolean = false;
-    private final XtcMacroFilter macroFilter;
 
     /** Construct a new expression evaluator with a macro table for defined
     * operations.
     */
   public ConditionEvaluator(PresenceConditionManager presenceConditionManager,
                             MacroTable macroTable,
-                            Runtime runtime, XtcMacroFilter macroFilter) {
+                            Runtime runtime) {
     this.presenceConditionManager = presenceConditionManager;
     this.macroTable = macroTable;
     this.runtime = runtime;
-    this.macroFilter=macroFilter;
 
     this.B = presenceConditionManager.getBDDFactory();
     this.cops = new C();
   }
 
-  public BDD evaluate(String expression) {
+    Locatable lastLocation = null;
+
+  public BDD evaluate(String expression, Locatable loc) {
     BDD expressionBDD;
+      lastLocation=loc;
 
 //    try {
       ConditionParser parser;
@@ -137,7 +134,7 @@ public class ConditionEvaluator extends Visitor {
 
       } catch (Exception e) {
         e.printStackTrace();
-        runtime.error(presenceConditionManager.reference(),"could not parse conditional expression "+e, tree);
+        runtime.error(presenceConditionManager.reference(),"could not parse conditional expression "+e, loc);
         System.err.println("could not parse conditional expression");
         expressionBDD = B.zero();
         tree = null;
@@ -181,7 +178,11 @@ public class ConditionEvaluator extends Visitor {
 
   /** Process primary identifier. */
   public Object visitPrimaryIdentifier(GNode n) {
-    return n.getString(0);
+      //mirroring typechef behavior in dealing with unknown non-boolean macros
+      runtime.warning(presenceConditionManager.reference(), "inline macro expansion of "+n.getString(0)+" not exhaustive. assuming 0!", lastLocation);
+
+//    return n.getString(0);
+      return Long.valueOf(0);
   }
 
   /** Process a unary minus. */
@@ -670,7 +671,8 @@ public class ConditionEvaluator extends Visitor {
         // The macro was used in a conditional expression before or
         // without being defined, therefore it is a configuration
         // variable.
-        if (!macroFilter.isVariable(parameter))
+
+        if (!macroTable.isVariable(parameter))
           return B.zero();
         else
           if (runtime.test("configurationVariables")) {

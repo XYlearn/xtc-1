@@ -1032,7 +1032,13 @@ public class Runtime {
     warnings++;
   }
 
-  /**
+    public void warning(PresenceConditionManager.PresenceCondition pc, String msg, Locatable loc) {
+        errConsole.loc(loc).p("warning[" + pc.toString() + "]: ").pln(msg).flush();
+        warnings++;
+    }
+
+
+    /**
    * Print the specified warning message.
    *
    * @param msg The warning message.
