@@ -4,6 +4,9 @@ http://cs.nyu.edu/rgrimm/xtc/
 
 
 
+Commited to github to make changes transparent. If you are interested in using Xtc or SuperC please refer to the original site.
+
+
 
 Changes in SuperC for use in TypeChef
 ====
