@@ -12,12 +12,16 @@ Changes in SuperC for use in TypeChef
 ====
 
 
-Enable error reporting. Silently failing when a header file is not found is unsound. Added error reporting also in other locations.
+ * Enable error reporting. Silently failing when a header file is not found is unsound. Added error reporting also in other locations.
 
-No Buildin Pathes or Macros. They depend on the system (and are different in different configurations) and should not
+ * Extend error reporting to report location and presence condition
+
+ * No Buildin Pathes or Macros. They depend on the system (and are different in different configurations) and should not
  be set by the preprocessor. Unsound behavior.
 
-Disabled unsound header guard heuristic.
+ * Disabled unsound header guard heuristic.
+
+ * Replicate TypeChef's behavior with regard to non-Boolean macros: Always reduce to Boolean, assume value 0 for undefined macros (like cpp). Issuing a warning.
 
 
 
