@@ -2,7 +2,6 @@ package xtc;
 
 import xtc.lang.cpp.*;
 import xtc.tree.Locatable;
-import xtc.tree.Location;
 import xtc.util.Runtime;
 
 import java.io.*;
@@ -132,13 +131,15 @@ public class LexerInterface {
         }
 
 
-        HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
-                tokenCreator, lexerTimer);
+        if (in != null) {
+            HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
+                    tokenCreator, lexerTimer);
 
-        Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
-                tokenCreator, runtime);
+            Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+                    tokenCreator, runtime);
 
-        result.add(preprocessor);
+            result.add(preprocessor);
+        }
 
         return result;
 
