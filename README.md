@@ -1,4 +1,4 @@
-fork from xtc/superc to experiment in the context of the TypeChef project
+# Fork from xtc/superc to experiment in the context of the TypeChef project
 
 http://cs.nyu.edu/rgrimm/xtc/
 
@@ -8,8 +8,8 @@ Commited to github to make changes transparent. If you are interested in using X
 
 
 
-Changes in SuperC for use in TypeChef
-====
+### Changes in SuperC for use in TypeChef
+
 
 
  * Enable error reporting. Silently failing when a header file is not found is unsound. Added error reporting also in other locations.
