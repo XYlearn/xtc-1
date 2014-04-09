@@ -3509,7 +3509,7 @@ public class Preprocessor implements Stream {
           // formal arguments.
 
           if (showErrors) {
-            runtime.error(presenceConditionManager.reference(),"macro \"" + name + "\" passed "
+            runtime.error(presenceConditionManager.reference().and(e.presenceCondition),"macro \"" + name + "\" passed "
                                + (null == args ? "0" : args.size())
                                + " arguments, but takes just "
                                + (null == f.formals ? "0" : f.formals.size()), token);
