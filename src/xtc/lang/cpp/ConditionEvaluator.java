@@ -51,10 +51,10 @@ public class ConditionEvaluator {
 
   /** The expression parser. */
   private ExpressionParser parser;
-  
+
   /** The BDD factory. */
   private BDDFactory B;
-  
+
   /** The common type operations for C. */
   private final C cops;
 
@@ -85,7 +85,7 @@ public class ConditionEvaluator {
    *
    * @param presenceConditionManager Manages presence conditions.
    * @param macroTable The macro table.
-   */  
+   */
   public ConditionEvaluator(ExpressionParser parser,
                             PresenceConditionManager presenceConditionManager,
                             MacroTable macroTable) {
@@ -143,7 +143,7 @@ public class ConditionEvaluator {
       /** Process an integer constant. */
       public Object visitIntegerConstant(GNode n) {
         xtc.type.Type result;
-    
+
         result = cops.typeInteger(n.getString(0));
 
         return result.getConstant().bigIntValue().longValue();
@@ -152,9 +152,9 @@ public class ConditionEvaluator {
       /** Process a character constant. */
       public Object visitCharacterConstant(GNode n) {
         xtc.type.Type result;
-    
+
         result = cops.typeCharacter(n.getString(0));
-    
+
         return result.getConstant().bigIntValue().longValue();
       }
 
@@ -163,7 +163,7 @@ public class ConditionEvaluator {
         // if (pullUndefinedFalse) {
         //   return "";
         // }
-        
+
         return n.getString(0);
       }
 
@@ -172,13 +172,13 @@ public class ConditionEvaluator {
         Object a;
 
         nonboolean = true;
-    
+
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
-    
+
         dostring = false;
-    
+
         if (a instanceof Long) {
           return - (Long) a;
         }
@@ -198,7 +198,7 @@ public class ConditionEvaluator {
       public Object visitLogicalNegationExpression(GNode n) {
         if (dostring) {
           Object a = dispatch(n.getGeneric(0));
-      
+
           if (a instanceof Long) {
             return "" + ((((Long) a).equals(new Long(0))) ? 1 : 0);
           }
@@ -209,11 +209,11 @@ public class ConditionEvaluator {
         else {
           BDD a = ensureBDD(dispatch(n.getGeneric(0)));
           BDD bdd;
-      
+
           bdd = a.not();
-      
+
           a.free();
-      
+
           return bdd;
         }
       }
@@ -221,22 +221,22 @@ public class ConditionEvaluator {
       /** Process a bitwise negation. */
       public Object visitBitwiseNegationExpression(GNode n) {
         Object a, result;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
-            
+
         dostring = false;
-    
+
         if (a instanceof Long) {
           result = ~ (Long) a;
         }
         else {
           return "~ " + parens(a);
         }
-    
+
         return result;
       }
 
@@ -244,17 +244,17 @@ public class ConditionEvaluator {
       public Object visitMultiplicativeExpression(GNode n) {
         Object a, b, result;
         String op;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(2));
         op = n.getString(1);
-    
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           if ((op.equals("/")
                || op.equals("%")) && ((Long) b).equals(new Long(0))) {
@@ -277,7 +277,7 @@ public class ConditionEvaluator {
         else {
           result = parens(a) + " " + op + " " + parens(b);
         }
-    
+
         return result;
       }
 
@@ -285,17 +285,17 @@ public class ConditionEvaluator {
       public Object visitAdditiveExpression(GNode n) {
         Object a, b, result;
         String op;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(2));
         op = n.getString(1);
-    
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           if (op.equals("+")) {
             result = (Long) a + (Long) b;
@@ -310,7 +310,7 @@ public class ConditionEvaluator {
         else {
           result = parens(a) + " " + op + " " + parens(b);
         }
-    
+
         return result;
       }
 
@@ -318,17 +318,17 @@ public class ConditionEvaluator {
       public Object visitShiftExpression(GNode n) {
         Object a, b, result;
         String op;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(2));
         op = n.getString(1);
-    
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           if (op.equals("<<")) {
             result = (Long) a << (Long) b;
@@ -343,7 +343,7 @@ public class ConditionEvaluator {
         else {
           result = parens(a) + " " + op + " " + parens(b);
         }
-    
+
         return result;
       }
 
@@ -351,23 +351,23 @@ public class ConditionEvaluator {
       public Object visitRelationalExpression(GNode n) {
         Object a, b, result;
         String op;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(2));
         op = n.getString(1);
-    
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           Long x = (Long) a;
           Long y = (Long) b;
           long zero = 0;
           long one = 1;
-      
+
           if (op.equals("<")) {
             result = x < y ? one : zero;
           }
@@ -387,7 +387,7 @@ public class ConditionEvaluator {
         else {
           result = parens(a) + " " + op + " " + parens(b);
         }
-    
+
         return result;
       }
 
@@ -396,17 +396,17 @@ public class ConditionEvaluator {
         Object a, b, result;
         String op;
         boolean mydostring = dostring;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(2));
         op = n.getString(1);
-    
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           if (op.equals("==")) {
             result = ((Long) a).equals((Long) b);
@@ -420,7 +420,7 @@ public class ConditionEvaluator {
         }
         else {
           String sa, sb;
-      
+
           if (a instanceof String) {
             sa = (String) a;
           }
@@ -430,7 +430,7 @@ public class ConditionEvaluator {
           else {
             return null;
           }
-      
+
           if (b instanceof String) {
             sb = (String) b;
           }
@@ -440,7 +440,7 @@ public class ConditionEvaluator {
           else {
             return null;
           }
-      
+
           if (op.equals("==") && sa.equals(sb)) {
             result = mydostring ? "1" : B.one();
           }
@@ -448,76 +448,76 @@ public class ConditionEvaluator {
             result = parens(sa) + " " + op + " " + parens(sb);
           }
         }
-    
+
         return result;
       }
 
       /** Process a bitwise and. */
       public Object visitBitwiseAndExpression(GNode n) {
         Object a, b, result;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(1));
-            
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           result = (Long) a & (Long) b;
         }
         else {
           result = parens(a) + " & " + parens(b);
         }
-    
+
         return result;
       }
 
       /** Process a bitwise xor. */
       public Object visitBitwiseXorExpression(GNode n) {
         Object a, b, result;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(1));
-            
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           result = (Long) a ^ (Long) b;
         }
         else {
           result = parens(a) + " ^ " + parens(b);
         }
-    
+
         return result;
       }
 
       /** Process a bitwise or. */
       public Object visitBitwiseOrExpression(GNode n) {
         Object a, b, result;
-    
+
         nonboolean = true;
 
         dostring = true;
-    
+
         a = dispatch(n.getGeneric(0));
         b = dispatch(n.getGeneric(1));
-            
+
         dostring = false;
-    
+
         if (a instanceof Long && b instanceof Long) {
           result = (Long) a | (Long) b;
         }
         else {
           result = parens(a) + " | " + parens(b);
         }
-    
+
         return result;
       }
 
@@ -526,7 +526,7 @@ public class ConditionEvaluator {
         if (dostring) {
           Object a = dispatch(n.getGeneric(0));
           Object b = dispatch(n.getGeneric(1));
-      
+
           if (a instanceof Long && b instanceof Long) {
             return (Long) a & (Long) b;
           }
@@ -536,12 +536,12 @@ public class ConditionEvaluator {
         }
         else {
           BDD a, b, bdd;
-      
+
           a = ensureBDD(dispatch(n.getGeneric(0)));
           b = ensureBDD(dispatch(n.getGeneric(1)));
-      
+
           bdd = a.andWith(b);
-      
+
           return bdd;
         }
       }
@@ -551,7 +551,7 @@ public class ConditionEvaluator {
         if (dostring) {
           Object a = dispatch(n.getGeneric(0));
           Object b = dispatch(n.getGeneric(1));
-      
+
           if (a instanceof Long && b instanceof Long) {
             return (Long) a | (Long) b;
           }
@@ -561,16 +561,16 @@ public class ConditionEvaluator {
         }
         else {
           BDD a, b, bdd;
-      
+
           a = ensureBDD(dispatch(n.getGeneric(0)));
           b = ensureBDD(dispatch(n.getGeneric(1)));
-      
+
           bdd = a.orWith(b);
-      
+
           return bdd;
         }
       }
-  
+
 
       /** Make a new BDD argument, "defined M".  If a macro table was supplied
        * to the evaluator, look for M there and evaluate the operation.
@@ -584,12 +584,12 @@ public class ConditionEvaluator {
 
           if (definitions != null && definitions.size() > 0) {
             boolean hasDefined, hasUndefined, hasFree;
-        
+
             //three conditions
             //1) defined under all configurations, so output 1 (true)
             //2) undefined under all configurations, so output 0 (false)
             //3) partially defined, so output union of configurations
-        
+
             hasDefined = false;
             hasUndefined = false;
             hasFree = false;
@@ -604,7 +604,7 @@ public class ConditionEvaluator {
                 hasUndefined = true;
               }
             }
-        
+
             if (hasDefined && ! hasUndefined && ! hasFree) {
               //fully defined in this presenceCondition
               return B.one(); //the constant true BDD
@@ -618,7 +618,7 @@ public class ConditionEvaluator {
               BDD defined = B.zero();
               List<Token> tokenlist;
               int c;
-          
+
               for (Entry def : definitions) {
                 if (def.macro.state == Macro.State.FREE) {
                   BDD newDefined;
@@ -643,7 +643,7 @@ public class ConditionEvaluator {
 
                 } else if (def.macro.state == Macro.State.DEFINED) {
                   BDD newDefined;
-              
+
                   newDefined = defined.or(def.presenceCondition.getBDD());
                   defined.free();
                   defined = newDefined;
@@ -659,27 +659,27 @@ public class ConditionEvaluator {
             // The macro was used in a conditional expression before or
             // without being defined, therefore it is a configuration
             // variable.
-            if (macroTable.getConfigurationVariables()) {
-              macroTable.configurationVariables.add(parameter);
+              if (!macroTable.isVariable(parameter))
+                  return B.zero();
+              else
+              if (macroTable.getConfigurationVariables()) {
+                  macroTable.configurationVariables.add(parameter);
             }
 
-            if (pullUndefinedFalse) {
-              return B.zero();
-            }
           }
         } //end has macro table
 
         //if there are no macro table entries, just return the operation as is
         return "defined " + parameter;  //return a string
       }
-  
+
       /** Process a conditional expression. */
       public Object visitConditionalExpression(GNode n) {
         if (dostring) {
           Object a = dispatch(n.getGeneric(0));
           Object b = dispatch(n.getGeneric(1));
           Object c = dispatch(n.getGeneric(2));
-      
+
           if (a instanceof Long) {
             return (! ((Long) a).equals(new Long(0))) ? b : c;
           }
@@ -692,7 +692,7 @@ public class ConditionEvaluator {
           BDD b = ensureBDD(dispatch(n.getGeneric(1)));
           BDD c = ensureBDD(dispatch(n.getGeneric(2)));
           BDD ab, na, nac, bdd;
-      
+
           //implement with a & b | !a & c
           ab = a.and(b);
           b.free();
@@ -704,7 +704,7 @@ public class ConditionEvaluator {
           bdd = ab.or(nac);
           nac.free();
           ab.free();
-      
+
           return bdd;
         }
       }
@@ -714,7 +714,7 @@ public class ConditionEvaluator {
     */
   public String parens(Object a) {
     String s;
-    
+
     if (a instanceof String) {
       s = (String) a;
     }
@@ -724,7 +724,7 @@ public class ConditionEvaluator {
     else {
       return null;
     }
-    
+
     if (s.indexOf(" ") >= 0) {
       return "(" + s + ")";
     }
@@ -755,7 +755,7 @@ public class ConditionEvaluator {
     }
     else if (o instanceof Boolean) {
       Boolean b = (Boolean) o;
-      
+
       if (b) {
         return B.one();
       }
@@ -768,7 +768,7 @@ public class ConditionEvaluator {
       System.err.println(o);
       System.err.println(o.getClass());
       System.exit(-1);
-      
+
       return null;
     }
   }

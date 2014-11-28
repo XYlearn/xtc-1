@@ -74,13 +74,6 @@ public class MacroTable {
 
     final XtcMacroFilter macroFilter;          
 
-
-    /** Only allow macros with a given prefix to be free macros. */
-    private boolean restrictPrefix = false;
-
-    /** The restricted prefix. */
-    private String prefix = null;
-
     /** Make a new empty macro table */
   public MacroTable(Runtime runtime, TokenCreator tokenCreator, XtcMacroFilter macroFilter) {
     this.runtime = runtime;
@@ -116,23 +109,7 @@ public class MacroTable {
     return getHeaderGuards;
   }
 
-  /**
-   * Only allow macros with a given prefix to be free macros.  Pass
-   * null to turn this feature off.  It is off by default.
-   *
-   * @param prefix Give a string to turn restricted prefix on.  Give
-   * null to turn it off.
-   */
-  public void restrictPrefix(String prefix) {
-    if (null == prefix) {
-      restrictPrefix = false;
-      this.prefix = null;
-    } else {
-      restrictPrefix = true;
-      this.prefix = prefix;
-    }
-  }
-  
+
   /** Define a macro under a given presenceCondition.  This function will
    * ensure that all conditions are disjoint and that there are no more
    * than one of each unique definition.
@@ -211,8 +188,7 @@ public class MacroTable {
         PresenceCondition negation;
         
         negation = presenceCondition.not();
-        if (runtime.test("cppmode")
-            || (!isVariable(name))) {
+        if (!isVariable(name)) {
 
           // Assume the macro is undefined.
           defs.add(new Entry(Macro.undefined, negation));

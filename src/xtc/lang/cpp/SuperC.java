@@ -527,9 +527,9 @@ public class SuperC extends Tool {
       macroTable
               .getConfigurationVariables(runtime.test("configurationVariables"));
       macroTable.getHeaderGuards(runtime.test("headerGuards"));
-      if (null != runtime.getString("TypeChef-x")) {
-          macroTable.restrictPrefix(runtime.getString("TypeChef-x"));
-      }
+//      if (null != runtime.getString("TypeChef-x")) {
+//          macroTable.restrictPrefix(runtime.getString("TypeChef-x"));
+//      }
     presenceConditionManager = new PresenceConditionManager();
     if (runtime.test("checkExpressionParser")) {
       expressionParser = ExpressionParser.comparator(presenceConditionManager);
