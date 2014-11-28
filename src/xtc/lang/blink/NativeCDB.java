@@ -234,18 +234,14 @@ public class NativeCDB extends StdIOProcess
     if (e instanceof AgentBreakPointHitEvent) {
       dispatch((AgentBreakPointHitEvent)e);
     } else if (e instanceof InternalStepCompletionEvent) {
-    	try {
-    		String eipString = raeLine("r eip\n", "eip=([0-9a-f]+)")[1];
-    		long eip = Long.parseLong(eipString, 16);
-    		assert agent_address_begin != 0L && agent_address_end != 0L;
-    		if (isInAgentLibrary(eip)) {
-    			sendMessage("G\n");
-    		} else {
-    			dbg.enqueEvent(new NativeStepCompletionEvent(this));
-    		}
-    	} catch(IOException ioe) {
-    		dbg.err("can not correctly handle step completion.\n");
-    	}
+    	String eipString = raeLine("r eip\n", "eip=([0-9a-f]+)")[1];
+      long eip = Long.parseLong(eipString, 16);
+      assert agent_address_begin != 0L && agent_address_end != 0L;
+      if (isInAgentLibrary(eip)) {
+      	sendMessage("G\n");
+      } else {
+      	dbg.enqueEvent(new NativeStepCompletionEvent(this));
+      }
     }
   }
 
@@ -256,40 +252,36 @@ public class NativeCDB extends StdIOProcess
    * @param e The event.
    */
   private void dispatch(AgentBreakPointHitEvent e) {
-    try {
-      if (e.getBpID() == cbpBreakPointId) {
-        String bptype = readEnum(BDA_CBP_BPTYPE);
-        if (bptype.equals(BDA_BPTYPE_J2C_DEBUGGER)) {
-          dbg.enqueEvent(new J2CBreakPointHitEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_CALL)) {
-          long native_target_address = readAddressValue(BDA_CBP_TARGET_NATIVE_ADDRESS);
-          advance(native_target_address);
-          rae("t\n");
-          dbg.enqueEvent(new Java2NativeCallEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_RETURN)) {
-          String cname = readStringValue(BDA_CBP_TARGET_CNAME);
-          int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
-          dbg.enqueEvent(new Java2NativeReturnEvent(this, cname, lineNumber));
-        } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_CALL)) {
-          String cname = readStringValue(BDA_CBP_TARGET_CNAME);
-          int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
-          dbg.enqueEvent(new Native2JavaCallEvent(this, cname, lineNumber));
-        } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_RETURN)) {
-          rae("gu\n"); // bda_cbp -> jni_state_c2j_return
-          rae("gu\n"); // jni_state_c2j_return -> c2j_proxyCallXXXMethod
-          rae("gu\n"); // caller of the (*env)->CallXXXMethod
-          dbg.enqueEvent(new Native2JavaReturnEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_JNI_WARNING)) {
-          String message = readStringValue(BDA_CBP_STATE_MESSAGE);
-          dbg.enqueEvent(new NativeJNIWarningEvent(this, message));
-        } else {
-          assert false : "can not recognize an internal break point";            
-        }
+    if (e.getBpID() == cbpBreakPointId) {
+      String bptype = readEnum(BDA_CBP_BPTYPE);
+      if (bptype.equals(BDA_BPTYPE_J2C_DEBUGGER)) {
+        dbg.enqueEvent(new J2CBreakPointHitEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_CALL)) {
+        long native_target_address = readAddressValue(BDA_CBP_TARGET_NATIVE_ADDRESS);
+        advance(native_target_address);
+        rae("t\n");
+        dbg.enqueEvent(new Java2NativeCallEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_RETURN)) {
+        String cname = readStringValue(BDA_CBP_TARGET_CNAME);
+        int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
+        dbg.enqueEvent(new Java2NativeReturnEvent(this, cname, lineNumber));
+      } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_CALL)) {
+        String cname = readStringValue(BDA_CBP_TARGET_CNAME);
+        int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
+        dbg.enqueEvent(new Native2JavaCallEvent(this, cname, lineNumber));
+      } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_RETURN)) {
+        rae("gu\n"); // bda_cbp -> jni_state_c2j_return
+        rae("gu\n"); // jni_state_c2j_return -> c2j_proxyCallXXXMethod
+        rae("gu\n"); // caller of the (*env)->CallXXXMethod
+        dbg.enqueEvent(new Native2JavaReturnEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_JNI_WARNING)) {
+        String message = readStringValue(BDA_CBP_STATE_MESSAGE);
+        dbg.enqueEvent(new NativeJNIWarningEvent(this, message));
       } else {
-    	  assert false : "can not recognize an internal break point";
+        assert false : "can not recognize an internal break point";            
       }
-    } catch(IOException ioe) {
-      dbg.err("can not correctly handle internal break point.");
+    } else {
+      assert false : "can not recognize an internal break point";
     }
   }
 
@@ -298,7 +290,7 @@ public class NativeCDB extends StdIOProcess
    * @param name The variable name.
    * @return The string value.
    */
-  private String readStringValue(String name) throws IOException {
+  private String readStringValue(String name)  {
     String s = raeLine("?? " + name + "\n", " \"(.+)\"")[1];
     return s;
   }
@@ -308,7 +300,7 @@ public class NativeCDB extends StdIOProcess
    * @param name The variable name.
    * @return The integer value.
    */
-  private int readIntValue(String name) throws IOException {
+  private int readIntValue(String name)  {
    String s = raeLine("?? " + name + "\n", "int ([0-9]+)")[1];
     return Integer.parseInt(s);
   }
@@ -318,7 +310,7 @@ public class NativeCDB extends StdIOProcess
    * @param name The variable name.
    * @return The address.
    */
-  private long readAddressValue(String name) throws IOException {
+  private long readAddressValue(String name)  {
     String s = raeLine("?? " + name + "\n", "^.+0x([0-9a-f]+)$")[1];
     return Long.parseLong(s, 16);
   }
@@ -328,7 +320,7 @@ public class NativeCDB extends StdIOProcess
    * @param name The variable name.
    * @return The enumeration name.
    */
-  private String readEnum(String name) throws IOException {
+  private String readEnum(String name)  {
     return raeLine("?? " + name + "\n", "^.+ (.+) .*$")[1];
   }
 
@@ -336,7 +328,7 @@ public class NativeCDB extends StdIOProcess
    * Attach CDB to the debugee JVM.
    * @param pid The process id of the debbugee.
    */
-  public void attach(int pid) throws IOException {
+  public void attach(int pid)  {
     final String[] cdbCommandArray = new String[] {
         "cdb",
         "-lines", 
@@ -353,10 +345,6 @@ public class NativeCDB extends StdIOProcess
         }
       }
     });
-    
-    if (dbg.options.getVerboseLevel() >= 1) {
-      dbg.out("cdb is initialized.\n");
-    }
 
     cbpBreakPointId = createSymbolBreakPoint(BDA_CBP);
     nextBreakPointIdentifier = cbpBreakPointId + 1;
@@ -385,12 +373,12 @@ public class NativeCDB extends StdIOProcess
   }
 
   /** Detach and terminate the CDB. */
-  public void detach() throws IOException {
+  public void detach()  {
     sendMessage(".detach\nQ\n");
   }
 
   /** Active a native-to-Java transition. */
-  public void callNative2Java() throws IOException {
+  public void callNative2Java()  {
     String callCommand = ".call " + BDA_C2J +"()\n";
     rae(callCommand);
     callNative2JavaRequested = true;
@@ -398,12 +386,12 @@ public class NativeCDB extends StdIOProcess
   }
 
   /** Continue the debugee JVM. */
-  public void cont() throws IOException {
+  public void cont()  {
     sendMessage("G\n");
   }
 
   /** Abruptly termindate the debugee JVM. */
-  public void quit() throws IOException {
+  public void quit()  {
     sendMessage("Q\n");
   }
 
@@ -413,7 +401,7 @@ public class NativeCDB extends StdIOProcess
    * 
    * @param command The CDB command.
    */
-  public String runCommand(String command) throws IOException {
+  public String runCommand(String command)  {
     return rae(command + "\n");
   }
 
@@ -424,22 +412,22 @@ public class NativeCDB extends StdIOProcess
    * @param line The line number.
    * @return The breakpoint identifier.
    */
-  public int createBreakpoint(String sourceFile, int line) throws IOException {
+  public int createBreakpoint(String sourceFile, int line)  {
     int bpid = nextBreakPointID();
     String cmd ="bp" + bpid + " `" + sourceFile + ":" + line +"`\n";
     String rst = rae(cmd);
     if (rst != null && rst.length() > 0) {
-      dbg.out(rst); // perhaps some problem.
+      dbg.out("%s", rst); // perhaps some problem.
     }
     return bpid;
   }
 
-  public int createBreakpoint(String symbol) throws IOException {
+  public int createBreakpoint(String symbol)  {
     int bpid = nextBreakPointID();
     String cmd ="bp" + bpid + " " + symbol + "\n";
     String rst = rae(cmd);
     if (rst != null && rst.length() > 0) {
-      dbg.out(rst); // perhaps some problem.
+      dbg.out("%s", rst); // perhaps some problem.
     }
     return bpid;    
   }
@@ -450,7 +438,7 @@ public class NativeCDB extends StdIOProcess
    * @param symbol The symbol name.
    * @return The breakpoint identifier.
    */
-  private int createSymbolBreakPoint(String symbol) throws IOException {
+  private int createSymbolBreakPoint(String symbol)  {
     String[] rsts = raeLine(
         "bm " + symbol + "\n",
         "^\\s*(\\d+)\\: \\p{XDigit}+ \\@\\!\"(.+)\"$"
@@ -474,7 +462,7 @@ public class NativeCDB extends StdIOProcess
    * 
    * @param address The target native address.
    */
-  private void advance(long address) throws IOException {
+  private void advance(long address)  {
 	 final int bpid = nextBreakPointID(); 
 	 rae("bp" + bpid + " /1 " + Long.toHexString(address) + "\n");
 	 sendMessage("g\n");
@@ -496,7 +484,7 @@ public class NativeCDB extends StdIOProcess
    *
    * @param bpid The breakpoint identifier.
    */
-  public void enableBreakpoint(int bpid) throws IOException {
+  public void enableBreakpoint(int bpid)  {
     rae("be " + bpid + "\n");
   }
 
@@ -505,7 +493,7 @@ public class NativeCDB extends StdIOProcess
    *
    * @param bpid The breakpoint identifier.
    */
-  public void disableBreakpoint(int bpid) throws IOException {
+  public void disableBreakpoint(int bpid)  {
     rae("bd " + bpid + "\n");
   }
 
@@ -513,19 +501,12 @@ public class NativeCDB extends StdIOProcess
    * Delete a breakpoint.
    * @param bpid The breakpoint identifier.
    */
-  public void deleteBreakpoint(int bpid) throws IOException {
+  public void deleteBreakpoint(int bpid)  {
     assert false : "Not implemented";    
   }
 
-  public String getJNIEnv() throws IOException {
-    rae(".call " + BDA_ENSURE_JNIENV + "()\n");
-    String jnienv = raeLine("g\n", 
-        "struct JNINativeInterface_ \\*\\* (0x\\p{XDigit}+)")[1];
-    return jnienv;
-  }
-
   /** Followings are for inspecting calling context and program state.*/
-  public List<NativeCallFrame> getFrames() throws IOException {
+  public List<NativeCallFrame> getFrames()  {
     // extract frames
     String framesText = rae("kn\n");
     LinkedList<NativeCallFrame> frames = new LinkedList<NativeCallFrame>();
@@ -583,9 +564,6 @@ public class NativeCDB extends StdIOProcess
             frameType);
         frames.addLast(frame);
       } else if (l.matches("^WARNING: .+$")) {
-        if (dbg.options.getVerboseLevel() >= 1) {
-          dbg.err("ignoring CDB output: " + l + "\n");
-        }
       } else if (l.matches("\\s+#\\s+ChildEBP\\s+RetAddr\\s*")) {
         //skip header.
       } else {
@@ -595,7 +573,7 @@ public class NativeCDB extends StdIOProcess
     return frames;
   }
 
-  public SourceFileAndLine getCurrentLocation() throws IOException {
+  public SourceFileAndLine getCurrentLocation()  {
     SourceFileAndLine loc = null;    
     String frames = rae("kn1\n");
     Pattern p = Pattern.compile("0+ [0-9a-f]+ [0-9a-f]+ .+ \\[(.+) @ ([0-9]+)\\]");
@@ -612,14 +590,14 @@ public class NativeCDB extends StdIOProcess
     return loc;
   }
 
-  public String getSourceLines(String filename, int line, int count) throws IOException {
+  public String getSourceLines(String filename, int line, int count)  {
     assert filename != null && line >=0 && count >=0;
     rae("lsf " + filename + "\n");
     String lines = rae("ls " + line + ", " + count + "\n");
     return lines;
   }
 
-  public List<LocalVariable> getLocals(NativeCallFrame f) throws IOException {
+  public List<LocalVariable> getLocals(NativeCallFrame f)  {
     LinkedList<LocalVariable> localList = new LinkedList<LocalVariable>();
 	  rae(".frame " + f.getFrameID() + "\n");
 	  String localsText = rae("dv\n");
@@ -640,19 +618,19 @@ public class NativeCDB extends StdIOProcess
   }
 
   /* Followings are for inter-language stepping. */
-  public void step() throws IOException {
+  public void step()  {
     rae("l+t\n");
     stepRequested = true;
     sendMessage("t\n");
   }
 
-  public void next() throws IOException {
+  public void next()  {
     rae("l+t\n");
     stepRequested = true;
     sendMessage("p\n");
   }
 
-  public int getLanguageTransitionCount() throws IOException {
+  public int getLanguageTransitionCount()  {
 	rae(".call " + BDA_GET_CURRENT_TRANSITION_COUNT + "()\n");
 	String countString = raeLine("g\n", "int (\\d+)")[1];
 	return Integer.parseInt(countString);
@@ -675,19 +653,19 @@ public class NativeCDB extends StdIOProcess
   }
 
   public void setTransitionBreakPoint(LanguageTransitionEventType bptype, int transitionCount)
-    throws IOException {
+     {
     String controlVariable = getBreakpointControlVariable(bptype);
     rae("ed " + controlVariable + " 1\n");
     rae("ed " + BDA_TRANSITION_COUNT + "  " + transitionCount +"\n");
   }
 
   public void clearTransitionBreakPoint(LanguageTransitionEventType bptype)
-    throws IOException {
+     {
     String controlVariable = getBreakpointControlVariable(bptype);
     rae("ed " + controlVariable + " 0\n");
   }
 
-  public void callJavaDummy() throws IOException {
+  public void callJavaDummy()  {
     rae(".call " + BDA_DUMMY_JAVA + "()" + "\n");
     callDummyRequested = true;
     sendMessage("g\n");
@@ -698,22 +676,22 @@ public class NativeCDB extends StdIOProcess
 	  }
 
   /** Following are for expression evaluation. */
-  public String eval(NativeCallFrame f, String expr) throws IOException {
+  public String eval(NativeCallFrame f, String expr)  {
     assert false : "Not implemented";
     return null;
   }
 
   public void setVariable(NativeCallFrame f, String name, String expr)
-      throws IOException {
+       {
     assert false : "Not implemented";
   }
 
-  public String whatis(NativeCallFrame f, String expr) throws IOException {
+  public String whatis(NativeCallFrame f, String expr)  {
     assert false : "Not implemented";
     return null;
   }
 
-  private void setVariable(String name, String value) throws IOException {
+  private void setVariable(String name, String value)  {
 	  rae("ed " + name + " " + value +"\n");
   }
 
@@ -723,7 +701,7 @@ public class NativeCDB extends StdIOProcess
    * @param cmd The command.
    * @return The result message.
    */
-  private String rae(final String cmd) throws IOException {
+  private String rae(final String cmd)  {
     sendMessage(cmd);
     return (String) EventLoop.subLoop(dbg, new ReplyHandler() {
       public boolean dispatch(Event e) {
@@ -746,7 +724,7 @@ public class NativeCDB extends StdIOProcess
    * @param expect The expected line.
    * @return The matcher object.
    */
-  private String[] raeLine(final String cmd, final String expect) throws IOException {   
+  private String[] raeLine(final String cmd, final String expect)  {   
     final Pattern p = Pattern.compile(expect);
     sendMessage(cmd);
     return (String[]) EventLoop.subLoop(dbg, new ReplyHandler() {
@@ -772,4 +750,15 @@ public class NativeCDB extends StdIOProcess
       }
     });
   }
+
+  private int nextVCIdentifier = 0;
+
+  public String getNewCTmpVarIdentifier() {
+    return "$vc" + nextVCIdentifier++;
+  }
+  
+  public void resetConvenienceVariables() { 
+    nextVCIdentifier = 0;
+  }
+
 }

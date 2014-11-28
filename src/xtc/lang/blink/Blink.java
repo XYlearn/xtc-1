@@ -4,10 +4,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.LinkedBlockingQueue;
+import static java.lang.String.format;
 
 import xtc.lang.blink.CallStack.JavaCallFrame;
 import xtc.lang.blink.Event.DummyCallCompletionEvent;
@@ -23,6 +24,7 @@ import xtc.lang.blink.Event.Native2JavaReturnEvent;
 import xtc.lang.blink.Event.NativeBreakPointHitEvent;
 import xtc.lang.blink.Event.JavaBreakPointHitEvent;
 import xtc.lang.blink.Event.NativeStepCompletionEvent;
+import xtc.lang.blink.Event.RawTextMessageEvent;
 import xtc.lang.blink.JavaDebugger.InitializedEvent;
 import xtc.lang.blink.JavaDebugger.ListenAddressEvent;
 import xtc.lang.blink.NativeDebugger.LanguageTransitionEventType;
@@ -34,6 +36,7 @@ import xtc.lang.blink.EventUtil.ConjunctiveReplyHandler;
 import xtc.lang.blink.EventUtil.DeathReplyHandler;
 import xtc.lang.blink.EventUtil.J2CCompletionEventHandler;
 import xtc.lang.blink.EventUtil.EventReplyHandler.EventFilter;
+import static xtc.lang.blink.agent.AgentJavaDeclaration.*;
 
 /**
  * The Blink debugger for the Java/C mixed mode source level debugging. 
@@ -64,6 +67,7 @@ public class Blink implements AgentNativeDeclaration {
       + "Blink options:\n"
       + "\t-help\n"
       + "\t-jniassert\n"
+      + "\t-agentpath\n"
       +'\n'
 
       + "options forwarded to JDB:\n"
@@ -79,10 +83,8 @@ public class Blink implements AgentNativeDeclaration {
       +'\n'
 
       + "environment variables:\n"
+      + "\tOSTYPE                       one of linux-gnu, mingw, and win32\n"
       + "\tJAVA_DEV_ROOT                xtc installation path\n"
-      + "\tCLASSPATH                    class path\n"
-      + "\tJAVA_HOME                    JDK installation path\n"
-      + "\tOSTYPE                       OS type (linux,cygwin,win32, ...)\n"
       ;
 
     buf.append(usage);
@@ -116,7 +118,7 @@ public class Blink implements AgentNativeDeclaration {
       + "continue                  coninue running.\n"
       + "step                      execute until another line reached\n"
       + "next                      execute the next line, including function calls\n";
-    out(msg);
+    out("%s", msg);
   }
 
   /**
@@ -126,11 +128,11 @@ public class Blink implements AgentNativeDeclaration {
    */
   public static void main(String[] args) {
     InternalOption debuggerOptions = new InternalOption();
-    StringBuffer sbJVMOptions = new StringBuffer();
-    StringBuffer sbJDBOptions = new StringBuffer();
+    List<String> sbJVMOptions = new LinkedList<String>();
+    List<String> sbJDBOptions = new LinkedList<String>();
     StringBuffer sbGDBOPtions = new StringBuffer();
     String mainClass = null;
-    StringBuffer sbMainOptions = new StringBuffer();
+    List<String> sbMainOptions = new LinkedList<String>();
 
     // parse arguments
     for (int i = 0; i < args.length; i++) {
@@ -139,51 +141,39 @@ public class Blink implements AgentNativeDeclaration {
       if (mainClass == null) {
         if (arg.equals("-help")) {
           usage("");
-          // BEGIN - internal options for debugging purpose.
-        } else if (arg.equals("-bv") || arg.equals("-bverbose")) {
-          debuggerOptions.moreVerbose();
-        } else if (arg.equals("-ex")) {
-          if ((i + 1) >= args.length)
-            usage("Please, specify a Blink command after -ex");
-          String cmd = "";
-          for (i++; i < args.length && !args[i].equals("-xe"); i++) {
-            cmd += " " + args[i];
-          }
-          if (i >= args.length)
-            usage("Please, specify -xe to end the Blink initial command.");
-          debuggerOptions.addInitialBlinkCommand(cmd);
         } else if (arg.equals("-jniassert")) { 
-          debuggerOptions.setJniCheck(false);
-          // END - internal options for debugging purpose.
-
+          debuggerOptions.setJniCheck(true);
           //jdb options
+        } else if (arg.equals("-agentpath")) {
+          String agentPath = args[++i];
+          debuggerOptions.setAgentPath(agentPath);
         } else if (arg.equals("-sourcepath")) {
           if ((i + 1) >= args.length)
             usage("Please, specify path after -sourcepath.");
           String argPath = args[++i];
-          sbJDBOptions.append(' ').append(arg).append(' ').append(argPath);
+          sbJDBOptions.add(arg);
+          sbJDBOptions.add(argPath);
         } else if (arg.equals("-dbgtrace")) {
-          sbJDBOptions.append(' ').append(arg);
-          
+          sbJDBOptions.add(arg);
         //jvm options
         } else if (arg.equals("-classpath")) {
           if ((i + 1) >= args.length)
             usage("Please, specify path after -classpath.");
           String argPath = args[++i];
-          sbJVMOptions.append(' ').append(arg);
-          sbJVMOptions.append(' ').append(argPath);
+          sbJVMOptions.add(arg);
+          sbJVMOptions.add(argPath);
         } else if (arg.equals("-v") || Pattern.matches("-verbose(:(class|gc|jni))?", arg)) {
-          sbJVMOptions.append(' ').append(arg);
+          sbJVMOptions.add(arg);
         } else if (arg.matches("-X.+")) {
-          sbJVMOptions.append(' ').append(arg);
+          sbJVMOptions.add(arg);
         } else if (arg.matches("-D[^=]+=.*")) {
-          sbJVMOptions.append(' ').append(arg);
+          sbJVMOptions.add(arg);
         }else {
           mainClass = arg;
         }
       } else {
         // app options
-        sbMainOptions.append(' ').append(arg);
+        sbMainOptions.add(arg);
       }
     }
 
@@ -192,29 +182,18 @@ public class Blink implements AgentNativeDeclaration {
       usage("Please, specify the main CLASS name.");
     }
 
-    //agent native files
-    if (debuggerOptions.getAgentLibrarypath() != null) {
-      ensureAgentLibrary(debuggerOptions.getAgentLibrarypath());
-    } else {
-      debuggerOptions.setAgentLibrarypath(ensureAgentLibraryPathFromEnv());
-    }
-
     // build jvm arguments
-    sbJVMOptions.append(' ').append(mainClass);
-    sbJVMOptions.append(' ').append(sbMainOptions);
-
-    if (debuggerOptions.getVerboseLevel() >= 1) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("xtc.lang.blink.Debugger");
-      for (final String a : args) { sb.append(' ').append(a);}
-      System.out.println("running: " + sb + "\n");
+    sbJVMOptions.add(mainClass);
+    for(String a:sbMainOptions) {
+      sbJVMOptions.add(a);
     }
 
     //now actually launch the Blink.
     try {
-      Blink debugger = new Blink(mainClass, sbJVMOptions.toString(),
-          sbJDBOptions.toString(), sbGDBOPtions.toString(), debuggerOptions);
+      Blink debugger = new Blink(mainClass, sbJVMOptions.toArray(new String[0]),
+          sbJDBOptions.toArray(new String[0]), sbGDBOPtions.toString(), debuggerOptions);
       debugger.startSession();
+      debugger.eventLoop.main();
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -230,44 +209,35 @@ public class Blink implements AgentNativeDeclaration {
       assert false:"not reachable";
     }
     if (!new File(java_dev_root).isDirectory()) {
-      usage(("JAVA_DEV_ROOT(=" 
-              + java_dev_root + ") is expected to be directory"));
+      usage(format("JAVA_DEV_ROOT(=%s) is expected to be directory", java_dev_root));
       assert false:"not reachable";
     }
     return java_dev_root;
   }
 
-  /** 
-   * Ensure the debug agent's native shared library path from envorinment
-   * variable.
-   */
-  static String ensureAgentLibraryPathFromEnv() {
-    String java_dev_root= ensureJavaDevRoot();
-    String java_dev_bin = java_dev_root + java.io.File.separator + "bin";
-    ensureAgentLibrary(java_dev_bin);
-    return java_dev_bin;
-  }
-
-  /** Ensure the Agent dll exists and return its full path. */
-  static String ensureAgentLibraryPath() {
-    return ensureAgentLibrary(ensureAgentLibraryPathFromEnv());
-  }
-
-  /**
-   *  Ensure debug agent's native shared library exists.
-   *  @param libpath The library path. 
-   */
-  private static String ensureAgentLibrary(String libpath) {
-    assert libpath != null;
-    String dll_windows = libpath + java.io.File.separator + BDA_SHARED_LIBRARY_NAME + ".dll"; 
-    String dll_unix = libpath + File.separator + "lib" +  BDA_SHARED_LIBRARY_NAME  + ".so";
-    if (new File(dll_windows).exists()) {
-      return dll_windows;
-    } else if (new File(dll_unix).exists()) {
-      return dll_unix;
+  /** Ensure the agent  exists and return its full path. */
+  String ensureAgentLibraryPath() {
+    String apath = options.getAgentPath();
+    if (apath != null && new File(apath).exists()) {
+       return apath;
+    }
+    String java_dev_root = ensureJavaDevRoot();
+    String libpath = format("%s%sbin", java_dev_root, java.io.File.separator);
+    String agentPath;
+    String osType=System.getProperty("OSTYPE");
+    if ("linux-gnu".equals(osType)) {
+      agentPath = format("%s%slib%s.so", libpath, java.io.File.separator, BDA_SHARED_LIBRARY_NAME);
+    } else if ("win32".equals(osType)) {
+      agentPath = format("%s%s%s.dll", libpath, java.io.File.separator, BDA_SHARED_LIBRARY_NAME);
+    } else if ("mingw".equals(osType)) {
+      agentPath = format("%s%s%s_mingw.dll", libpath, java.io.File.separator, BDA_SHARED_LIBRARY_NAME);
     } else {
-      usage("can not find Blink agent native library in " + libpath);
-      assert false : "not reachable";
+      agentPath = format("%s%slib%s.so", libpath, java.io.File.separator, BDA_SHARED_LIBRARY_NAME);
+    }
+    if (new File(libpath).exists()) {
+      return agentPath;
+    } else {
+      usage(format("can not find Blink agent native library in %s/bin",java_dev_root));
       return null;
     }
   }
@@ -359,10 +329,10 @@ public class Blink implements AgentNativeDeclaration {
   private final String mainClass;
 
   /** The option string to be forwarded to the jvm. */
-  private final String jvmArguments;
+  private final String[] jvmArguments;
 
   /** The option string to be forwarded to the jdb. */
-  private final String jdbArguments;
+  private final String[] jdbArguments;
 
   /** The user command monitor. */
   private final CommandLineInterface user;
@@ -402,12 +372,6 @@ public class Blink implements AgentNativeDeclaration {
   /** The Blink debugger options. */
   final InternalOption options;
 
-  /** the jni env value for the current context. */
-  String jnienvValue;
-
-  /** The unified log queue for debugging purpose. */
-  final BoundedLogQueue logQueue = new BoundedLogQueue(4*1024);
-
   /**
    * Construct the Blink debugger.
    * 
@@ -417,8 +381,8 @@ public class Blink implements AgentNativeDeclaration {
    * @param gdbOptions The gdb command line options.
    * @param debugOption The Blink debugger options.
    */
-  private Blink(final String mainClass, final String jvmArguments,
-      final String jdbArguments, final String gdbOptions,
+  private Blink(final String mainClass, final String[] jvmArguments,
+      final String[] jdbArguments, final String gdbOptions,
       final InternalOption debugOptions) {
     this.mainClass = mainClass;
     this.jvmArguments = jvmArguments;
@@ -434,28 +398,30 @@ public class Blink implements AgentNativeDeclaration {
   /**
    * Start the Blink debugger and wait until the end of this Blink session.
    */
-  private void startSession() throws IOException {
+  private void startSession()  {
 
-    // launch Java debugger and get the listening address.
+    // Launch Java debugger and get the listening address.
     jdb.startListening(jdbArguments);
     final String address = (String) EventLoop.subLoop(this,
         new EventLoop.ReplyHandler() {
-      boolean dispatch(Event e) {
-        if (e instanceof ListenAddressEvent && e.getSource() == Blink.this.jdb) {
-          ListenAddressEvent listenEvent = (ListenAddressEvent) e;
-          setResult(listenEvent.getAddress());
-          return true;
-        } else {
-          return false;
-        }
-      }
-    });
+          boolean dispatch(Event e) {
+            if (e instanceof ListenAddressEvent
+                && e.getSource() == Blink.this.jdb) {
+              ListenAddressEvent listenEvent = (ListenAddressEvent) e;
+              setResult(listenEvent.getAddress());
+              return true;
+            } else {
+              return false;
+            }
+          }
+        });
 
-    // launch JVM and attach the JVM to the JDB.
+    // Launch JVM and attach the JVM to the JDB.
     jvm.beginDebugSession(jvmArguments, address);
     EventLoop.subLoop(this, new EventLoop.ReplyHandler() {
       boolean dispatch(Event e) {
-        if (e instanceof InitializedEvent && e.getSource() == Blink.this.jdb) {
+        if (e instanceof InitializedEvent 
+            && e.getSource() == Blink.this.jdb) {
           setResult(new Boolean(true));
           return true;
         } else {
@@ -464,25 +430,30 @@ public class Blink implements AgentNativeDeclaration {
       }
     });
 
-    //advance the program execution to the main method.
+    // Advance the program execution to the main method.
     jdb.setBreakPoint(mainClass + ".main");
     jdb.run();
     EventLoop.subLoop(this, new EventLoop.ReplyHandler() {
       boolean dispatch(Event e) {
-        if (e instanceof JavaBreakPointHitEvent && e.getSource() == Blink.this.jdb) {
-          JavaBreakPointHitEvent je = (JavaBreakPointHitEvent)e;
-          if (je.getClassName().equals(mainClass) && je.getMethodName().equals("main")) {
+        if (e instanceof JavaBreakPointHitEvent) {
+          JavaBreakPointHitEvent je = (JavaBreakPointHitEvent) e;
+          if (je.getClassName().equals(mainClass)
+              && je.getMethodName().equals("main")) {
             setResult(new Boolean(true));
             return true;
           } else {
             assert false : "unknown Java breakpoint hit";
             return false;
           }
+        } else if (e instanceof RawTextMessageEvent) {
+            return false;
         } else {
+          assert false : "To be implemented for " + e.toString();
           return false;
         }
       }
     });
+
     changeDebugControlStatus(DebugerControlStatus.JDB);
     jdb.clearBreakPoint(mainClass + ".main");
     initj();
@@ -491,17 +462,10 @@ public class Blink implements AgentNativeDeclaration {
     out("Blink a Java/C mixed language debugger.\n");
     changeDebugControlStatus(DebugerControlStatus.JDB);
 
-    // execute some initial Blink commands.
-    for (final String line : options.getInitialBlinkCommandList()) {
-      eventLoop.executeBlinkCommand(line);
-    }
-
     // Now, enable the user command line processing.
     user.start();
     showPrompt();
 
-    // Now, get into the event loop.
-    eventLoop.main();
   }
 
   /**
@@ -526,13 +490,9 @@ public class Blink implements AgentNativeDeclaration {
 
   /** Implement Blink "run" command. */
   void run() {
-    try {
-      assert (getDebugControlStatus() == DebugerControlStatus.JDB);
-      jdb.run();
-      changeDebugControlStatus(Blink.DebugerControlStatus.NONE);
-    } catch (IOException e) {
-      err("could not successfully run the application");
-    }
+    assert (getDebugControlStatus() == DebugerControlStatus.JDB);
+    jdb.run();
+    changeDebugControlStatus(Blink.DebugerControlStatus.NONE);
   }
 
   /**
@@ -540,7 +500,7 @@ public class Blink implements AgentNativeDeclaration {
    * will initilize the Blink debugger agent by running a number of jdb and gdb
    * commands.
    */
-  boolean initj() {
+  boolean initj()  {
     if (gdbAttached) {
       err("the initj was run before.");
       return true;
@@ -548,34 +508,15 @@ public class Blink implements AgentNativeDeclaration {
 
     assert debugControl == DebugerControlStatus.JDB;
     // try to initialize the DebugAgent
-    try {
-      if (!jdb.initAgent()) {
-        return false;
-      }
-    } catch (IOException e) {
-      err("failed in executing initj for jdb\n");
-      return false;
-    }
+    jdb.setBreakPoint(BDA_AGENT_NAME + "." + BDA_JBP );
 
-    // get debugee process id through the DebugAgent Code.
-    int pid;
-    try {
-      pid = jdb.getJVMProcessID();
-    } catch (IOException e) {
-      err("failed in getting debugged process id\n");
-      return false;
-    }
+    // Obtain the process ID of the debuggee by using the agent.
+    int pid = Integer.parseInt(jdb.eval(BDA_GETPROCESSID));
 
-    // gdb - attach the debugee
-    try {
-      ndb.attach(pid);
-      gdbAttached = true;
-    } catch (IOException e) {
-      err("could not attach the native code debugger.\n");
-      return false;
-    }
+    // Attach gdb to the debugee using the process ID.
+    ndb.attach(pid);
+    gdbAttached = true;
 
-    ensurePureContext();
     assert getDebugControlStatus() == DebugerControlStatus.JDB;
     return true;
   }
@@ -589,26 +530,17 @@ public class Blink implements AgentNativeDeclaration {
       err("please run initj before j2c\n");
       return;
     }
-    if (options.getVerboseLevel() >= 1) {
-      out("switching to gdb mode due to j2c command.\n");
+    jdb.j2c();
+    Event e = (Event) EventLoop.subLoop(this, new EventReplyHandler(
+        new EventFilter[] { new EventFilter(ndb, J2CBreakPointHitEvent.class),
+            new EventFilter(ndb, LanguageTransitionEvent.class), }));
+    if (e instanceof LanguageTransitionEvent) {
+      ndb.cont();
+      EventLoop.subLoop(this,
+          new EventReplyHandler(new EventFilter[] { new EventFilter(ndb,
+              J2CBreakPointHitEvent.class), }));
     }
-    try {
-      jdb.j2c();
-      Event e = (Event)EventLoop.subLoop(this, new EventReplyHandler( new EventFilter[] {
-          new EventFilter(ndb, J2CBreakPointHitEvent.class),
-          new EventFilter(ndb, LanguageTransitionEvent.class),
-      }));
-      if (e instanceof LanguageTransitionEvent) {
-        ndb.cont();
-        EventLoop.subLoop(this, new EventReplyHandler( new EventFilter[] {
-            new EventFilter(ndb, J2CBreakPointHitEvent.class),
-        }));
-      }
-      changeDebugControlStatus(DebugerControlStatus.GDB_IN_JDB);
-    } catch (IOException e) {
-      err("failed in executing j2c\n");
-      e.printStackTrace();
-    }
+    changeDebugControlStatus(DebugerControlStatus.GDB_IN_JDB);
   }
 
   /**
@@ -620,20 +552,12 @@ public class Blink implements AgentNativeDeclaration {
       err("please run initj before c2j\n");
       return;
     }
-    if (options.getVerboseLevel() >= 1) {
-      out("switching to jdb mode due to c2j command,\n");
-    }
-    try {
-      ndb.callNative2Java();
-      EventLoop.subLoop(this, new EventReplyHandler( new EventFilter[] {
-          new EventFilter(jdb, JavaBreakPointHitEvent.class),
-      }));
+    ndb.callNative2Java();
+    EventLoop.subLoop(this, new EventReplyHandler( new EventFilter[] {
+        new EventFilter(jdb, JavaBreakPointHitEvent.class),
+    }));
 
-      changeDebugControlStatus(DebugerControlStatus.JDB_IN_GDB);
-    } catch (IOException e) {
-      err("failed in executing c2j\n");
-      e.printStackTrace();
-    }
+    changeDebugControlStatus(DebugerControlStatus.JDB_IN_GDB);
   }
 
   /**
@@ -655,25 +579,13 @@ public class Blink implements AgentNativeDeclaration {
       err("jret is for jdb and gdb nesting.");
       break;
     case JDB_IN_GDB:
-      if (options.getVerboseLevel() >= 1) {
-        out("return to gdb\n");
-      }
-      try {
-        jdb.cont();
-        EventLoop.subLoop(this, new EventReplyHandler( new EventFilter[] {
-            new EventFilter(ndb, Native2JavaCompletionEvent.class),
-            new EventFilter(ndb, LanguageTransitionEvent.class),
-        }));
-        changeDebugControlStatus(DebugerControlStatus.GDB);
-      } catch (IOException e) {
-        err("failed in resuming jdb control nested in the gdb\n");
-      }
+      jdb.cont();
+      EventLoop.subLoop(this, new EventReplyHandler(new EventFilter[] {
+          new EventFilter(ndb, Native2JavaCompletionEvent.class),
+          new EventFilter(ndb, LanguageTransitionEvent.class), }));
+      changeDebugControlStatus(DebugerControlStatus.GDB);
       break;
     case GDB_IN_JDB:
-      if (options.getVerboseLevel() >= 1) {
-        out("returning to jdb\n");
-      }
-      try {
         ndb.cont();
         EventLoop.subLoop(this, new ReplyHandler() {
           boolean dispatch(Event e) {
@@ -681,13 +593,7 @@ public class Blink implements AgentNativeDeclaration {
               setResult(new Boolean(true));
               return true;
             } else if (e instanceof NativeBreakPointHitEvent && e.getSource() == ndb) {
-              NativeBreakPointHitEvent ne = (NativeBreakPointHitEvent )e;
-              try {
-                ndb.cont();
-              } catch(IOException ioe) {
-                err("could not continue from breakpoint from the native breakpoint:" + e);
-                EventLoop.reportEvent(Blink.this, ne);
-              }
+              ndb.cont();
               return false;
             } else {
               return false;
@@ -695,9 +601,6 @@ public class Blink implements AgentNativeDeclaration {
           }
         });
         changeDebugControlStatus(DebugerControlStatus.JDB);
-      } catch (IOException e) {
-        err("failed in resuming gdb control nested in the jdb\n");
-      }
       break;
     default:
       break;
@@ -709,38 +612,25 @@ public class Blink implements AgentNativeDeclaration {
    */
   void cont() {
     assert debugControl != DebugerControlStatus.NONE;
-    jnienvValue = null;
 
     switch (getDebugControlStatus()) {
       case JDB:
       case GDB:
       if (breakpointManager.hasDeferredNativeBreakpoint()) {
-        try {
           ensureJDBContext();
           jdb.setLoadLibraryEvent();
-        }catch(IOException e) {
-          err("could not handle deferred gdb break point");
-        }
       }
       break;
     }
 
     switch (getDebugControlStatus()) {
     case JDB:
-      try {
         jdb.cont();
         changeDebugControlStatus(Blink.DebugerControlStatus.NONE);
-      } catch (IOException e) {
-        err("failed in executing the continue\n");
-      }
       break;
     case GDB:
-      try {
         ndb.cont();
         changeDebugControlStatus(Blink.DebugerControlStatus.NONE);
-      } catch (IOException e) {
-        err("failed in executing the continue\n");
-      }
       break;
     case JDB_IN_GDB:
     case GDB_IN_JDB:
@@ -756,7 +646,7 @@ public class Blink implements AgentNativeDeclaration {
   /**
    * Perform inter-language source level stepping.
    */
-  Event step() throws IOException {
+  Event step()  {
     ensurePureContext();
     Event e = null;
     SourceFileAndLine start = getCurrentSourceLevelLocation();
@@ -786,7 +676,7 @@ public class Blink implements AgentNativeDeclaration {
    *
    * @return The component event.
    */
-  private Event stepj() throws IOException {
+  private Event stepj()  {
     assert getDebugControlStatus() == DebugerControlStatus.JDB;
 
     // try JDB step-into and expect pause at Java or native code.
@@ -847,7 +737,7 @@ public class Blink implements AgentNativeDeclaration {
    *
    * @return The component event.
    */
-  private Event stepc() throws IOException {
+  private Event stepc()  {
     assert getDebugControlStatus() == DebugerControlStatus.GDB;
 
     //set breakpoints for escaping to the Java.
@@ -909,7 +799,7 @@ public class Blink implements AgentNativeDeclaration {
    * 
    * @return The component debugger event.
    */
-  Event next() throws IOException {
+  Event next()  {
     Event e = null;
     ensurePureContext();
     SymbolMapper.SourceFileAndLine start = getCurrentSourceLevelLocation();
@@ -942,7 +832,7 @@ public class Blink implements AgentNativeDeclaration {
    * 
    * @return The component debugger event.
    */
-  private Event nextj() throws IOException {
+  private Event nextj()  {
     assert debugControl == DebugerControlStatus.JDB;
     
     //set c2j_return breakpoint.
@@ -984,7 +874,7 @@ public class Blink implements AgentNativeDeclaration {
    *
    * @return The component debugger event.
    */
-  private Event nextc() throws IOException {
+  private Event nextc()  {
     assert debugControl == DebugerControlStatus.GDB;
 
     //set language transition breakpoint.
@@ -1045,54 +935,43 @@ public class Blink implements AgentNativeDeclaration {
     return e;
   }
 
-  /** Exit the current debugging session. */
-  void exit() {
-    if (getDebugControlStatus() == DebugerControlStatus.NONE ) {
-      out("can not terminate the current debugging session.\n");
-      return;
-    }
+  /** Exit the current debugging session. 
+   * @ */
+  void exit()  {
     ensurePureContext();
-    if (getDebugControlStatus() == DebugerControlStatus.JDB) {
-      try {
+    if (getDebugControlStatus() == DebugerControlStatus.NONE) {
+      System.exit(0);
+      assert false : "should not reach here";
+      return;
+    } else if (getDebugControlStatus() == DebugerControlStatus.JDB) {
         // ensure gdb is detached.
-        if (gdbAttached) {
+        if (gdbAttached && !ndb.isDead()) {
           j2c();
           ndb.detach();
-          EventLoop.subLoop(this,
-              new ConjunctiveReplyHandler(
-                  new J2CCompletionEventHandler(jdb),
-                  new DeathReplyHandler(ndb)
-          ));
           debugControl = DebugerControlStatus.JDB;
+          EventLoop.subLoop(this, new ConjunctiveReplyHandler(
+              new J2CCompletionEventHandler(jdb), new DeathReplyHandler(ndb)));
           gdbAttached = false;
         }
-  
-        jdb.exit();
-        EventLoop.subLoop(this, 
-            new ConjunctiveReplyHandler(
-                new DeathReplyHandler(jvm),
-                new DeathReplyHandler(jdb)
-        ));
-        debugControl = DebugerControlStatus.NONE;
-      } catch (IOException e) {
-        err("could not successfully run the exit sequent from jdb.");
-      }
+        if (!jdb.isDead()) {
+          jdb.exit();
+          EventLoop.subLoop(this, new ConjunctiveReplyHandler(
+              new DeathReplyHandler(jvm), new DeathReplyHandler(jdb)));
+          debugControl = DebugerControlStatus.NONE;
+        }
+      
     } else if (getDebugControlStatus() == DebugerControlStatus.GDB) {
-      try {
+      if (!ndb.isDead()) {
         ndb.quit();
-        EventLoop.subLoop(this, 
-            new ConjunctiveReplyHandler(
-              new DeathReplyHandler(jvm),
-              new DeathReplyHandler(jdb),
-              new DeathReplyHandler(ndb)
-      ));
-    } catch (IOException e) {
-      err("could not successfully run the exit sequent from gdb.");
-    }
+        EventLoop.subLoop(this, new ConjunctiveReplyHandler(
+            new DeathReplyHandler(jvm), new DeathReplyHandler(jdb),
+            new DeathReplyHandler(ndb)));
+      }
     } else {
       assert false : "should not reach here";
       return;
     }
+    System.exit(0);
   }
 
   /**
@@ -1100,10 +979,11 @@ public class Blink implements AgentNativeDeclaration {
    * 
    * @param msg The message to print.
    */
-  void out(String msg) {
+  void out(String format, Object ... args) {
+    String msg = format(format, args);
     user.out(msg);
   }
-
+  
   /**
    * Print an message to the console.
    * 
@@ -1136,7 +1016,7 @@ public class Blink implements AgentNativeDeclaration {
   /**
    * Ensure the debug agent is ready.
    */
-  boolean ensureDebugAgent() throws IOException {
+  boolean ensureDebugAgent()  {
     assert debugControl ==  DebugerControlStatus.JDB;
     if (IsNativeDebuggerAttached()) {
       return true;
@@ -1147,7 +1027,7 @@ public class Blink implements AgentNativeDeclaration {
   /**
    * Ensure jdb is available.
    */
-  public boolean ensureJDBContext() {
+  public boolean ensureJDBContext()  {
     switch (debugControl) {
     case JDB:
     case JDB_IN_GDB:
@@ -1169,7 +1049,7 @@ public class Blink implements AgentNativeDeclaration {
    * 
    * @return true if the gdb context. false otherwise.
    */
-  public boolean ensureGDBContext() {
+  public boolean ensureGDBContext()  {
     if (!IsNativeDebuggerAttached()) {
       return false;
     }
@@ -1204,58 +1084,6 @@ public class Blink implements AgentNativeDeclaration {
       break;
     case NONE:
       break;
-    }
-  }
-
-  /**
-   * Ensure the JNIENV pointer is available.
-   *   
-   * @return The JNIEnv pointer value.
-   */
-  public String ensureJNIENV() {
-    if (jnienvValue != null) {
-      return jnienvValue;
-    }
-
-    if (!ensureGDBContext()) {
-      assert false : "panic";
-    }
-    try {
-      jnienvValue = ndb.getJNIEnv();
-    } catch (IOException e) {
-      err("could not get jnienv value.\n");
-    }
-    return jnienvValue;
-  }
-
-  /**
-   * Dispatch the internal Blink user command.
-   * 
-   * @param command The command.
-   */
-  void executeDebugCommand(String command) {
-    assert command.startsWith("bdb ");
-    if (command.equals("bdb log")) {
-      out(logQueue.getLastTrace());
-      Thread.dumpStack();
-    } else if (Pattern.matches("bdb log (jdb|gdb)", command)) {
-      Matcher m = Pattern.compile("bdb log (jdb|gdb)").matcher(command);
-      if (!m.matches()) { assert false: "impossible!"; }
-      String mdbg =m.group(1);
-      if (mdbg.equals("jdb")) {
-        out(jdb.getLastOutputMessage() + "\n");
-      } else {
-        assert mdbg.equals("gdb") : "impossible!";
-        out(ndb.getLastOutputMessage() + "\n");
-      }
-    } else if (command.equals("bdb verbose")) {
-      options.moreVerbose();
-    } else if (command.equals("bdb quiet")) {
-      options.setVerboseLevel(0);      
-    } else if (command.equals("bdb where")) {
-       Thread.dumpStack();
-    } else {
-      err("can not recognize: " + command + "\n");
     }
   }
 
@@ -1326,7 +1154,7 @@ public class Blink implements AgentNativeDeclaration {
    * Get current location where the debugee suspened.
    * @return The location.
    */
-  SourceFileAndLine getCurrentSourceLevelLocation() throws IOException {
+  SourceFileAndLine getCurrentSourceLevelLocation()  {
     ensurePureContext();
     SourceFileAndLine location;
     switch(debugControl) {
@@ -1343,7 +1171,7 @@ public class Blink implements AgentNativeDeclaration {
     }
     return location;
   }
-  String getCurrentSourceLine() throws IOException {
+  String getCurrentSourceLine()  {
     ensurePureContext();
     String line;
     switch(debugControl) {

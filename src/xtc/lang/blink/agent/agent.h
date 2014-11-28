@@ -15,10 +15,10 @@ typedef enum {
 
 /* Java or native program location. */
 struct bda_location {
-    const void * native_address; /* native code address */
-    const char * cname; /* Java class name */
-    const char * mname; /* Java method name */
-    const char * mdesc; /* Java descriptor name */
+    const void *native_address; /* native code address */
+    const char *cname; /* Java class name */
+    const char *mname; /* Java method name */
+    const char *mdesc; /* Java descriptor name */
     int line_number; /* line number */
     int bcindex; /* bytecode index */
 };
@@ -26,14 +26,13 @@ struct bda_location {
 /* The Blink internal break point. */
 extern void bda_cbp(
     breakpoint_type bptype,
-    struct bda_state_info * state,
-    struct bda_location * target);
+    struct bda_state_info *state,
+    struct bda_location *target);
 
 extern void bda_check_handle_assertion_fail(
-    struct bda_state_info * state, 
+    struct bda_state_info *state, 
     jthrowable pending_exception, 
-    const char* fmt, ...);
-
+    const char *fmt, ...);
 
 /* If set to be 1, activate the j2c_call breakpoint.*/
 extern int bda_j2c_call_breakpoint;
@@ -53,13 +52,11 @@ extern int bda_c2j_return_breakpoint;
 extern int bda_transition_count;
 
 /* The beginning and ending of the JDWP agent memory region. */
-extern void* bda_jdwp_region_begin;
-extern void* bda_jdwp_region_end;
+extern void *bda_jdwp_region_begin;
+extern void *bda_jdwp_region_end;
 
 extern void bda_agent_init(JNIEnv *env); 
-
-/* Ensure the JNI environment identifier at a breakpoint. */
-extern JNIEnv* bda_ensure_jnienv();
+extern void bda_j2c_proxy_init();
 
 /* Trigger c2j transition. */
 extern int bda_c2j();
@@ -69,18 +66,15 @@ extern int bda_dummy_java();
 
 extern int bda_dummy_native();
 
-/* inspecting the current thread state*/
-extern int bda_get_current_transition_count();
+/* The getter and setter functions for convenience variables. */
+extern int bda_cv_set_jboolean(jboolean exprValue);
+extern int bda_cv_set_jint(jint exprValue);
+extern int bda_cv_set_jdouble(jdouble exprValue);
+extern int bda_cv_set_jobject(jobject exprValue);
 
-/* The followings are related to the expression evaluation. */
-extern int bda_set_vj_from_cexpr_jboolean(JNIEnv *env, jboolean exprValue);
-extern int bda_set_vj_from_cexpr_jint(JNIEnv *env, jint exprValue);
-extern int bda_set_vj_from_cexpr_jdouble(JNIEnv *env, jdouble exprValue);
-extern int bda_set_vj_from_cexpr_jobject(JNIEnv *env, jobject exprValue);
-
-extern jboolean bda_get_cvalue_from_vj_jboolean(JNIEnv *env, int vjid);
-extern jint bda_get_cvalue_from_vj_jint(JNIEnv *env, int vjid);
-extern jdouble bda_get_cvalue_from_vj_jdouble(JNIEnv *env, int vjid);
-extern jobject bda_get_cvalue_from_vj_jobject(JNIEnv *env, int vjid);
+extern jboolean bda_cv_get_jboolean(int vjid);
+extern jint     bda_cv_get_jint(int vjid);
+extern jdouble  bda_cv_get_jdouble(int vjid);
+extern jobject  bda_cv_get_jobject(int vjid);
 
 #endif /* _AGENT_H_ */

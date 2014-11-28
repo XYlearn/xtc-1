@@ -26,7 +26,7 @@ import xtc.lang.cpp.Syntax.Language;
  * Token creation methods
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.4 $
+ * @version $Revision: 1.5 $
  */
 interface TokenCreator {
 
@@ -61,8 +61,6 @@ interface TokenCreator {
    * @param t1 The first token.
    * @param t2 The second token.
    * @return The pasted token or null.
-   * @throws IOException since pasting may use a lexer.
    */
-  public Language<?> pasteTokens(Language<?> t1, Language<?> t2)
-    throws IOException;
+  public Language<?> pasteTokens(Language<?> t1, Language<?> t2);
 }

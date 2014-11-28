@@ -23,6 +23,7 @@ import xtc.lang.blink.Event.NativeJNIWarningEvent;
 import xtc.lang.blink.Event.RawTextMessageEvent;
 import xtc.lang.blink.Event.NativeBreakPointHitEvent;
 import xtc.lang.blink.Event.NativeStepCompletionEvent;
+import xtc.lang.blink.Event.NativeSignalEvent;
 import xtc.lang.blink.EventLoop.ReplyHandler;
 import xtc.lang.blink.SymbolMapper.SourceFileAndLine;
 import xtc.lang.blink.agent.AgentNativeDeclaration;
@@ -124,7 +125,7 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
    * 
    * @param pid The process identifier.
    */
-  public void attach(int pid) throws IOException {
+  public void attach(int pid)  {
     final String[] gdbCommandArray = new String[] { "gdb", "-nw", "-quiet",
         "--pid", Integer.toString(pid), "-ex", "echo blinkgdbready\\n", };
     begin(gdbCommandArray);
@@ -138,17 +139,12 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
       }
     });
 
-    if (dbg.options.getVerboseLevel() >= 1) {
-      dbg.out("gdb is initialized.\n");
-    }
-
     // do gdb initialization.
     raeGDB("set language c\n");
     raeGDB("set width 0\n");
+    raeGDB("set step-mode on\n");
+    raeGDB("set breakpoint pending on\n");
     cbpBreakPointId = createSymbolBreakPoint(BDA_CBP);
-
-    // the JVM uses this signal, so do not stop.
-    raeGDB("handle SIGSEGV nostop \n");
 
     String sharedLibries = raeGDB("info shar\n");
     Pattern p = Pattern.compile("^0x([0-9a-f]+) +0x([0-9a-f]+) +\\S(.+)$");
@@ -176,98 +172,94 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     sendMessage("continue\n");
   }
 
-  public void callNative2Java() throws IOException {
+  public void callNative2Java()  {
     native2JavaCallRequested = true;
     sendMessage("call " + BDA_C2J + "()\n");
   }
 
-  public void step() throws IOException {
+  public void step()  {
     steppingRequested = true;
     sendMessage("step\n");
   }
 
-  public void next() throws IOException {
+  public void next()  {
     steppingRequested = true;
     sendMessage("next\n");
   }
 
   /** trigger detach sequence. */
-  public void detach() throws IOException {
+  public void detach()  {
     sendMessage("detach\nquit\n");
   }
 
-  public void quit() throws IOException {
+  public void quit()  {
     sendMessage("kill\nquit\n");
   }
 
   /** Continue the debuggee's execution. */
-  public void cont() throws IOException {
+  public void cont()  {
     sendMessage("continue\n");
   }
 
-  public String getJNIEnv() throws IOException {
-    Matcher m = raeGDB("print/x " + BDA_ENSURE_JNIENV + "()\n",
-        "\\$\\d+ = (0x[0-9a-f]+)\\n");
-    return m.group(1);
-  }
-
-  public String eval(NativeCallFrame f, String expr) throws IOException {
-    raeGDB("frame " + f.getFrameID() + "\n");
+  public String eval(NativeCallFrame f, String expr)  {
+    if (f != null) {
+      raeGDB("frame " + f.getFrameID() + "\n");
+    }
     Matcher m = raeGDB("print " + expr + "\n", "\\$\\d+ = (.+)\\n");
     String rst = m.group(1);
     return rst;
   }
 
-  public void callJavaDummy() throws IOException {
+  public void callJavaDummy()  {
     callJavaDummyRequested = true;
     sendMessage("call " + BDA_DUMMY_JAVA + "()" + "\n");
   }
 
-  private void setVariable(String name, String value) throws IOException {
+  private void setVariable(String name, String value)  {
     raeGDB("set " + name + " = " + value + "\n");
   }
 
   public void setVariable(NativeCallFrame f, String name, String value)
-      throws IOException {
+       {
     raeGDB("frame " + f.getFrameID() + "\n");
     raeGDB("set " + name + " = " + value + "\n");
   }
 
-  public int createBreakpoint(String sourceFile, int line) throws IOException {
+  public int createBreakpoint(String sourceFile, int line)  {
     Matcher m = raeGDB("break " + sourceFile + ":" + line + "\n",
         "Breakpoint ([0-9]+) .*\\n");
     int bpid = Integer.valueOf(m.group(1));
     return bpid;
   }
 
-  public int createBreakpoint(String symbol) throws IOException {
+  public int createBreakpoint(String symbol)  {
     Matcher m = raeGDB("break " + symbol + "\n", "Breakpoint ([0-9]+) .*\\n");
     int bpid = Integer.valueOf(m.group(1));
     return bpid;
   }
 
-  public int createRawAddressBreakPoint(String address) throws IOException {
+  public int createRawAddressBreakPoint(String address)  {
     Matcher m = raeGDB("break *" + address + "\n", "Breakpoint ([0-9]+) .*\\n");
     int bpid = Integer.valueOf(m.group(1));
     return bpid;
   }
 
-  private int createSymbolBreakPoint(String symbol) throws IOException {
+  private int createSymbolBreakPoint(String symbol)  {
     Matcher m = raeGDB("break " + symbol + "\n",
         "(?:.*\n)*Breakpoint (\\d+) at.*\\n");
     int bpid = Integer.valueOf(m.group(1));
     return bpid;
   }
 
-  public void enableBreakpoint(int bpid) throws IOException {
+  public void enableBreakpoint(int bpid)  {
     raeGDB("enable " + bpid + "\n");
   }
 
-  public void disableBreakpoint(int bpid) throws IOException {
+  public void disableBreakpoint(int bpid)  {
     raeGDB("disable " + bpid + "\n");
   }
 
-  public void deleteBreakpoint(int bpid) throws IOException {
+  public void deleteBreakpoint(int bpid)  {
     raeGDB("delete " + bpid + "\n");
   }
 
@@ -287,26 +279,26 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     }
   }
 
-  public int getLanguageTransitionCount() throws IOException {
+  public int getLanguageTransitionCount()  {
     String s = raeGDB("call " + BDA_GET_CURRENT_TRANSITION_COUNT + "()\n",
         "\\$\\d+ = (\\d+)\n" + "(?:.*\n)*").group(1);
     return Integer.parseInt(s);
   }
 
   public void setTransitionBreakPoint(LanguageTransitionEventType bptype, int transitionCount)
-      throws IOException {
+       {
     String controlVariable = getBreakpointControlVariable(bptype);
     raeGDB("set " + controlVariable + " = 1\n");
     raeGDB("set " + BDA_TRANSITION_COUNT + " = " + transitionCount +"\n");
   }
 
   public void clearTransitionBreakPoint(LanguageTransitionEventType bptype)
-      throws IOException {
+       {
     String controlVariable = getBreakpointControlVariable(bptype);
     raeGDB("set " + controlVariable + " = 0\n");
   }
 
-  public String whatis(NativeCallFrame f, String expr) throws IOException {
+  public String whatis(NativeCallFrame f, String expr)  {
     raeGDB("frame " + f.getFrameID() + "\n");
     String type = raeGDB("whatis " + expr + "\n", ".+ = (.+)\\n").group(1);
     return type;
@@ -317,17 +309,13 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     if (e instanceof BDA_CBP_BreakpointHitEvent) {
       dispatch((BDA_CBP_BreakpointHitEvent) e);
     } else if (e instanceof InternalStepCompletionEvent) {
-      try {
-        String pc_str = raeGDB("p/x $pc\n",
-            "\\s*\\$\\d+ = 0x([0-9a-f]+)\n").group(1);
-        long pc = Long.parseLong(pc_str, 16);
-        if (isInAgentLibrary(pc)) {
-          sendMessage("continue\n");
-        } else {
-          dbg.enqueEvent(new NativeStepCompletionEvent(this));
-        }
-      } catch(IOException ioe) {
-        dbg.err("can not correctly handle step completion.");
+      String pc_str = raeGDB("p/x $pc\n",
+          "\\s*\\$\\d+ = 0x([0-9a-f]+)\n").group(1);
+      long pc = Long.parseLong(pc_str, 16);
+      if (isInAgentLibrary(pc)) {
+        sendMessage("continue\n");
+      } else {
+        dbg.enqueEvent(new NativeStepCompletionEvent(this));
       }
     }
   }
@@ -336,20 +324,20 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     return agent_address_begin <= addr && addr < agent_address_end; 
   }
 
-  private String readEnum(String name) throws IOException {
+  private String readEnum(String name)  {
     return raeGDB("print " +name + "\n", "\\s*\\$\\d+ = (.+)\n").group(1);
   }
   
-  private String readAddressValue(String name) throws IOException {
+  private String readAddressValue(String name)  {
     return raeGDB(
-        "print " + name + "\n",
-        "\\s*\\$\\d+ = .*(0x[0-9a-f]+)\n").group(1);
+        "print/x " + name + "\n",
+        "\\s*\\$\\d+ = (0x[0-9a-f]+)\n").group(1);
   }
-  private String readStringValue(String name) throws IOException {
+  private String readStringValue(String name)  {
     return raeGDB("print " + name + "\n",
     "\\s*\\$\\d+ = 0x.+ \"(.+)\"\n").group(1);
   }
-  private int readIntValue(String name) throws IOException {
+  private int readIntValue(String name)  {
     String value = raeGDB("print " + name + "\n",
     "\\s*\\$\\d+ = (\\d+)\n").group(1);
     return Integer.parseInt(value);
@@ -357,42 +345,38 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
 
   /** process internal event in the event handler thread. */
   private void dispatch(BDA_CBP_BreakpointHitEvent e) {
-    try {
-      if (e.getBpID() == cbpBreakPointId) {
-        String bptype = readEnum(BDA_CBP_BPTYPE);
-        if (bptype.equals(BDA_BPTYPE_J2C_DEBUGGER)) {
-          dbg.enqueEvent(new J2CBreakPointHitEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_CALL)) {
-          String native_target_address = readAddressValue(BDA_CBP_TARGET_NATIVE_ADDRESS); 
-          // move the control to the prologue of the native method.
-          raeGDB("finish\n"); //bda_cbp -> jni_state_j2c_call
-          raeGDB("finish\n"); //jni_state_j2c_call -> j2c_proxy_xxx
-          raeGDB("advance *" + native_target_address + "\n");
-          dbg.enqueEvent(new Java2NativeCallEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_RETURN)) {
-          String cname = readStringValue(BDA_CBP_TARGET_CNAME);
-          int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
-          dbg.enqueEvent(new Java2NativeReturnEvent(this, cname, lineNumber));
-        } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_CALL)) {
-          String cname = readStringValue(BDA_CBP_TARGET_CNAME);
-          int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
-          dbg.enqueEvent(new Native2JavaCallEvent(this, cname, lineNumber));
-        } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_RETURN)) {
-          raeGDB("finish\n"); // bda_cbp -> jni_state_c2j_return
-          raeGDB("finish\n"); // jni_state_c2j_return -> c2j_proxyCallXXXMethod
-          raeGDB("finish\n"); // caller of the *env->CallXXXMethod
-          dbg.enqueEvent(new Native2JavaReturnEvent(this));
-        } else if (bptype.equals(BDA_BPTYPE_JNI_WARNING)) {
-          String message = readStringValue(BDA_CBP_STATE_MESSAGE);
-          dbg.enqueEvent(new NativeJNIWarningEvent(this, message));
-        } else {
-          assert false : "can not recognize an internal break point";
-        }
+    if (e.getBpID() == cbpBreakPointId) {
+      String bptype = readEnum(BDA_CBP_BPTYPE);
+      if (bptype.equals(BDA_BPTYPE_J2C_DEBUGGER)) {
+        dbg.enqueEvent(new J2CBreakPointHitEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_CALL)) {
+        String native_target_address = readAddressValue(BDA_CBP_TARGET_NATIVE_ADDRESS); 
+        // move the control to the prologue of the native method.
+        raeGDB("finish\n"); //bda_cbp -> jni_state_j2c_call
+        raeGDB("finish\n"); //jni_state_j2c_call -> j2c_proxy_xxx
+        raeGDB("advance *" + native_target_address + "\n");
+        dbg.enqueEvent(new Java2NativeCallEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_J2C_JNI_RETURN)) {
+        String cname = readStringValue(BDA_CBP_TARGET_CNAME);
+        int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
+        dbg.enqueEvent(new Java2NativeReturnEvent(this, cname, lineNumber));
+      } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_CALL)) {
+        String cname = readStringValue(BDA_CBP_TARGET_CNAME);
+        int lineNumber = readIntValue(BDA_CBP_TARGET_LINE_NUMBER);
+        dbg.enqueEvent(new Native2JavaCallEvent(this, cname, lineNumber));
+      } else if (bptype.equals(BDA_BPTYPE_C2J_JNI_RETURN)) {
+        raeGDB("finish\n"); // bda_cbp -> jni_state_c2j_return
+        raeGDB("finish\n"); // jni_state_c2j_return -> c2j_proxyCallXXXMethod
+        raeGDB("finish\n"); // caller of the *env->CallXXXMethod
+        dbg.enqueEvent(new Native2JavaReturnEvent(this));
+      } else if (bptype.equals(BDA_BPTYPE_JNI_WARNING)) {
+        String message = readStringValue(BDA_CBP_STATE_MESSAGE);
+        dbg.enqueEvent(new NativeJNIWarningEvent(this, message));
       } else {
         assert false : "can not recognize an internal break point";
       }
-    } catch (IOException ioe) {
-      dbg.err("can not correctly handle internal break point.");
+    } else {
+      assert false : "can not recognize an internal break point";
     }
   }
 
@@ -432,17 +416,14 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     }
 
     if (!checkBreakPointHitPattern(msg) && !checkCallCompletionPattern(msg)
-        && !checkStepCompletion(msg)) {
+        && !checkStepCompletion(msg) && !checkSignal(msg)) {
       dbg.enqueEvent(new GDBRawMessageEvent(this, msg));
     }
 
-    Pattern exitPattern = p("Program exited normally.\\n");
+    Pattern exitPattern = p("(Program|Inferior).* exited normally.\\n");
     Matcher exitMatcher = exitPattern.matcher(msg);
     if (exitMatcher.find()) {
-      try {
-        sendMessage("quit\n");
-      } catch (IOException ioe) {
-      }
+      sendMessage("quit\n");
     }
   }
 
@@ -493,13 +474,25 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     return true;
   }
 
+  private boolean checkSignal(String msg) {
+    Pattern p = p("(?:.*\n)*" + "Program received signal (.+), .+\n" + "(?:.*\n)*");
+    Matcher m = p.matcher(msg);
+    if (!m.matches()) {
+      return false;
+    } else {
+      String signal = m.group(1);
+      dbg.enqueEvent(new NativeSignalEvent(this, signal));
+      return true;
+    }
+  }
+
   /**
    * Let the Blink debug to talk to gdb and obtain native stack frame list.
    * Then, parse the output messages and constuct a list of native stack frames.
    * 
    * @return The list of native stack frames.
    */
-  public LinkedList<NativeCallFrame> getFrames() throws IOException {
+  public LinkedList<NativeCallFrame> getFrames()  {
     String output = raeGDB("where\n");
     Pattern frameLinePattern = Pattern.compile("^#([0-9]+)" + "\\s+" // id
         + "(0x[a-f0-9]+)?" + "\\s+" // address
@@ -533,7 +526,7 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     return frames;
   }
 
-  public SourceFileAndLine getCurrentLocation() throws IOException {
+  public SourceFileAndLine getCurrentLocation()  {
     raeGDB("frame 0\n");
     String frameText = raeGDB("bt 1\n");
     String firstLine = new StringTokenizer(frameText, "\n").nextToken();
@@ -549,7 +542,7 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
     return loc;
   }
 
-  public List<LocalVariable> getLocals(NativeCallFrame f) throws IOException {
+  public List<LocalVariable> getLocals(NativeCallFrame f)  {
     LinkedList<LocalVariable> localList = new LinkedList<LocalVariable>();
     raeGDB("frame " + f.getFrameID() + "\n");
     String args = raeGDB("info args\n");
@@ -572,12 +565,12 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
   }
 
   public String getSourceLines(String filename, int line, int count)
-      throws IOException {
+       {
     raeGDB("set listsize " + count + "\n");
     return raeGDB("list " + filename + ":" + line + "\n");
   }
 
-  public String runCommand(String command) throws IOException {
+  public String runCommand(String command)  {
     return raeGDB(command + "\n");
   }
 
@@ -590,7 +583,7 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
    * @param expect The message to be expected from the gdb.
    * @return The matched string for the regular expression.
    */
-  private Matcher raeGDB(final String msg, String expect) throws IOException {
+  private Matcher raeGDB(final String msg, String expect)  {
     final Pattern p = Pattern.compile(expect);
     sendMessage(msg);
     return (Matcher) EventLoop.subLoop(dbg, new ReplyHandler() {
@@ -613,7 +606,7 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
    * @param cmd The command.
    * @return The result message.
    */
-  private String raeGDB(final String cmd) throws IOException {
+  private String raeGDB(final String cmd)  {
     sendMessage(cmd);
     String lines = (String) EventLoop.subLoop(dbg, new ReplyHandler() {
       public boolean dispatch(Event e) {
@@ -626,5 +619,15 @@ public class NativeGDB extends StdIOProcess implements NativeDebugger,
       }
     });
     return lines;
+  }
+
+  private int nextVCIdentifier = 0;
+
+  public String getNewCTmpVarIdentifier() {
+    return "$vc" + nextVCIdentifier++;
+  }
+  
+  public void resetConvenienceVariables() { 
+    nextVCIdentifier = 0;
   }
 }

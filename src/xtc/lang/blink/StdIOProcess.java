@@ -23,8 +23,9 @@ abstract class StdIOProcess implements BlinkEventSource {
   private static final boolean needDOSEOLProcessing = System.getProperty("os.name")
       .startsWith("Windows");
 
-  /** If the current system uses 2 bytes DOS EOL (\r\n), remove '\r'. */
-  private static int read(BufferedReader br, char[] buf) throws IOException {
+  /** If the current system uses 2 bytes DOS EOL (\r\n), remove '\r'. 
+   * @throws IOException */
+  private static int read(BufferedReader br, char[] buf) throws IOException  {
     int nRead = br.read(buf);
     if (nRead < 0) {return nRead;}
     int nEffectiveRead;
@@ -70,12 +71,8 @@ abstract class StdIOProcess implements BlinkEventSource {
   /** A reader thread for the process error message. */
   private final Thread stdErrReader;
 
-  /** The output stream log for debugging purpose. */
-  private final BoundedLogQueue logStdOut;
-
-  /** The error stream log for debugging purpose. */
-  private final BoundedLogQueue logStderr;
-
+  private boolean died = false;
+  
   /**
    * @param name The name of the slave process.
    * @param commandArray The command array to create the slave process.
@@ -83,16 +80,13 @@ abstract class StdIOProcess implements BlinkEventSource {
   StdIOProcess(Blink dbg, String name) {
     this.dbg = dbg;
     this.name = name;
-    this.logStdOut = 
-      new BoundedLogQueue(4 * 1024);
-    this.logStderr = 
-      new BoundedLogQueue(4 * 1024);
-    // initiate reader two threads for stdout and stderr
     this.tg = new ThreadGroup(getEventSourceName());
-    stdOutReader = new Thread(tg, "stdout reader for " + getEventSourceName()) {
+    stdOutReader = new Thread(tg, 
+        String.format("StdIOProcessThread(%s, stdout)", getEventSourceName())) {
       public void run() {monitorStdOut();}
     };
-    stdErrReader = new Thread(tg, "stderr reader for " + getEventSourceName()) {
+    stdErrReader = new Thread(tg,
+        String.format("StdIOProcessThread(%s, stderr)", getEventSourceName())) {
       public void run() { monitorStdErr();}
     };
   }
@@ -137,30 +131,20 @@ abstract class StdIOProcess implements BlinkEventSource {
     try {
       int nRead = read(br,buf);
       while (nRead > 0) {
-        if (dbg.options.getVerboseLevel() >= 1) {
-          String m=new String(buf, 0, nRead);
-          dbg.out(m);
-        }
-        logStdOut.log(buf, 0, nRead);
-        dbg.logQueue.log(buf, 0, nRead);
         RawTextMessageEvent e = new RawTextMessageEvent(this, buf, 0, nRead);
-
         dbg.enqueEvent(e);
         processMessageEvent(e);
         nRead = read(br,buf); // possibly blocking
       }
       assert nRead == -1; // EOF
     } catch (IOException e) {
-      if (dbg.options.getVerboseLevel() >= 0) {
-        dbg.err(name + ": " + " got an IO Exception in reading stderr, \n");
-        dbg.err(name + ": " + " and finishing message reading thread\n");
-      }
     }
 
     // wait until two reader threads are dead.
     try {stdErrReader.join();} catch(InterruptedException e) {}
 
     // notify my death.
+    died = true;
     dbg.enqueEvent(new DeathEvent(this));
   }
 
@@ -177,15 +161,10 @@ abstract class StdIOProcess implements BlinkEventSource {
       while (nRead > 0) {
         String m=new String(buf, 0, nRead);
         dbg.err(m);
-        logStderr.log(buf, 0, nRead);
         nRead = read(br,buf); // possibly blocking
       }
       assert nRead == -1; // EOF
     } catch (IOException e) {
-      if (dbg.options.getVerboseLevel() >= 0) {
-        dbg.err(name + ": " + " got an IO Exception in reading stdout, ");
-        dbg.err(name + ": " + " and finishing message reading thread\n");
-      }
     }
   }
 
@@ -202,21 +181,16 @@ abstract class StdIOProcess implements BlinkEventSource {
    * 
    * @param msg The message.
    */
-  public void sendMessage(String msg) throws IOException {
-    if (dbg.options.getVerboseLevel() >= 1) {
-      dbg.out(msg);
+  public void sendMessage(String msg) {
+    try {
+      out.write(msg);
+      out.flush();
+    } catch(IOException e) {
+      throw new RuntimeException("A failure to send a message", e);
     }
-    dbg.logQueue.log(msg);
-    out.write(msg);
-    out.flush();
   }
-
-  /**
-   * Get the last output message from this debugger. 
-   * @return The message.
-   */
-  public String getLastOutputMessage() {
-    return logStdOut.getLastTrace();
+  
+  public boolean isDead() {
+    return died;
   }
-
 }

@@ -1,6 +1,5 @@
 package xtc.lang.blink;
 
-import java.io.IOException;
 import java.util.List;
 
 import xtc.lang.blink.CallStack.NativeCallFrame;
@@ -22,57 +21,57 @@ public interface NativeDebugger extends BlinkEventSource {
   }
 
   /** attaching and detaching. */
-  public void attach(int pid) throws IOException;
-  public void detach() throws IOException;
-  public void quit() throws IOException;
+  public void attach(int pid) ;
+  public void detach() ;
+  public void quit() ;
 
   /** user level breakpoint and continuing. */
-  public int createBreakpoint(String sourceFile, int line) throws IOException;
-  public int createBreakpoint(String symbol) throws IOException;
-  public void enableBreakpoint(int bpid) throws IOException;
-  public void disableBreakpoint(int bpid) throws IOException;
-  public void deleteBreakpoint(int bpid) throws IOException;
+  public int createBreakpoint(String sourceFile, int line) ;
+  public int createBreakpoint(String symbol) ;
+  public void enableBreakpoint(int bpid) ;
+  public void disableBreakpoint(int bpid) ;
+  public void deleteBreakpoint(int bpid) ;
   
   /** Enable and disable the internal transition break point. */
-  public int getLanguageTransitionCount() throws IOException;
+  public int getLanguageTransitionCount() ;
   public void setTransitionBreakPoint(LanguageTransitionEventType bptype, int transitionCount)
-    throws IOException;
+    ;
   public void clearTransitionBreakPoint(LanguageTransitionEventType bptype)
-    throws IOException;
+    ;
 
   /** For transitions */
-  public void callNative2Java() throws IOException;
+  public void callNative2Java() ;
 
   /** Continue the debuggee's execution. */
-  public void cont() throws IOException;
+  public void cont() ;
 
-  public void callJavaDummy() throws IOException;
+  public void callJavaDummy() ;
   
   /** Calling context. */
-  public List<NativeCallFrame> getFrames() throws IOException;
+  public List<NativeCallFrame> getFrames() ;
   /** Get current location. */
-  public SourceFileAndLine getCurrentLocation() throws IOException;
-  public String getSourceLines(String filename, int line, int count) throws IOException;
-  public List <LocalVariable> getLocals(NativeCallFrame f) throws IOException;
+  public SourceFileAndLine getCurrentLocation() ;
+  public String getSourceLines(String filename, int line, int count) ;
+  public List <LocalVariable> getLocals(NativeCallFrame f) ;
 
   /** Stepping */
-  public void step() throws IOException;
-  public void next() throws IOException;
+  public void step() ;
+  public void next() ;
   
   /** Inspecting the memory. */
-  public String getJNIEnv() throws IOException;
-  public String eval(NativeCallFrame f, String expr) throws IOException;
-  public void setVariable(NativeCallFrame f, String name, String expr) throws IOException;
+  public String eval(NativeCallFrame f, String expr) ;
+  public void setVariable(NativeCallFrame f, String name, String expr) ;
+  public String getNewCTmpVarIdentifier();  
+  public void resetConvenienceVariables(); 
 
   /** Obtain the type of the C expression including convenience variable. */
-  public String whatis(NativeCallFrame f, String expr) throws IOException;
+  public String whatis(NativeCallFrame f, String expr) ;
 
   /** Run the native debugger specific raw command line, and return the response. */
-  public String runCommand(String command) throws IOException;
+  public String runCommand(String command) ;
 
   /** Perform debugger's internal event handling. */
   public void dispatch(Event e);
-  
-  /** Get the logging message. */
-  public String getLastOutputMessage();
+
+  public boolean isDead();
 }

@@ -23,10 +23,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.HashMap;
 
-import xtc.tree.Node;
 import xtc.tree.Location;
-import xtc.util.Pair;
-import xtc.util.Runtime;
 
 import xtc.lang.cpp.Syntax.Kind;
 import xtc.lang.cpp.Syntax.LanguageTag;
@@ -47,9 +44,9 @@ import xtc.lang.cpp.ForkMergeParser.Lookahead;
  * This class implements the generated CActionsBase class.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.15 $
+ * @version $Revision: 1.23 $
  */
-public class CParsingContext implements Actions.Context {
+public class CParsingContext implements ParsingContext {
 
   /** Output bindings and scope changes. */
   protected static boolean DEBUG = false;
@@ -69,9 +66,6 @@ public class CParsingContext implements Actions.Context {
    */
   protected boolean reentrant;
 
-  /** The xtc runtime. */
-  Runtime runtime;
-
   /** Whether to display language statistics. */
   boolean languageStatistics;
 
@@ -85,14 +79,9 @@ public class CParsingContext implements Actions.Context {
     TRUEFALSE
   }
 
-  /**
-   * Create a new initial C parsing contex.
-   *
-   * @param runtime The xtc runtime for reporting and command-line
-   * arguments.
-   */
-  public CParsingContext(Runtime runtime) {
-    this(new SymbolTable(), null, runtime);
+  /** Create a new initial C parsing contex. */
+  public CParsingContext() {
+    this(new SymbolTable(), null);
   }
   
   /**
@@ -101,46 +90,62 @@ public class CParsingContext implements Actions.Context {
    * @param symtab The symbol table for this parsing context and scope.
    * @param parent The parent parsing context and scope.
    */
-  public CParsingContext(SymbolTable symtab, CParsingContext parent,
-                         Runtime runtime) {
+  public CParsingContext(SymbolTable symtab, CParsingContext parent) {
     this.symtab = symtab;
     this.parent = parent;
-    this.runtime = runtime;
 
     this.reentrant = false;
+  }
 
-    this.languageStatistics = runtime.test("statisticsLanguage");
+  /**
+   * Turn language statistics collection on.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void collectStatistics(boolean b) {
+    languageStatistics = b;
   }
 
   /**
    * Copy a C parsing context.  Used for forking the parsing context.
    *
-   * @scope The parsing context to copy.
+   * @param scope The parsing context to copy.
    */
-  public CParsingContext(CParsingContext scope, Runtime runtime) {
+  public CParsingContext(CParsingContext scope) {
     this.symtab = scope.symtab.addRef();
 
     if (scope.parent != null) {
-      this.parent = new CParsingContext(scope.parent, runtime);
+      this.parent = new CParsingContext(scope.parent);
 
     } else {
       this.parent = null;
     }
 
     this.reentrant = scope.reentrant;
-    this.runtime = runtime;
   }
   
-  public Actions.Context fork() {
-    return new CParsingContext(this, runtime);
+  public ParsingContext fork() {
+    return new CParsingContext(this);
   }
 
+  /**
+   * Check whether a syntax token is an identifier.
+   *
+   * @return true if syntax is an identifier.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean isIdentifier(Syntax syntax) {
+    return syntax.kind() == Kind.LANGUAGE
+      && ((Language<CTag>)syntax).toLanguage().tag() == CTag.IDENTIFIER;
+  }
+
+
+  // get around capture of ? to CTag warning
   public boolean shouldReclassify(Collection<Lookahead> set) {
     // Check whether any tokens need reclassification, i.e. they are
     // an identifier and have an entry in the symbol.
     for (Lookahead n : set) {
-      if (n.token.syntax.kind() == Kind.LANGUAGE
-          && n.token.syntax.toLanguage().tag() == CTag.IDENTIFIER) { 
+      if (isIdentifier(n.token.syntax)) { 
         String ident = n.token.syntax.getTokenText();
 
         // Check the stack of symbol tables for a typedef entry.
@@ -171,6 +176,7 @@ public class CParsingContext implements Actions.Context {
     return false;
   }
 
+  // get around capture of ? to CTag warning
   public Collection<Lookahead> reclassify(Collection<Lookahead> set) {
     // Reclassify any tokens that are typedef names and also create a
     // new token when there is a typedef/var ambiguity so the FMLR
@@ -179,9 +185,7 @@ public class CParsingContext implements Actions.Context {
     for (Lookahead n : set) {
       // Get the symbol table entry for the token.
       trit isTypedef = trit.FALSE;
-      if (n.token.syntax.kind() == Kind.LANGUAGE
-          && n.token.syntax.toLanguage().tag() == CTag.IDENTIFIER) { 
-          
+      if (isIdentifier(n.token.syntax)) {
         isTypedef = isType(n.token.syntax.getTokenText(),
                            n.presenceCondition, n.token.syntax.getLocation());
       }
@@ -217,17 +221,7 @@ public class CParsingContext implements Actions.Context {
         newToken.setLocation(n.token.syntax.getLocation());
 
         // Copy the ordering wrapper for the token.
-        OrderedSyntax newOrdered;
-        try {
-          newOrdered = n.token.copy(newToken);
-        } catch (java.io.IOException e) {
-          // OrderedSyntax.copy() can throw an IOException because it
-          // may have to read from the input stream.  The Actions
-          // interface does not throw an IOException, so we throw a
-          // RuntimeException instead.
-          throw new RuntimeException(e);
-        }
-        n.token = newOrdered;
+        n.token = n.token.copy(newToken);
         break;
 
       case FALSE:
@@ -247,7 +241,8 @@ public class CParsingContext implements Actions.Context {
    * @param ident The identifier.
    * @param presenceCondition The presence condition.
    */
-  public trit isType(String ident, PresenceCondition presenceCondition, Location location) {
+  public trit isType(String ident, PresenceCondition presenceCondition,
+                     Location location) {
     CParsingContext scope;
     
     scope = this;
@@ -304,8 +299,8 @@ public class CParsingContext implements Actions.Context {
           if (DEBUG) System.err.println("isType: " + ident
                                         + " true/false in " /*+ presenceCondition*/);
           if (languageStatistics) {
-            runtime.errConsole().pln(String.format("typedef_ambiguity %s %s",
-                                                   ident, location)).flush();
+            System.err.println(String.format("typedef_ambiguity %s %s",
+                                             ident, location));
           }
           return trit.TRUEFALSE;
 
@@ -334,7 +329,7 @@ public class CParsingContext implements Actions.Context {
     return trit.FALSE;
   }
   
-  public boolean mayMerge(Actions.Context other) {
+  public boolean mayMerge(ParsingContext other) {
     if (! (other instanceof CParsingContext)) return false;
 
     return mergeable(this, (CParsingContext) other);
@@ -360,7 +355,7 @@ public class CParsingContext implements Actions.Context {
     }
   }
   
-  public Actions.Context merge(Actions.Context other) {
+  public ParsingContext merge(ParsingContext other) {
     CParsingContext scope = (CParsingContext) other;
 
     if (this.symtab == scope.symtab) {
@@ -466,9 +461,7 @@ public class CParsingContext implements Actions.Context {
       scope = scope.parent;
     }
     
-    scope = new CParsingContext(new SymbolTable(), new CParsingContext(scope,
-                                                                       runtime),
-                                runtime);
+    scope = new CParsingContext(new SymbolTable(), new CParsingContext(scope));
     
     return scope;
   }
@@ -476,7 +469,7 @@ public class CParsingContext implements Actions.Context {
   /**
    * Exit the scope.
    *
-   * @param context The current presence condition.
+   * @param presenceCondition The current presence condition.
    * @return The parsing context of the parent scope.
    */
   public CParsingContext exitScope(PresenceCondition presenceCondition) {
@@ -501,7 +494,7 @@ public class CParsingContext implements Actions.Context {
   /**
    * Exit a reentrant scope.
    *
-   * @param context The current presence condition.
+   * @param presenceCondition The current presence condition.
    * @return The parsing context of the parent scope.
    */
   public CParsingContext exitReentrantScope(PresenceCondition presenceCondition) {
@@ -524,7 +517,7 @@ public class CParsingContext implements Actions.Context {
   /**
    * Reenter a reentrant scope.
    *
-   * @param context The current presence condition.
+   * @param presenceCondition The current presence condition.
    * @return The parsing context of the reentered scope.
    */
   public CParsingContext reenterScope(PresenceCondition presenceCondition) {

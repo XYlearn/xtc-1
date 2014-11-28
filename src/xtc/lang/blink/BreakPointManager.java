@@ -1,6 +1,5 @@
 package xtc.lang.blink;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -65,7 +64,7 @@ public final class BreakPointManager {
    * @param sourceLine The source line number.
    */
   NativeSourceLineBreakPoint setNativeBreakpoint(String sourceFile, int sourceLine) 
-    throws IOException {
+     {
     //create a native breakpoint.
     NativeSourceLineBreakPoint nbp;
     boolean deferred;
@@ -90,7 +89,7 @@ public final class BreakPointManager {
     return nbp;
   }
 
-  NativeSymbolBreakpoint setNativeBreakpoint(String symbol) throws IOException {
+  NativeSymbolBreakpoint setNativeBreakpoint(String symbol)  {
     NativeSymbolBreakpoint nbp;
     boolean deferred;
     if (dbg.IsNativeDebuggerAttached()) {
@@ -217,7 +216,7 @@ public final class BreakPointManager {
       sb.append(id).append("  ");
       sb.append(bp.toString()).append('\n');
     }
-    dbg.out(sb.toString());
+    dbg.out("%s", sb.toString());
   }
 
   /**
@@ -246,8 +245,6 @@ public final class BreakPointManager {
           resolved.add(id);
         }
       }
-    } catch(IOException e) {
-      dbg.err("error during resolving defered native break points.\n"); 
     } finally {
       for(final Integer id : resolved) {
         deferredNativeBreakpoints.remove(id);
@@ -354,14 +351,9 @@ public final class BreakPointManager {
         if(!dbg.ensureGDBContext()) {
           return false;
         }
-        try {
-          // try to set the break point
-          dbg.ndb.enableBreakpoint(nativeBreakpointID);
-          mdbState = BreakPointState.ENABLED;
-        } catch (IOException e) {
-          dbg.err("could not set the break point.");
-          return false;
-        }
+        // try to set the break point
+        dbg.ndb.enableBreakpoint(nativeBreakpointID);
+        mdbState = BreakPointState.ENABLED;
         return true;
       default:
         assert false : "not reachable.";
@@ -383,12 +375,7 @@ public final class BreakPointManager {
           dbg.err("counld not disable break point: " + this + "\n");
          return false; 
         }
-        try {
-          dbg.ndb.disableBreakpoint(nativeBreakpointID);
-        } catch (IOException e) {
-          dbg.err("cound not resent the break point");
-          return false;
-        }
+        dbg.ndb.disableBreakpoint(nativeBreakpointID);
         mdbState = BreakPointState.DISABLED;
         return true;
       }
@@ -542,13 +529,8 @@ public final class BreakPointManager {
         if(!dbg.ensureJDBContext()) {
           return false;
         }
-        try {
-          // try to set the break point
-          dbg.jdb.setBreakPoint(className, lineNumber);
-        } catch (IOException e) {
-          dbg.err("could not set the break point.");
-          return false;
-        }
+        // try to set the break point
+        dbg.jdb.setBreakPoint(className, lineNumber);
         mdbState = BreakPointState.ENABLED;
         return true;
       case ENABLED:
@@ -567,15 +549,10 @@ public final class BreakPointManager {
       case DISABLED:
         return true;
       case ENABLED:
-        try {
-          if (!dbg.ensureJDBContext()) {
-            return false;
-          }
-          dbg.jdb.clearBreakPoint(className, lineNumber);
-        } catch (IOException e) {
-          dbg.err("cound not resent the break point");
+        if (!dbg.ensureJDBContext()) {
           return false;
         }
+        dbg.jdb.clearBreakPoint(className, lineNumber);
         mdbState = BreakPointState.DISABLED;
         return true;
       }
@@ -616,13 +593,8 @@ public final class BreakPointManager {
         if(!dbg.ensureJDBContext()) {
           return false;
         }
-        try {
-          // try to set the break point
-          dbg.jdb.setBreakPoint(cname + "." + mname);
-        } catch (IOException e) {
-          dbg.err("could not set the break point.");
-          return false;
-        }
+        // try to set the break point
+        dbg.jdb.setBreakPoint(cname + "." + mname);
         mdbState = BreakPointState.ENABLED;
         return true;
       case ENABLED:
@@ -640,15 +612,10 @@ public final class BreakPointManager {
       case DISABLED:
         return true;
       case ENABLED:
-        try {
-          if (!dbg.ensureJDBContext()) {
-            return false;
-          }
-          dbg.jdb.clearBreakPoint(cname + "." + "mname");
-        } catch (IOException e) {
-          dbg.err("cound not resent the break point");
+        if (!dbg.ensureJDBContext()) {
           return false;
         }
+        dbg.jdb.clearBreakPoint(cname + "." + "mname");
         mdbState = BreakPointState.DISABLED;
         return true;
       }

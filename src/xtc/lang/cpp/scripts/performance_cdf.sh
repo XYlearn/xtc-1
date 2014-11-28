@@ -21,10 +21,28 @@
 # This takes the performance statistics output from linux_test.sh or
 # typechef_test.sh and produces a CDF of per-file times.
 
+inc=.1 # the default increment of seconds for percentiles
+
+while getopts :i: opt; do
+    case $opt in
+        i)
+            inc=$OPTARG
+            ;;
+        \?)
+            echo "(`basename $0`)" "Invalid argument: -$OPTARG"
+            ;;
+        :)
+            echo "(`basename $0`)" "-$OPTARG requires an argument."
+            ;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+
 files=$@
 
 if [[ -z $files ]]; then
-    echo "USAGE: `basename $0` file file ..."
+    echo "USAGE: `basename $0` [-i increment] file file ..."
     exit 1
 fi
 
@@ -32,13 +50,13 @@ total=`cat $files | grep "^performance" \
     | awk 'BEGIN{sum = 0} {sum += 1} END{print sum}'`
 
 cat $files | grep "^performance" | awk '{print $3, $2}' | sort -n \
-    | awk -v total=$total 'BEGIN{seconds=0; count=0}
+    | awk -v total=$total -v inc=$inc 'BEGIN{seconds=0; count=0}
 {
 
 if ($1 > seconds) {
 print seconds, count / total
   while ($1 > seconds) {
-    seconds += .1
+    seconds += inc
   }
 }
 

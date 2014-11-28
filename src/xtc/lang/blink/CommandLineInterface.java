@@ -31,6 +31,7 @@ class CommandLineInterface extends Thread implements BlinkEventSource {
    * @param dbg The Blink debugger.
    */
   CommandLineInterface(Blink dbg) {
+    super("CommandLineProcessingThread");
     this.dbg = dbg;
   }
 
@@ -41,11 +42,6 @@ class CommandLineInterface extends Thread implements BlinkEventSource {
 
   /** Monitor user input, and enqueue a user message event. */
   public void run() {
-
-    if (dbg.options.getVerboseLevel() >= 1 ) {
-      dbg.out("beginning user input line read thread.\n");
-    }
-
     while (true) {
       String line;
       try {
@@ -61,10 +57,6 @@ class CommandLineInterface extends Thread implements BlinkEventSource {
         break;
       }
       dbg.enqueEvent(new UserCommandEvent(this, line));
-    }
-
-    if (dbg.options.getVerboseLevel() >= 1 ) {
-      dbg.out("finishing user input line read thread.\n");
     }
   }
 

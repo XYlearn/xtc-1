@@ -21,12 +21,13 @@
 # Create a temporary file with a unique name.  Uses the tempfile
 # command if the system has it.
 
-which tempfile >/dev/null
+tmpdir="/scratch/pcg234/tmp"
+
+which tempfile >/dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-    tempfile $@
+    tempfile -d $tmpdir $@
 else
-    tmpdir="/tmp"
     prefix="file"
     suffix=
     while getopts :p:s: opt; do

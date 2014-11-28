@@ -22,7 +22,7 @@
 # Gather command-line parameters.
 
 cppTool="gcc -E"
-while getopts :S:J:G:C:gak:s:mMi opt; do
+while getopts :S:J:G:C:gaek:s:mMi opt; do
     case $opt in
         S)
             supercArgs="$OPTARG"
@@ -39,8 +39,14 @@ while getopts :S:J:G:C:gak:s:mMi opt; do
         g)
             gccCompare=true
             ;;
+        E)
+            errCompare=true
+            ;;
         a)
             allCompare=true
+            ;;
+        e)
+            allErrCompare=true
             ;;
         k)
             knownCompare=true
@@ -81,7 +87,9 @@ if [[ $# -eq 0 ]]; then
     echo ""
     echo "OPTIONS"
     echo "  -g               Compare SuperC output to (g)cc output."
+    # echo "  -e               Also compare (e)rror out for -g."
     echo "  -a               Compare (a)ll configurations to gcc output."
+    echo "  -e               Compare all configs of error messages to gcc."
     echo "  -k extension     Compare SuperC output to (k)nown correct output."
     echo "  -s extension     Check that max (s)ubparsers are the same."
     echo "  -m               (m)ake test files for -k and -s."
@@ -102,14 +110,15 @@ fi
 commands=0
 if [ ! -z "$gccCompare" ]; then commands=$((commands+1)); fi;
 if [ ! -z "$allCompare" ]; then commands=$((commands+1)); fi;
+if [ ! -z "$allErrCompare" ]; then commands=$((commands+1)); fi;
 if [ ! -z "$knownCompare" ]; then commands=$((commands+1)); fi;
 if [ ! -z "$maxCompare" ]; then commands=$((commands+1)); fi;
 
 if [ $commands -eq 0 ]; then
-    echo "Please specify one of -g, -a, -k, or -s."
+    echo "Please specify one of -g, -a, -e, -k, or -s."
     exit
 elif [ $commands -gt 1 ]; then
-    echo "Please specify no more than one of -g, -a, -k, or -s."
+    echo "Please specify no more than one of -g, -a, -e, -k, or -s."
     exit
 fi
 
@@ -121,6 +130,11 @@ fi
 if [[ ! -z "$allCompare" && ! -z "$saveIntermediate" ]]; then
     echo "-i cannot be used with -a because it produces many files.  Instead rerun with"
     echo "-g and a single configuration setting with -G."
+    exit
+fi
+
+if [[ ! -z "$errCompare" && -z "$gccCompare" ]]; then
+    echo "-e requires -g"
     exit
 fi
 
@@ -151,25 +165,47 @@ do
             tempfiles=$tempfilebase
             superc=$tempfilebase.super.c
             supercE=$tempfilebase.super.E
+            supercEerr=$tempfilebase.super.C.err
+            supercEerr_stripped=$tempfilebase.super.C.err_stripped
             gccE=$tempfilebase.gcc.E
+            gccEerr=$tempfilebase.gcc.E.err
+            gccEerr_stripped=$tempfilebase.gcc.E.err_stripped
             diff=$tempfilebase.diff
+            differr=$tempfilebase.diff
             if [ -z "$saveIntermediate" ]; then
-                tempfiles="$tempfiles $superc $supercE $gccE $diff"
+                tempfiles="$tempfiles $superc $supercE $supercEerr \
+$supercEerr_stripped $gccE $gccEerr $gccEerr_stripped $diff $differr"
             fi
             trap "rm -f -- $tempfilebase $tempfiles" EXIT
 
             echo "Testing $file"
             java $jvmFlags xtc.lang.cpp.SuperC \
-                -silent $supercArgs $file > $superc 2>/dev/null
+                -silent $supercArgs $file > $superc 2>$supercEerr
             $cppTool $gccArgs $superc > $supercE 2>/dev/null
-            $cppTool $gccArgs $file > $gccE 2>/dev/null
+            $cppTool $gccArgs $file > $gccE 2>$gccEerr
             java xtc.lang.cpp.cdiff $gccE $supercE > $diff
             if [ $? -ne 0 ]; then
                 cat $diff
                 echo "failed $file"
                 errors=$((errors+1))
             else
-                passed=$((passed+1))
+                if [ ! -z "$errCompare" ]; then
+                    # Ignore line numbers for now.  Remove xtc
+                    # Runtime's "## errors" line
+                    cat $supercEerr | egrep -v "^[[:digit:]]+ (error|errors)$" \
+                        | sed 's/^.*\(error:.*\)$/\1/' > $supercEerr_stripped
+                    sed 's/^.*\(error:.*\)$/\1/' $gccEerr > $gccEerr_stripped
+                    diff $supercEerr_stripped $gccEerr_stripped > $differr
+                    if [ $? -ne 0 ]; then
+                        cat $differr
+                        echo "failed $file (error output)"
+                        errors=$((errors+1))
+                    else
+                        passed=$((passed+1))
+                    fi
+                else
+                    passed=$((passed+1))
+                fi
             fi
             if [ ! -z "$saveIntermediate" ]; then
                 echo "intermediate files $tempfilebase*"
@@ -193,7 +229,8 @@ do
                         read -p "Set comparison file $known? [y/N] " yn
                         case $yn in
                             [Yy]* )
-                                cp $superc $known
+                              echo "#superc_args $supercArgs" > $known
+                              cat $superc >> $known
                                 ;;
                             * )
                                 ;;
@@ -237,7 +274,8 @@ do
             diff=$tempfilebase.diff
             alldiff=$tempfilebase.alldiff
             if [ -z "$saveIntermediate" ]; then
-                tempfiles="$tempfiles $powerset $superc $supercE $gccE $diff $alldiff"
+                tempfiles="$tempfiles $powerset $superc $supercE $gccE $diff \
+$alldiff"
             fi
             trap "rm -f -- $tempfilebase $tempfiles" EXIT
 
@@ -245,7 +283,8 @@ do
             java xtc.lang.cpp.SuperC \
                 -silent -configurationVariables -preprocessor $file 2>&1 \
                 | grep "config_var" | awk '{print $2}' \
-                | $JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/powerset.py > $powerset
+                | python $JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/powerset.py \
+                > $powerset
 
             if [ $? -ne 0 ]; then
                 echo "Testing $file with none (too many configurations to test)"
@@ -262,14 +301,14 @@ do
                     passed=$((passed+1))
                 fi
             else
+                java $jvmFlags xtc.lang.cpp.SuperC -silent $supercArgs \
+                    $file > $superc 2>/dev/null
                 cat $powerset | while read set; do
                     if [ -z "$set" ]; then
                         echo "Testing $file with none"
                     else
                         echo "Testing $file with $set"
                     fi
-                    java $jvmFlags xtc.lang.cpp.SuperC -silent $supercArgs \
-                        $file > $superc 2>/dev/null
                     $cppTool $gccArgs $set $superc > $supercE 2>/dev/null
                     $cppTool $gccArgs $set $file > $gccE 2>/dev/null
                     java xtc.lang.cpp.cdiff $gccE $supercE > $diff
@@ -284,6 +323,61 @@ do
                     echo "failed $file"
                 else
                     passed=$((passed+1))
+                fi
+            fi
+        elif [ ! -z "$allErrCompare" ]; then
+            tempfilebase=$($JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/tempfile.sh -p gcmp) || exit
+            tempfiles=$tempfilebase
+            powerset=$($JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/tempfile.sh) || exit
+            superc=$tempfilebase.super.c
+            supercE=$tempfilebase.super.E
+            supercEstrip=$tempfilebase.super.E.strip
+            gccE=$tempfilebase.gcc.E
+            gccEall=$tempfilebase.gcc.E.all
+            gccEallsorted=$tempfilebase.gcc.E.all.sorted
+            diff=$tempfilebase.diff
+            if [ -z "$saveIntermediate" ]; then
+                tempfiles="$tempfiles $powerset $superc $supercE $gccE \
+$gccEall $gccEallsorted $diff"
+            fi
+            trap "rm -f -- $tempfilebase $tempfiles" EXIT
+
+            # Get all combinations of configuration variables.
+            java xtc.lang.cpp.SuperC \
+                -silent -configurationVariables -preprocessor $file 2>&1 \
+                | grep "config_var" | awk '{print $2}' \
+                | python $JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/powerset.py \
+                > $powerset
+
+            if [ $? -ne 0 ]; then
+                echo -e "Skipping $file, because there are too many \
+configuration variables to test all\ncombinations."
+                skipped=$((skipped+1))
+            else
+                java $jvmFlags xtc.lang.cpp.SuperC -silent $supercArgs \
+                    $file >/dev/null 2>$supercE
+                # Strip xtc "## errors" message.  And strip line
+                # numbers for now.
+                cat $supercE | egrep -v "^[[:digit:]]+ (error|errors)$" \
+                    | sort | sed 's/^.*\(error:.*\)$/\1/' > $supercEstrip
+
+                cat $powerset | while read set; do
+                    $cppTool $gccArgs $set $file >/dev/null 2>$gccE
+                    cat $gccE | sed 's/^.*\(error:.*\)$/\1/' >> $gccEall
+                done
+
+                cat $gccEall | sort | uniq > $gccEallsorted
+
+                diff $gccEallsorted $supercEstrip > $diff
+                if [ $? -ne 0 ]; then
+                    cat $diff
+                    errors=$((errors+1))
+                    echo "failed $file"
+                else
+                    passed=$((passed+1))
+                fi
+                if [ ! -z "$saveIntermediate" ]; then
+                    echo "intermediate files $tempfilebase*"
                 fi
             fi
         fi
@@ -327,9 +421,9 @@ if [ -z "$makeCompare" ]; then
             fi
         else
             if [ $skipped -eq 1 ]; then
-                echo "$skipped file not found"
+                echo "$skipped file not done"
             else
-                echo "$skipped files not found"
+                echo "$skipped files not done"
             fi
         fi
     fi

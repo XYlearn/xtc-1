@@ -152,7 +152,7 @@ public class EventUtil {
       RawTextMessageEvent me = (RawTextMessageEvent)e; 
       String msg = new String(me.getMessage());
       buf.append(msg);
-      m.reset();
+      m.reset(buf);
       if (m.find()) {
         setResult(m);
         return true;
@@ -200,7 +200,7 @@ public class EventUtil {
     public J2CCompletionEventHandler(JavaDebugger sourceFilter) {
       super(sourceFilter);
     }
-    
+
     boolean dispatch(Event e) {
       if (getResult() != null) {return true;}
       if (e instanceof Java2NativeCompletionEvent 

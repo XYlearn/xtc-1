@@ -1,6 +1,8 @@
 package xtc.lang.blink;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 import xtc.lang.blink.Event.RawTextMessageEvent;
 import xtc.lang.blink.agent.AgentCommandOptions;
@@ -20,10 +22,10 @@ public class DebugeeJVM extends StdIOProcess implements AgentCommandOptions {
   /**
    * Launch the debuggee JVM and return the JPDA listener address.
    * 
-   * @param argument The arguments.
+   * @param args The arguments.
    * @param address The listener address.
    */
-  public void beginDebugSession(String argument, String address) throws IOException {
+  public void beginDebugSession(String[] args, String address)  {
 
     final String transport;
     if (System.getProperty("os.name").startsWith("Windows")) {
@@ -33,25 +35,24 @@ public class DebugeeJVM extends StdIOProcess implements AgentCommandOptions {
     }
 
     final StringBuffer agentOptions = new StringBuffer();
-    agentOptions.append("=bia=y");
-    if (dbg.options.isJniCheck()) {
-      agentOptions.append("," + JNICHECK + "=y");
+    if (dbg.options.hasJniCheck()) {
+      agentOptions.append(JNICHECK + "=y");
     } else {
-    	agentOptions.append("," + JNICHECK + "=n");
+    	agentOptions.append(JNICHECK + "=n");
     }
 
-    final String jvmCommand = "java " 
-      + "-Xdebug -agentlib:jdwp=server=n,suspend=y" 
-      + ",transport=" + transport  
-      + ",address=" + address + " "
-      + "-agentpath:" + Blink.ensureAgentLibraryPath() 
-      + agentOptions.toString()
-      + " " + argument;
-
-    if (dbg.options.getVerboseLevel() >= 1) {
-      dbg.out("executing: " + jvmCommand + "\n");
-    }
-    begin(jvmCommand.split("\\s+"));;
+    final List<String> jvmCommand= new LinkedList<String>();
+    final String[] jvmCommandPrefix =  {
+        "java", 
+        String.format("-agentpath:%s=%s",dbg.ensureAgentLibraryPath(), agentOptions.toString()),
+        //"-Xdebug",
+        String.format("-agentlib:jdwp=server=n,suspend=y,transport=%s,address=%s", transport, address),
+    };
+    for(String a:jvmCommandPrefix)
+      jvmCommand.add(a);
+    for(String a:args)
+      jvmCommand.add(a);
+    begin(jvmCommand.toArray(new String[0]));
   }
 
   /**

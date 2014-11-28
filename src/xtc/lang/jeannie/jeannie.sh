@@ -156,7 +156,7 @@ case $PLATFORM in
   Linux)
     JNI_HDRDIR=$JAVA_HOME/include
     CC_JNI="$CC -I$JNI_HDRDIR -I$JNI_HDRDIR/linux"
-    CC_DLL="$CC_JNI -shared"
+    CC_DLL="$CC_JNI -shared -fPIC"
     PATH_SEP=':'
     DLL_PREFIX=lib
     DLL_SUFFIX=.so

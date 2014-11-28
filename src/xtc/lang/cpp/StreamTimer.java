@@ -18,14 +18,16 @@
  */
 package xtc.lang.cpp;
 
+import java.util.Iterator;
+
 /**
  * A stream that times another stream.
  *
  * @author Paul Gazzillo
  */
-public class StreamTimer implements Stream {
+public class StreamTimer<T> implements Iterator<T> {
   /** The stream to time. */
-  Stream stream;
+  Iterator<T> stream;
 
   /** The stopwatch to use for timing. */
   StopWatch stopWatch;
@@ -36,22 +38,26 @@ public class StreamTimer implements Stream {
    * @param stream The stream to time.
    * @param stopWatch the stopwatch to use for timing.
    */
-  public StreamTimer(Stream stream, StopWatch stopWatch) {
+  public StreamTimer(Iterator<T> stream, StopWatch stopWatch) {
     this.stream = stream;
     this.stopWatch = stopWatch;
   }
 
-  public Syntax scan() throws java.io.IOException {
-    Syntax syntax;
+  public T next() {
+    T syntax;
 
     stopWatch.start();
-    syntax = stream.scan();
+    syntax = stream.next();
     stopWatch.stop();
 
     return syntax;
   }
 
-  public boolean done() {
-    return stream.done();
+  public boolean hasNext() {
+    return stream.hasNext();
+  }
+
+  public void remove() {
+    throw new UnsupportedOperationException();
   }
 }

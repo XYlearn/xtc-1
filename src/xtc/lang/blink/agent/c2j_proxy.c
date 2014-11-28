@@ -6,247 +6,13 @@ Please, do not edit manually.*/
 #include <jvmti.h>
 #include "agent_main.h"
 #include "state.h"
-#include "common.h"
+#include "util.h"
 #include "agent.h"
 #include "options.h"
-#include "java_method.h"
 #include "jnicheck.h"
 #include "classfile_constants.h"
 
 static jniNativeInterface* proxy_jni_funcs = NULL;
-struct bda_c2j_stat_count_jint {
-  jint GetVersion;
-  jint DefineClass;
-  jint FindClass;
-  jint FromReflectedMethod;
-  jint FromReflectedField;
-  jint ToReflectedMethod;
-  jint GetSuperclass;
-  jint IsAssignableFrom;
-  jint ToReflectedField;
-  jint Throw;
-  jint ThrowNew;
-  jint ExceptionOccurred;
-  jint ExceptionDescribe;
-  jint ExceptionClear;
-  jint FatalError;
-  jint PushLocalFrame;
-  jint PopLocalFrame;
-  jint NewGlobalRef;
-  jint DeleteGlobalRef;
-  jint DeleteLocalRef;
-  jint IsSameObject;
-  jint NewLocalRef;
-  jint EnsureLocalCapacity;
-  jint AllocObject;
-  jint NewObject;
-  jint NewObjectV;
-  jint NewObjectA;
-  jint GetObjectClass;
-  jint IsInstanceOf;
-  jint GetMethodID;
-  jint CallObjectMethod;
-  jint CallObjectMethodV;
-  jint CallObjectMethodA;
-  jint CallBooleanMethod;
-  jint CallBooleanMethodV;
-  jint CallBooleanMethodA;
-  jint CallByteMethod;
-  jint CallByteMethodV;
-  jint CallByteMethodA;
-  jint CallCharMethod;
-  jint CallCharMethodV;
-  jint CallCharMethodA;
-  jint CallShortMethod;
-  jint CallShortMethodV;
-  jint CallShortMethodA;
-  jint CallIntMethod;
-  jint CallIntMethodV;
-  jint CallIntMethodA;
-  jint CallLongMethod;
-  jint CallLongMethodV;
-  jint CallLongMethodA;
-  jint CallFloatMethod;
-  jint CallFloatMethodV;
-  jint CallFloatMethodA;
-  jint CallDoubleMethod;
-  jint CallDoubleMethodV;
-  jint CallDoubleMethodA;
-  jint CallVoidMethod;
-  jint CallVoidMethodV;
-  jint CallVoidMethodA;
-  jint CallNonvirtualObjectMethod;
-  jint CallNonvirtualObjectMethodV;
-  jint CallNonvirtualObjectMethodA;
-  jint CallNonvirtualBooleanMethod;
-  jint CallNonvirtualBooleanMethodV;
-  jint CallNonvirtualBooleanMethodA;
-  jint CallNonvirtualByteMethod;
-  jint CallNonvirtualByteMethodV;
-  jint CallNonvirtualByteMethodA;
-  jint CallNonvirtualCharMethod;
-  jint CallNonvirtualCharMethodV;
-  jint CallNonvirtualCharMethodA;
-  jint CallNonvirtualShortMethod;
-  jint CallNonvirtualShortMethodV;
-  jint CallNonvirtualShortMethodA;
-  jint CallNonvirtualIntMethod;
-  jint CallNonvirtualIntMethodV;
-  jint CallNonvirtualIntMethodA;
-  jint CallNonvirtualLongMethod;
-  jint CallNonvirtualLongMethodV;
-  jint CallNonvirtualLongMethodA;
-  jint CallNonvirtualFloatMethod;
-  jint CallNonvirtualFloatMethodV;
-  jint CallNonvirtualFloatMethodA;
-  jint CallNonvirtualDoubleMethod;
-  jint CallNonvirtualDoubleMethodV;
-  jint CallNonvirtualDoubleMethodA;
-  jint CallNonvirtualVoidMethod;
-  jint CallNonvirtualVoidMethodV;
-  jint CallNonvirtualVoidMethodA;
-  jint GetFieldID;
-  jint GetObjectField;
-  jint GetBooleanField;
-  jint GetByteField;
-  jint GetCharField;
-  jint GetShortField;
-  jint GetIntField;
-  jint GetLongField;
-  jint GetFloatField;
-  jint GetDoubleField;
-  jint SetObjectField;
-  jint SetBooleanField;
-  jint SetByteField;
-  jint SetCharField;
-  jint SetShortField;
-  jint SetIntField;
-  jint SetLongField;
-  jint SetFloatField;
-  jint SetDoubleField;
-  jint GetStaticMethodID;
-  jint CallStaticObjectMethod;
-  jint CallStaticObjectMethodV;
-  jint CallStaticObjectMethodA;
-  jint CallStaticBooleanMethod;
-  jint CallStaticBooleanMethodV;
-  jint CallStaticBooleanMethodA;
-  jint CallStaticByteMethod;
-  jint CallStaticByteMethodV;
-  jint CallStaticByteMethodA;
-  jint CallStaticCharMethod;
-  jint CallStaticCharMethodV;
-  jint CallStaticCharMethodA;
-  jint CallStaticShortMethod;
-  jint CallStaticShortMethodV;
-  jint CallStaticShortMethodA;
-  jint CallStaticIntMethod;
-  jint CallStaticIntMethodV;
-  jint CallStaticIntMethodA;
-  jint CallStaticLongMethod;
-  jint CallStaticLongMethodV;
-  jint CallStaticLongMethodA;
-  jint CallStaticFloatMethod;
-  jint CallStaticFloatMethodV;
-  jint CallStaticFloatMethodA;
-  jint CallStaticDoubleMethod;
-  jint CallStaticDoubleMethodV;
-  jint CallStaticDoubleMethodA;
-  jint CallStaticVoidMethod;
-  jint CallStaticVoidMethodV;
-  jint CallStaticVoidMethodA;
-  jint GetStaticFieldID;
-  jint GetStaticObjectField;
-  jint GetStaticBooleanField;
-  jint GetStaticByteField;
-  jint GetStaticCharField;
-  jint GetStaticShortField;
-  jint GetStaticIntField;
-  jint GetStaticLongField;
-  jint GetStaticFloatField;
-  jint GetStaticDoubleField;
-  jint SetStaticObjectField;
-  jint SetStaticBooleanField;
-  jint SetStaticByteField;
-  jint SetStaticCharField;
-  jint SetStaticShortField;
-  jint SetStaticIntField;
-  jint SetStaticLongField;
-  jint SetStaticFloatField;
-  jint SetStaticDoubleField;
-  jint NewString;
-  jint GetStringLength;
-  jint GetStringChars;
-  jint ReleaseStringChars;
-  jint NewStringUTF;
-  jint GetStringUTFLength;
-  jint GetStringUTFChars;
-  jint ReleaseStringUTFChars;
-  jint GetArrayLength;
-  jint NewObjectArray;
-  jint GetObjectArrayElement;
-  jint SetObjectArrayElement;
-  jint NewBooleanArray;
-  jint NewByteArray;
-  jint NewCharArray;
-  jint NewShortArray;
-  jint NewIntArray;
-  jint NewLongArray;
-  jint NewFloatArray;
-  jint NewDoubleArray;
-  jint GetBooleanArrayElements;
-  jint GetByteArrayElements;
-  jint GetCharArrayElements;
-  jint GetShortArrayElements;
-  jint GetIntArrayElements;
-  jint GetLongArrayElements;
-  jint GetFloatArrayElements;
-  jint GetDoubleArrayElements;
-  jint ReleaseBooleanArrayElements;
-  jint ReleaseByteArrayElements;
-  jint ReleaseCharArrayElements;
-  jint ReleaseShortArrayElements;
-  jint ReleaseIntArrayElements;
-  jint ReleaseLongArrayElements;
-  jint ReleaseFloatArrayElements;
-  jint ReleaseDoubleArrayElements;
-  jint GetBooleanArrayRegion;
-  jint GetByteArrayRegion;
-  jint GetCharArrayRegion;
-  jint GetShortArrayRegion;
-  jint GetIntArrayRegion;
-  jint GetLongArrayRegion;
-  jint GetFloatArrayRegion;
-  jint GetDoubleArrayRegion;
-  jint SetBooleanArrayRegion;
-  jint SetByteArrayRegion;
-  jint SetCharArrayRegion;
-  jint SetShortArrayRegion;
-  jint SetIntArrayRegion;
-  jint SetLongArrayRegion;
-  jint SetFloatArrayRegion;
-  jint SetDoubleArrayRegion;
-  jint RegisterNatives;
-  jint UnregisterNatives;
-  jint MonitorEnter;
-  jint MonitorExit;
-  jint GetJavaVM;
-  jint GetStringRegion;
-  jint GetStringUTFRegion;
-  jint GetPrimitiveArrayCritical;
-  jint ReleasePrimitiveArrayCritical;
-  jint GetStringCritical;
-  jint ReleaseStringCritical;
-  jint NewWeakGlobalRef;
-  jint DeleteWeakGlobalRef;
-  jint ExceptionCheck;
-  jint NewDirectByteBuffer;
-  jint GetDirectBufferAddress;
-  jint GetDirectBufferCapacity;
-  jint GetObjectRefType;
-};
-struct bda_c2j_stat_count_jint bda_c2j_count;
-struct bda_c2j_stat_count_jint bda_c2j_count_user;
 
 /* proxy for GetVersion*/
 static jint JNICALL bda_c2j_proxy_GetVersion(JNIEnv * env)
@@ -254,7 +20,7 @@ static jint JNICALL bda_c2j_proxy_GetVersion(JNIEnv * env)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -266,13 +32,11 @@ static jint JNICALL bda_c2j_proxy_GetVersion(JNIEnv * env)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetVersion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetVersion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetVersion")
@@ -280,13 +44,13 @@ static jint JNICALL bda_c2j_proxy_GetVersion(JNIEnv * env)
     && bda_check_no_critical(s, "GetVersion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -307,14 +71,17 @@ static jint JNICALL bda_c2j_proxy_GetVersion(JNIEnv * env)
   result = bda_orig_jni_funcs->GetVersion(env);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -327,7 +94,7 @@ static jclass JNICALL bda_c2j_proxy_DefineClass(JNIEnv * env, const char * p1, j
   /* local variables */
   jclass result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -339,13 +106,11 @@ static jclass JNICALL bda_c2j_proxy_DefineClass(JNIEnv * env, const char * p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.DefineClass++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.DefineClass++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "DefineClass")
@@ -357,13 +122,13 @@ static jclass JNICALL bda_c2j_proxy_DefineClass(JNIEnv * env, const char * p1, j
     && bda_check_assignable_jobject_jclass(s, p2, bda_clazz_classloader, 2, "DefineClass")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -384,21 +149,25 @@ static jclass JNICALL bda_c2j_proxy_DefineClass(JNIEnv * env, const char * p1, j
   result = bda_orig_jni_funcs->DefineClass(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "DefineClass")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -411,7 +180,7 @@ static jclass JNICALL bda_c2j_proxy_FindClass(JNIEnv * env, const char * p1)
   /* local variables */
   jclass result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -423,13 +192,11 @@ static jclass JNICALL bda_c2j_proxy_FindClass(JNIEnv * env, const char * p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.FindClass++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.FindClass++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "FindClass")
@@ -438,13 +205,13 @@ static jclass JNICALL bda_c2j_proxy_FindClass(JNIEnv * env, const char * p1)
     && bda_check_non_null(s, p1,  1, "FindClass")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -465,21 +232,25 @@ static jclass JNICALL bda_c2j_proxy_FindClass(JNIEnv * env, const char * p1)
   result = bda_orig_jni_funcs->FindClass(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "FindClass")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -492,7 +263,7 @@ static jmethodID JNICALL bda_c2j_proxy_FromReflectedMethod(JNIEnv * env, jobject
   /* local variables */
   jmethodID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -504,13 +275,11 @@ static jmethodID JNICALL bda_c2j_proxy_FromReflectedMethod(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.FromReflectedMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.FromReflectedMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "FromReflectedMethod")
@@ -521,13 +290,13 @@ static jmethodID JNICALL bda_c2j_proxy_FromReflectedMethod(JNIEnv * env, jobject
     && bda_check_jobject_reflected_method(s, p1, 1, "FromReflectedMethod")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -548,14 +317,17 @@ static jmethodID JNICALL bda_c2j_proxy_FromReflectedMethod(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->FromReflectedMethod(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -568,7 +340,7 @@ static jfieldID JNICALL bda_c2j_proxy_FromReflectedField(JNIEnv * env, jobject p
   /* local variables */
   jfieldID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -580,13 +352,11 @@ static jfieldID JNICALL bda_c2j_proxy_FromReflectedField(JNIEnv * env, jobject p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.FromReflectedField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.FromReflectedField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "FromReflectedField")
@@ -597,13 +367,13 @@ static jfieldID JNICALL bda_c2j_proxy_FromReflectedField(JNIEnv * env, jobject p
     && bda_check_instance_jobject_jclass(s, p1, bda_clazz_field, 1, "FromReflectedField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -624,14 +394,17 @@ static jfieldID JNICALL bda_c2j_proxy_FromReflectedField(JNIEnv * env, jobject p
   result = bda_orig_jni_funcs->FromReflectedField(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -644,7 +417,7 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedMethod(JNIEnv * env, jclass p1, 
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -656,13 +429,11 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedMethod(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ToReflectedMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ToReflectedMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ToReflectedMethod")
@@ -675,13 +446,13 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedMethod(JNIEnv * env, jclass p1, 
     && bda_check_jmethodid_to_reflected(s, p1, p2, p3, "ToReflectedMethod")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -702,21 +473,25 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedMethod(JNIEnv * env, jclass p1, 
   result = bda_orig_jni_funcs->ToReflectedMethod(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "ToReflectedMethod")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -729,7 +504,7 @@ static jclass JNICALL bda_c2j_proxy_GetSuperclass(JNIEnv * env, jclass p1)
   /* local variables */
   jclass result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -741,13 +516,11 @@ static jclass JNICALL bda_c2j_proxy_GetSuperclass(JNIEnv * env, jclass p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetSuperclass++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetSuperclass++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetSuperclass")
@@ -758,13 +531,13 @@ static jclass JNICALL bda_c2j_proxy_GetSuperclass(JNIEnv * env, jclass p1)
     && bda_check_jclass(s, p1, 1, "GetSuperclass")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -785,21 +558,25 @@ static jclass JNICALL bda_c2j_proxy_GetSuperclass(JNIEnv * env, jclass p1)
   result = bda_orig_jni_funcs->GetSuperclass(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "GetSuperclass")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -812,7 +589,7 @@ static jboolean JNICALL bda_c2j_proxy_IsAssignableFrom(JNIEnv * env, jclass p1, 
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -824,13 +601,11 @@ static jboolean JNICALL bda_c2j_proxy_IsAssignableFrom(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.IsAssignableFrom++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.IsAssignableFrom++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "IsAssignableFrom")
@@ -844,13 +619,13 @@ static jboolean JNICALL bda_c2j_proxy_IsAssignableFrom(JNIEnv * env, jclass p1, 
     && bda_check_jclass(s, p2, 2, "IsAssignableFrom")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -871,14 +646,17 @@ static jboolean JNICALL bda_c2j_proxy_IsAssignableFrom(JNIEnv * env, jclass p1, 
   result = bda_orig_jni_funcs->IsAssignableFrom(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -891,7 +669,7 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedField(JNIEnv * env, jclass p1, j
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -903,13 +681,11 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ToReflectedField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ToReflectedField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ToReflectedField")
@@ -922,13 +698,13 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedField(JNIEnv * env, jclass p1, j
     && bda_check_jfieldid_to_reflected_field(s, p1, p2, p3, "ToReflectedField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -949,21 +725,25 @@ static jobject JNICALL bda_c2j_proxy_ToReflectedField(JNIEnv * env, jclass p1, j
   result = bda_orig_jni_funcs->ToReflectedField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "ToReflectedField")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -976,7 +756,7 @@ static jint JNICALL bda_c2j_proxy_Throw(JNIEnv * env, jthrowable p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -988,13 +768,11 @@ static jint JNICALL bda_c2j_proxy_Throw(JNIEnv * env, jthrowable p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.Throw++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.Throw++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "Throw")
@@ -1005,13 +783,13 @@ static jint JNICALL bda_c2j_proxy_Throw(JNIEnv * env, jthrowable p1)
     && bda_check_jthrowable(s, p1, 1, "Throw")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1032,14 +810,17 @@ static jint JNICALL bda_c2j_proxy_Throw(JNIEnv * env, jthrowable p1)
   result = bda_orig_jni_funcs->Throw(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1052,7 +833,7 @@ static jint JNICALL bda_c2j_proxy_ThrowNew(JNIEnv * env, jclass p1, const char *
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1064,13 +845,11 @@ static jint JNICALL bda_c2j_proxy_ThrowNew(JNIEnv * env, jclass p1, const char *
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ThrowNew++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ThrowNew++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ThrowNew")
@@ -1083,13 +862,13 @@ static jint JNICALL bda_c2j_proxy_ThrowNew(JNIEnv * env, jclass p1, const char *
     && bda_check_assignable_jclass_jclass(s, p1, bda_clazz_throwable, 1, "ThrowNew")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1110,14 +889,17 @@ static jint JNICALL bda_c2j_proxy_ThrowNew(JNIEnv * env, jclass p1, const char *
   result = bda_orig_jni_funcs->ThrowNew(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1130,7 +912,7 @@ static jthrowable JNICALL bda_c2j_proxy_ExceptionOccurred(JNIEnv * env)
   /* local variables */
   jthrowable result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1142,26 +924,24 @@ static jthrowable JNICALL bda_c2j_proxy_ExceptionOccurred(JNIEnv * env)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ExceptionOccurred++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ExceptionOccurred++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ExceptionOccurred")
     && bda_check_no_critical(s, "ExceptionOccurred")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1182,21 +962,25 @@ static jthrowable JNICALL bda_c2j_proxy_ExceptionOccurred(JNIEnv * env)
   result = bda_orig_jni_funcs->ExceptionOccurred(env);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "ExceptionOccurred")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1208,7 +992,7 @@ static void JNICALL bda_c2j_proxy_ExceptionDescribe(JNIEnv * env)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1220,26 +1004,24 @@ static void JNICALL bda_c2j_proxy_ExceptionDescribe(JNIEnv * env)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ExceptionDescribe++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ExceptionDescribe++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ExceptionDescribe")
     && bda_check_no_critical(s, "ExceptionDescribe")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1260,14 +1042,17 @@ static void JNICALL bda_c2j_proxy_ExceptionDescribe(JNIEnv * env)
    bda_orig_jni_funcs->ExceptionDescribe(env);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -1278,7 +1063,7 @@ static void JNICALL bda_c2j_proxy_ExceptionClear(JNIEnv * env)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1290,26 +1075,24 @@ static void JNICALL bda_c2j_proxy_ExceptionClear(JNIEnv * env)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ExceptionClear++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ExceptionClear++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ExceptionClear")
     && bda_check_no_critical(s, "ExceptionClear")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1330,14 +1113,17 @@ static void JNICALL bda_c2j_proxy_ExceptionClear(JNIEnv * env)
    bda_orig_jni_funcs->ExceptionClear(env);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -1348,7 +1134,7 @@ static void JNICALL bda_c2j_proxy_FatalError(JNIEnv * env, const char * p1)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1360,13 +1146,11 @@ static void JNICALL bda_c2j_proxy_FatalError(JNIEnv * env, const char * p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.FatalError++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.FatalError++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "FatalError")
@@ -1375,13 +1159,13 @@ static void JNICALL bda_c2j_proxy_FatalError(JNIEnv * env, const char * p1)
     && bda_check_non_null(s, p1,  1, "FatalError")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1402,14 +1186,17 @@ static void JNICALL bda_c2j_proxy_FatalError(JNIEnv * env, const char * p1)
    bda_orig_jni_funcs->FatalError(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -1421,7 +1208,7 @@ static jint JNICALL bda_c2j_proxy_PushLocalFrame(JNIEnv * env, jint p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1433,13 +1220,11 @@ static jint JNICALL bda_c2j_proxy_PushLocalFrame(JNIEnv * env, jint p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.PushLocalFrame++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.PushLocalFrame++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "PushLocalFrame")
@@ -1447,13 +1232,13 @@ static jint JNICALL bda_c2j_proxy_PushLocalFrame(JNIEnv * env, jint p1)
     && bda_check_no_critical(s, "PushLocalFrame")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1474,17 +1259,20 @@ static jint JNICALL bda_c2j_proxy_PushLocalFrame(JNIEnv * env, jint p1)
   result = bda_orig_jni_funcs->PushLocalFrame(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result == 0) {
      bda_local_ref_enter(s, p1, 0);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1497,7 +1285,7 @@ static jobject JNICALL bda_c2j_proxy_PopLocalFrame(JNIEnv * env, jobject p1)
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1509,13 +1297,11 @@ static jobject JNICALL bda_c2j_proxy_PopLocalFrame(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.PopLocalFrame++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.PopLocalFrame++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "PopLocalFrame")
@@ -1525,13 +1311,13 @@ static jobject JNICALL bda_c2j_proxy_PopLocalFrame(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "PopLocalFrame")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1552,22 +1338,26 @@ static jobject JNICALL bda_c2j_proxy_PopLocalFrame(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->PopLocalFrame(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_local_ref_leave(s);
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "PopLocalFrame")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1580,7 +1370,7 @@ static jobject JNICALL bda_c2j_proxy_NewGlobalRef(JNIEnv * env, jobject p1)
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1592,13 +1382,11 @@ static jobject JNICALL bda_c2j_proxy_NewGlobalRef(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewGlobalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewGlobalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewGlobalRef")
@@ -1608,13 +1396,13 @@ static jobject JNICALL bda_c2j_proxy_NewGlobalRef(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "NewGlobalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1635,14 +1423,17 @@ static jobject JNICALL bda_c2j_proxy_NewGlobalRef(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->NewGlobalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
     if (result != NULL) {
       bda_global_ref_add(result, 0);
     }
@@ -1657,7 +1448,7 @@ static void JNICALL bda_c2j_proxy_DeleteGlobalRef(JNIEnv * env, jobject p1)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1669,13 +1460,11 @@ static void JNICALL bda_c2j_proxy_DeleteGlobalRef(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.DeleteGlobalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.DeleteGlobalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "DeleteGlobalRef")
@@ -1685,13 +1474,13 @@ static void JNICALL bda_c2j_proxy_DeleteGlobalRef(JNIEnv * env, jobject p1)
     && bda_check_jobject_ref_type(s, p1, JNIGlobalRefType, 1, "DeleteGlobalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1712,14 +1501,17 @@ static void JNICALL bda_c2j_proxy_DeleteGlobalRef(JNIEnv * env, jobject p1)
    bda_orig_jni_funcs->DeleteGlobalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
    bda_global_ref_delete(p1, 0);
   }
 
@@ -1731,7 +1523,7 @@ static void JNICALL bda_c2j_proxy_DeleteLocalRef(JNIEnv * env, jobject p1)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1743,13 +1535,11 @@ static void JNICALL bda_c2j_proxy_DeleteLocalRef(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.DeleteLocalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.DeleteLocalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "DeleteLocalRef")
@@ -1758,13 +1548,13 @@ static void JNICALL bda_c2j_proxy_DeleteLocalRef(JNIEnv * env, jobject p1)
     && bda_check_jobject_ref_type(s, p1, JNILocalRefType, 1, "DeleteLocalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1785,17 +1575,20 @@ static void JNICALL bda_c2j_proxy_DeleteLocalRef(JNIEnv * env, jobject p1)
    bda_orig_jni_funcs->DeleteLocalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (p1 != NULL) {
      bda_local_ref_delete(s, p1);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -1807,7 +1600,7 @@ static jboolean JNICALL bda_c2j_proxy_IsSameObject(JNIEnv * env, jobject p1, job
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1819,13 +1612,11 @@ static jboolean JNICALL bda_c2j_proxy_IsSameObject(JNIEnv * env, jobject p1, job
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.IsSameObject++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.IsSameObject++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "IsSameObject")
@@ -1835,13 +1626,13 @@ static jboolean JNICALL bda_c2j_proxy_IsSameObject(JNIEnv * env, jobject p1, job
     && bda_check_ref_dangling(s, p2, 2, "IsSameObject")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1862,14 +1653,17 @@ static jboolean JNICALL bda_c2j_proxy_IsSameObject(JNIEnv * env, jobject p1, job
   result = bda_orig_jni_funcs->IsSameObject(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1882,7 +1676,7 @@ static jobject JNICALL bda_c2j_proxy_NewLocalRef(JNIEnv * env, jobject p1)
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1894,13 +1688,11 @@ static jobject JNICALL bda_c2j_proxy_NewLocalRef(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewLocalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewLocalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewLocalRef")
@@ -1910,13 +1702,13 @@ static jobject JNICALL bda_c2j_proxy_NewLocalRef(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "NewLocalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -1937,21 +1729,25 @@ static jobject JNICALL bda_c2j_proxy_NewLocalRef(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->NewLocalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewLocalRef")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -1964,7 +1760,7 @@ static jint JNICALL bda_c2j_proxy_EnsureLocalCapacity(JNIEnv * env, jint p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -1976,13 +1772,11 @@ static jint JNICALL bda_c2j_proxy_EnsureLocalCapacity(JNIEnv * env, jint p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.EnsureLocalCapacity++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.EnsureLocalCapacity++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "EnsureLocalCapacity")
@@ -1990,13 +1784,13 @@ static jint JNICALL bda_c2j_proxy_EnsureLocalCapacity(JNIEnv * env, jint p1)
     && bda_check_no_critical(s, "EnsureLocalCapacity")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2017,14 +1811,17 @@ static jint JNICALL bda_c2j_proxy_EnsureLocalCapacity(JNIEnv * env, jint p1)
   result = bda_orig_jni_funcs->EnsureLocalCapacity(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2037,7 +1834,7 @@ static jobject JNICALL bda_c2j_proxy_AllocObject(JNIEnv * env, jclass p1)
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2049,13 +1846,11 @@ static jobject JNICALL bda_c2j_proxy_AllocObject(JNIEnv * env, jclass p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.AllocObject++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.AllocObject++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "AllocObject")
@@ -2067,13 +1862,13 @@ static jobject JNICALL bda_c2j_proxy_AllocObject(JNIEnv * env, jclass p1)
     && bda_check_jclass_scalar_allocatable(s, p1, 1, "AllocObject")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2094,21 +1889,25 @@ static jobject JNICALL bda_c2j_proxy_AllocObject(JNIEnv * env, jclass p1)
   result = bda_orig_jni_funcs->AllocObject(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "AllocObject")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2121,7 +1920,7 @@ static jobject JNICALL bda_c2j_proxy_NewObject(JNIEnv * env, jclass p1, jmethodI
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2134,13 +1933,11 @@ static jobject JNICALL bda_c2j_proxy_NewObject(JNIEnv * env, jclass p1, jmethodI
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewObject++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewObject++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -2156,13 +1953,13 @@ static jobject JNICALL bda_c2j_proxy_NewObject(JNIEnv * env, jclass p1, jmethodI
     && bda_check_jmethodid_new_object(s, p1, p2, awrap, "NewObject")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2184,21 +1981,25 @@ static jobject JNICALL bda_c2j_proxy_NewObject(JNIEnv * env, jclass p1, jmethodI
   result =   bda_orig_jni_funcs->NewObjectV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewObject")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2211,7 +2012,7 @@ static jobject JNICALL bda_c2j_proxy_NewObjectV(JNIEnv * env, jclass p1, jmethod
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2223,13 +2024,11 @@ static jobject JNICALL bda_c2j_proxy_NewObjectV(JNIEnv * env, jclass p1, jmethod
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewObjectV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewObjectV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
     awrap.value.ap = p3;
@@ -2245,13 +2044,13 @@ static jobject JNICALL bda_c2j_proxy_NewObjectV(JNIEnv * env, jclass p1, jmethod
     && bda_check_jmethodid_new_object(s, p1, p2, awrap, "NewObjectV")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2272,21 +2071,25 @@ static jobject JNICALL bda_c2j_proxy_NewObjectV(JNIEnv * env, jclass p1, jmethod
   result = bda_orig_jni_funcs->NewObjectV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewObjectV")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2299,7 +2102,7 @@ static jobject JNICALL bda_c2j_proxy_NewObjectA(JNIEnv * env, jclass p1, jmethod
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2311,13 +2114,11 @@ static jobject JNICALL bda_c2j_proxy_NewObjectA(JNIEnv * env, jclass p1, jmethod
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewObjectA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewObjectA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -2333,13 +2134,13 @@ static jobject JNICALL bda_c2j_proxy_NewObjectA(JNIEnv * env, jclass p1, jmethod
     && bda_check_jmethodid_new_object(s, p1, p2, awrap, "NewObjectA")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2360,21 +2161,25 @@ static jobject JNICALL bda_c2j_proxy_NewObjectA(JNIEnv * env, jclass p1, jmethod
   result = bda_orig_jni_funcs->NewObjectA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewObjectA")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2387,7 +2192,7 @@ static jclass JNICALL bda_c2j_proxy_GetObjectClass(JNIEnv * env, jobject p1)
   /* local variables */
   jclass result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2399,13 +2204,11 @@ static jclass JNICALL bda_c2j_proxy_GetObjectClass(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetObjectClass++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetObjectClass++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetObjectClass")
@@ -2415,13 +2218,13 @@ static jclass JNICALL bda_c2j_proxy_GetObjectClass(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "GetObjectClass")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2442,21 +2245,25 @@ static jclass JNICALL bda_c2j_proxy_GetObjectClass(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->GetObjectClass(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "GetObjectClass")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2469,7 +2276,7 @@ static jboolean JNICALL bda_c2j_proxy_IsInstanceOf(JNIEnv * env, jobject p1, jcl
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2481,13 +2288,11 @@ static jboolean JNICALL bda_c2j_proxy_IsInstanceOf(JNIEnv * env, jobject p1, jcl
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.IsInstanceOf++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.IsInstanceOf++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "IsInstanceOf")
@@ -2500,13 +2305,13 @@ static jboolean JNICALL bda_c2j_proxy_IsInstanceOf(JNIEnv * env, jobject p1, jcl
     && bda_check_jclass(s, p2, 2, "IsInstanceOf")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2527,14 +2332,17 @@ static jboolean JNICALL bda_c2j_proxy_IsInstanceOf(JNIEnv * env, jobject p1, jcl
   result = bda_orig_jni_funcs->IsInstanceOf(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2547,7 +2355,7 @@ static jmethodID JNICALL bda_c2j_proxy_GetMethodID(JNIEnv * env, jclass p1, cons
   /* local variables */
   jmethodID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2559,13 +2367,11 @@ static jmethodID JNICALL bda_c2j_proxy_GetMethodID(JNIEnv * env, jclass p1, cons
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetMethodID++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetMethodID++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetMethodID")
@@ -2578,13 +2384,13 @@ static jmethodID JNICALL bda_c2j_proxy_GetMethodID(JNIEnv * env, jclass p1, cons
     && bda_check_jclass(s, p1, 1, "GetMethodID")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2605,17 +2411,20 @@ static jmethodID JNICALL bda_c2j_proxy_GetMethodID(JNIEnv * env, jclass p1, cons
   result = bda_orig_jni_funcs->GetMethodID(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
        bda_jmethodid_append( result, 0, p1, p2, p3);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2628,7 +2437,7 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethod(JNIEnv * env, jobject p1, 
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2641,13 +2450,11 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethod(JNIEnv * env, jobject p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallObjectMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallObjectMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -2662,13 +2469,13 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethod(JNIEnv * env, jobject p1, 
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallObjectMethod", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2690,21 +2497,25 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethod(JNIEnv * env, jobject p1, 
   result =   bda_orig_jni_funcs->CallObjectMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallObjectMethod")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2717,7 +2528,7 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodV(JNIEnv * env, jobject p1,
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2729,13 +2540,11 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodV(JNIEnv * env, jobject p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallObjectMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallObjectMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -2750,13 +2559,13 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodV(JNIEnv * env, jobject p1,
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallObjectMethodV", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2777,21 +2586,25 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodV(JNIEnv * env, jobject p1,
   result = bda_orig_jni_funcs->CallObjectMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallObjectMethodV")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2804,7 +2617,7 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodA(JNIEnv * env, jobject p1,
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2816,13 +2629,11 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodA(JNIEnv * env, jobject p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallObjectMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallObjectMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -2837,13 +2648,13 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodA(JNIEnv * env, jobject p1,
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallObjectMethodA", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2864,21 +2675,25 @@ static jobject JNICALL bda_c2j_proxy_CallObjectMethodA(JNIEnv * env, jobject p1,
   result = bda_orig_jni_funcs->CallObjectMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallObjectMethodA")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2891,7 +2706,7 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethod(JNIEnv * env, jobject p1
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2904,13 +2719,11 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethod(JNIEnv * env, jobject p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallBooleanMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallBooleanMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -2925,13 +2738,13 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethod(JNIEnv * env, jobject p1
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallBooleanMethod", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -2953,14 +2766,17 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethod(JNIEnv * env, jobject p1
   result =   bda_orig_jni_funcs->CallBooleanMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -2973,7 +2789,7 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodV(JNIEnv * env, jobject p
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -2985,13 +2801,11 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodV(JNIEnv * env, jobject p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallBooleanMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallBooleanMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -3006,13 +2820,13 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodV(JNIEnv * env, jobject p
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallBooleanMethodV", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3033,14 +2847,17 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodV(JNIEnv * env, jobject p
   result = bda_orig_jni_funcs->CallBooleanMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3053,7 +2870,7 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodA(JNIEnv * env, jobject p
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3065,13 +2882,11 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodA(JNIEnv * env, jobject p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallBooleanMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallBooleanMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -3086,13 +2901,13 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodA(JNIEnv * env, jobject p
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallBooleanMethodA", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3113,14 +2928,17 @@ static jboolean JNICALL bda_c2j_proxy_CallBooleanMethodA(JNIEnv * env, jobject p
   result = bda_orig_jni_funcs->CallBooleanMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3133,7 +2951,7 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethod(JNIEnv * env, jobject p1, jmet
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3146,13 +2964,11 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethod(JNIEnv * env, jobject p1, jmet
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallByteMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallByteMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -3167,13 +2983,13 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethod(JNIEnv * env, jobject p1, jmet
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallByteMethod", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3195,14 +3011,17 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethod(JNIEnv * env, jobject p1, jmet
   result =   bda_orig_jni_funcs->CallByteMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3215,7 +3034,7 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodV(JNIEnv * env, jobject p1, jme
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3227,13 +3046,11 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodV(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallByteMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallByteMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -3248,13 +3065,13 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodV(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallByteMethodV", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3275,14 +3092,17 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodV(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallByteMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3295,7 +3115,7 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodA(JNIEnv * env, jobject p1, jme
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3307,13 +3127,11 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodA(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallByteMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallByteMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -3328,13 +3146,13 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodA(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallByteMethodA", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3355,14 +3173,17 @@ static jbyte JNICALL bda_c2j_proxy_CallByteMethodA(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallByteMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3375,7 +3196,7 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethod(JNIEnv * env, jobject p1, jmet
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3388,13 +3209,11 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethod(JNIEnv * env, jobject p1, jmet
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallCharMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallCharMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -3409,13 +3228,13 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethod(JNIEnv * env, jobject p1, jmet
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallCharMethod", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3437,14 +3256,17 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethod(JNIEnv * env, jobject p1, jmet
   result =   bda_orig_jni_funcs->CallCharMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3457,7 +3279,7 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodV(JNIEnv * env, jobject p1, jme
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3469,13 +3291,11 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodV(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallCharMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallCharMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -3490,13 +3310,13 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodV(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallCharMethodV", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3517,14 +3337,17 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodV(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallCharMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3537,7 +3360,7 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodA(JNIEnv * env, jobject p1, jme
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3549,13 +3372,11 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodA(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallCharMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallCharMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -3570,13 +3391,13 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodA(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallCharMethodA", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3597,14 +3418,17 @@ static jchar JNICALL bda_c2j_proxy_CallCharMethodA(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallCharMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3617,7 +3441,7 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethod(JNIEnv * env, jobject p1, jm
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3630,13 +3454,11 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethod(JNIEnv * env, jobject p1, jm
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallShortMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallShortMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -3651,13 +3473,13 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethod(JNIEnv * env, jobject p1, jm
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallShortMethod", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3679,14 +3501,17 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethod(JNIEnv * env, jobject p1, jm
   result =   bda_orig_jni_funcs->CallShortMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3699,7 +3524,7 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodV(JNIEnv * env, jobject p1, j
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3711,13 +3536,11 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodV(JNIEnv * env, jobject p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallShortMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallShortMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -3732,13 +3555,13 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodV(JNIEnv * env, jobject p1, j
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallShortMethodV", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3759,14 +3582,17 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodV(JNIEnv * env, jobject p1, j
   result = bda_orig_jni_funcs->CallShortMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3779,7 +3605,7 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodA(JNIEnv * env, jobject p1, j
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3791,13 +3617,11 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodA(JNIEnv * env, jobject p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallShortMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallShortMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -3812,13 +3636,13 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodA(JNIEnv * env, jobject p1, j
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallShortMethodA", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3839,14 +3663,17 @@ static jshort JNICALL bda_c2j_proxy_CallShortMethodA(JNIEnv * env, jobject p1, j
   result = bda_orig_jni_funcs->CallShortMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3859,7 +3686,7 @@ static jint JNICALL bda_c2j_proxy_CallIntMethod(JNIEnv * env, jobject p1, jmetho
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3872,13 +3699,11 @@ static jint JNICALL bda_c2j_proxy_CallIntMethod(JNIEnv * env, jobject p1, jmetho
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallIntMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallIntMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -3893,13 +3718,13 @@ static jint JNICALL bda_c2j_proxy_CallIntMethod(JNIEnv * env, jobject p1, jmetho
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallIntMethod", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -3921,14 +3746,17 @@ static jint JNICALL bda_c2j_proxy_CallIntMethod(JNIEnv * env, jobject p1, jmetho
   result =   bda_orig_jni_funcs->CallIntMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -3941,7 +3769,7 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodV(JNIEnv * env, jobject p1, jmeth
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -3953,13 +3781,11 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodV(JNIEnv * env, jobject p1, jmeth
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallIntMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallIntMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -3974,13 +3800,13 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodV(JNIEnv * env, jobject p1, jmeth
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallIntMethodV", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4001,14 +3827,17 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodV(JNIEnv * env, jobject p1, jmeth
   result = bda_orig_jni_funcs->CallIntMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4021,7 +3850,7 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodA(JNIEnv * env, jobject p1, jmeth
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4033,13 +3862,11 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodA(JNIEnv * env, jobject p1, jmeth
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallIntMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallIntMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -4054,13 +3881,13 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodA(JNIEnv * env, jobject p1, jmeth
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallIntMethodA", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4081,14 +3908,17 @@ static jint JNICALL bda_c2j_proxy_CallIntMethodA(JNIEnv * env, jobject p1, jmeth
   result = bda_orig_jni_funcs->CallIntMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4101,7 +3931,7 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethod(JNIEnv * env, jobject p1, jmet
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4114,13 +3944,11 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethod(JNIEnv * env, jobject p1, jmet
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallLongMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallLongMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -4135,13 +3963,13 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethod(JNIEnv * env, jobject p1, jmet
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallLongMethod", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4163,14 +3991,17 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethod(JNIEnv * env, jobject p1, jmet
   result =   bda_orig_jni_funcs->CallLongMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4183,7 +4014,7 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodV(JNIEnv * env, jobject p1, jme
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4195,13 +4026,11 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodV(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallLongMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallLongMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -4216,13 +4045,13 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodV(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallLongMethodV", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4243,14 +4072,17 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodV(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallLongMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4263,7 +4095,7 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodA(JNIEnv * env, jobject p1, jme
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4275,13 +4107,11 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodA(JNIEnv * env, jobject p1, jme
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallLongMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallLongMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -4296,13 +4126,13 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodA(JNIEnv * env, jobject p1, jme
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallLongMethodA", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4323,14 +4153,17 @@ static jlong JNICALL bda_c2j_proxy_CallLongMethodA(JNIEnv * env, jobject p1, jme
   result = bda_orig_jni_funcs->CallLongMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4343,7 +4176,7 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethod(JNIEnv * env, jobject p1, jm
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4356,13 +4189,11 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethod(JNIEnv * env, jobject p1, jm
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallFloatMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallFloatMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -4377,13 +4208,13 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethod(JNIEnv * env, jobject p1, jm
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallFloatMethod", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4405,14 +4236,17 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethod(JNIEnv * env, jobject p1, jm
   result =   bda_orig_jni_funcs->CallFloatMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4425,7 +4259,7 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodV(JNIEnv * env, jobject p1, j
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4437,13 +4271,11 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodV(JNIEnv * env, jobject p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallFloatMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallFloatMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -4458,13 +4290,13 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodV(JNIEnv * env, jobject p1, j
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallFloatMethodV", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4485,14 +4317,17 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodV(JNIEnv * env, jobject p1, j
   result = bda_orig_jni_funcs->CallFloatMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4505,7 +4340,7 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodA(JNIEnv * env, jobject p1, j
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4517,13 +4352,11 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodA(JNIEnv * env, jobject p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallFloatMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallFloatMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -4538,13 +4371,13 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodA(JNIEnv * env, jobject p1, j
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallFloatMethodA", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4565,14 +4398,17 @@ static jfloat JNICALL bda_c2j_proxy_CallFloatMethodA(JNIEnv * env, jobject p1, j
   result = bda_orig_jni_funcs->CallFloatMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4585,7 +4421,7 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethod(JNIEnv * env, jobject p1, 
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4598,13 +4434,11 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethod(JNIEnv * env, jobject p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallDoubleMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallDoubleMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -4619,13 +4453,13 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethod(JNIEnv * env, jobject p1, 
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallDoubleMethod", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4647,14 +4481,17 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethod(JNIEnv * env, jobject p1, 
   result =   bda_orig_jni_funcs->CallDoubleMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4667,7 +4504,7 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodV(JNIEnv * env, jobject p1,
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4679,13 +4516,11 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodV(JNIEnv * env, jobject p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallDoubleMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallDoubleMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -4700,13 +4535,13 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodV(JNIEnv * env, jobject p1,
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallDoubleMethodV", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4727,14 +4562,17 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodV(JNIEnv * env, jobject p1,
   result = bda_orig_jni_funcs->CallDoubleMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4747,7 +4585,7 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodA(JNIEnv * env, jobject p1,
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4759,13 +4597,11 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodA(JNIEnv * env, jobject p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallDoubleMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallDoubleMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -4780,13 +4616,13 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodA(JNIEnv * env, jobject p1,
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallDoubleMethodA", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4807,14 +4643,17 @@ static jdouble JNICALL bda_c2j_proxy_CallDoubleMethodA(JNIEnv * env, jobject p1,
   result = bda_orig_jni_funcs->CallDoubleMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -4826,7 +4665,7 @@ static void JNICALL bda_c2j_proxy_CallVoidMethod(JNIEnv * env, jobject p1, jmeth
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4839,13 +4678,11 @@ static void JNICALL bda_c2j_proxy_CallVoidMethod(JNIEnv * env, jobject p1, jmeth
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallVoidMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallVoidMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -4860,13 +4697,13 @@ static void JNICALL bda_c2j_proxy_CallVoidMethod(JNIEnv * env, jobject p1, jmeth
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallVoidMethod", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4888,14 +4725,17 @@ static void JNICALL bda_c2j_proxy_CallVoidMethod(JNIEnv * env, jobject p1, jmeth
   bda_orig_jni_funcs->CallVoidMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -4906,7 +4746,7 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodV(JNIEnv * env, jobject p1, jmet
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4918,13 +4758,11 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodV(JNIEnv * env, jobject p1, jmet
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallVoidMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallVoidMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -4939,13 +4777,13 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodV(JNIEnv * env, jobject p1, jmet
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallVoidMethodV", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -4966,14 +4804,17 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodV(JNIEnv * env, jobject p1, jmet
    bda_orig_jni_funcs->CallVoidMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -4984,7 +4825,7 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodA(JNIEnv * env, jobject p1, jmet
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -4996,13 +4837,11 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodA(JNIEnv * env, jobject p1, jmet
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallVoidMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallVoidMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -5017,13 +4856,13 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodA(JNIEnv * env, jobject p1, jmet
     && bda_check_jmethodid_instance(s, p1, p2, awrap, "CallVoidMethodA", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5044,14 +4883,17 @@ static void JNICALL bda_c2j_proxy_CallVoidMethodA(JNIEnv * env, jobject p1, jmet
    bda_orig_jni_funcs->CallVoidMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -5063,7 +4905,7 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethod(JNIEnv * env, jo
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5076,13 +4918,11 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethod(JNIEnv * env, jo
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualObjectMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualObjectMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -5100,13 +4940,13 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethod(JNIEnv * env, jo
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualObjectMethod", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5128,21 +4968,25 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethod(JNIEnv * env, jo
   result =   bda_orig_jni_funcs->CallNonvirtualObjectMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallNonvirtualObjectMethod")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5155,7 +4999,7 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodV(JNIEnv * env, j
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5167,13 +5011,11 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodV(JNIEnv * env, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualObjectMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualObjectMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -5191,13 +5033,13 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodV(JNIEnv * env, j
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualObjectMethodV", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5218,21 +5060,25 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodV(JNIEnv * env, j
   result = bda_orig_jni_funcs->CallNonvirtualObjectMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallNonvirtualObjectMethodV")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5245,7 +5091,7 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodA(JNIEnv * env, j
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5257,13 +5103,11 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodA(JNIEnv * env, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualObjectMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualObjectMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -5281,13 +5125,13 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodA(JNIEnv * env, j
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualObjectMethodA", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5308,21 +5152,25 @@ static jobject JNICALL bda_c2j_proxy_CallNonvirtualObjectMethodA(JNIEnv * env, j
   result = bda_orig_jni_funcs->CallNonvirtualObjectMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallNonvirtualObjectMethodA")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5335,7 +5183,7 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethod(JNIEnv * env, 
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5348,13 +5196,11 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethod(JNIEnv * env, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualBooleanMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualBooleanMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -5372,13 +5218,13 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethod(JNIEnv * env, 
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualBooleanMethod", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5400,14 +5246,17 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethod(JNIEnv * env, 
   result =   bda_orig_jni_funcs->CallNonvirtualBooleanMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5420,7 +5269,7 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodV(JNIEnv * env,
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5432,13 +5281,11 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodV(JNIEnv * env,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualBooleanMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualBooleanMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -5456,13 +5303,13 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodV(JNIEnv * env,
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualBooleanMethodV", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5483,14 +5330,17 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodV(JNIEnv * env,
   result = bda_orig_jni_funcs->CallNonvirtualBooleanMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5503,7 +5353,7 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodA(JNIEnv * env,
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5515,13 +5365,11 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodA(JNIEnv * env,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualBooleanMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualBooleanMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -5539,13 +5387,13 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodA(JNIEnv * env,
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualBooleanMethodA", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5566,14 +5414,17 @@ static jboolean JNICALL bda_c2j_proxy_CallNonvirtualBooleanMethodA(JNIEnv * env,
   result = bda_orig_jni_funcs->CallNonvirtualBooleanMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5586,7 +5437,7 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethod(JNIEnv * env, jobjec
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5599,13 +5450,11 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethod(JNIEnv * env, jobjec
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualByteMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualByteMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -5623,13 +5472,13 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethod(JNIEnv * env, jobjec
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualByteMethod", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5651,14 +5500,17 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethod(JNIEnv * env, jobjec
   result =   bda_orig_jni_funcs->CallNonvirtualByteMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5671,7 +5523,7 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodV(JNIEnv * env, jobje
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5683,13 +5535,11 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodV(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualByteMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualByteMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -5707,13 +5557,13 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodV(JNIEnv * env, jobje
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualByteMethodV", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5734,14 +5584,17 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodV(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualByteMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5754,7 +5607,7 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodA(JNIEnv * env, jobje
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5766,13 +5619,11 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodA(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualByteMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualByteMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -5790,13 +5641,13 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodA(JNIEnv * env, jobje
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualByteMethodA", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5817,14 +5668,17 @@ static jbyte JNICALL bda_c2j_proxy_CallNonvirtualByteMethodA(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualByteMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5837,7 +5691,7 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethod(JNIEnv * env, jobjec
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5850,13 +5704,11 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethod(JNIEnv * env, jobjec
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualCharMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualCharMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -5874,13 +5726,13 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethod(JNIEnv * env, jobjec
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualCharMethod", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5902,14 +5754,17 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethod(JNIEnv * env, jobjec
   result =   bda_orig_jni_funcs->CallNonvirtualCharMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -5922,7 +5777,7 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodV(JNIEnv * env, jobje
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -5934,13 +5789,11 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodV(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualCharMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualCharMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -5958,13 +5811,13 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodV(JNIEnv * env, jobje
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualCharMethodV", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -5985,14 +5838,17 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodV(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualCharMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6005,7 +5861,7 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodA(JNIEnv * env, jobje
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6017,13 +5873,11 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodA(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualCharMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualCharMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -6041,13 +5895,13 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodA(JNIEnv * env, jobje
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualCharMethodA", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6068,14 +5922,17 @@ static jchar JNICALL bda_c2j_proxy_CallNonvirtualCharMethodA(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualCharMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6088,7 +5945,7 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethod(JNIEnv * env, jobj
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6101,13 +5958,11 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethod(JNIEnv * env, jobj
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualShortMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualShortMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -6125,13 +5980,13 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethod(JNIEnv * env, jobj
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualShortMethod", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6153,14 +6008,17 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethod(JNIEnv * env, jobj
   result =   bda_orig_jni_funcs->CallNonvirtualShortMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6173,7 +6031,7 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodV(JNIEnv * env, job
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6185,13 +6043,11 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodV(JNIEnv * env, job
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualShortMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualShortMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -6209,13 +6065,13 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodV(JNIEnv * env, job
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualShortMethodV", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6236,14 +6092,17 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodV(JNIEnv * env, job
   result = bda_orig_jni_funcs->CallNonvirtualShortMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6256,7 +6115,7 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodA(JNIEnv * env, job
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6268,13 +6127,11 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodA(JNIEnv * env, job
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualShortMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualShortMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -6292,13 +6149,13 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodA(JNIEnv * env, job
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualShortMethodA", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6319,14 +6176,17 @@ static jshort JNICALL bda_c2j_proxy_CallNonvirtualShortMethodA(JNIEnv * env, job
   result = bda_orig_jni_funcs->CallNonvirtualShortMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6339,7 +6199,7 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethod(JNIEnv * env, jobject 
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6352,13 +6212,11 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethod(JNIEnv * env, jobject 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualIntMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualIntMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -6376,13 +6234,13 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethod(JNIEnv * env, jobject 
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualIntMethod", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6404,14 +6262,17 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethod(JNIEnv * env, jobject 
   result =   bda_orig_jni_funcs->CallNonvirtualIntMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6424,7 +6285,7 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodV(JNIEnv * env, jobject
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6436,13 +6297,11 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodV(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualIntMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualIntMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -6460,13 +6319,13 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodV(JNIEnv * env, jobject
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualIntMethodV", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6487,14 +6346,17 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodV(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->CallNonvirtualIntMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6507,7 +6369,7 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodA(JNIEnv * env, jobject
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6519,13 +6381,11 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodA(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualIntMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualIntMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -6543,13 +6403,13 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodA(JNIEnv * env, jobject
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualIntMethodA", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6570,14 +6430,17 @@ static jint JNICALL bda_c2j_proxy_CallNonvirtualIntMethodA(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->CallNonvirtualIntMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6590,7 +6453,7 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethod(JNIEnv * env, jobjec
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6603,13 +6466,11 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethod(JNIEnv * env, jobjec
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualLongMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualLongMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -6627,13 +6488,13 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethod(JNIEnv * env, jobjec
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualLongMethod", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6655,14 +6516,17 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethod(JNIEnv * env, jobjec
   result =   bda_orig_jni_funcs->CallNonvirtualLongMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6675,7 +6539,7 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodV(JNIEnv * env, jobje
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6687,13 +6551,11 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodV(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualLongMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualLongMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -6711,13 +6573,13 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodV(JNIEnv * env, jobje
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualLongMethodV", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6738,14 +6600,17 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodV(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualLongMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6758,7 +6623,7 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodA(JNIEnv * env, jobje
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6770,13 +6635,11 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodA(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualLongMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualLongMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -6794,13 +6657,13 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodA(JNIEnv * env, jobje
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualLongMethodA", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6821,14 +6684,17 @@ static jlong JNICALL bda_c2j_proxy_CallNonvirtualLongMethodA(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->CallNonvirtualLongMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6841,7 +6707,7 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethod(JNIEnv * env, jobj
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6854,13 +6720,11 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethod(JNIEnv * env, jobj
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualFloatMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualFloatMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -6878,13 +6742,13 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethod(JNIEnv * env, jobj
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualFloatMethod", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6906,14 +6770,17 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethod(JNIEnv * env, jobj
   result =   bda_orig_jni_funcs->CallNonvirtualFloatMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -6926,7 +6793,7 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodV(JNIEnv * env, job
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -6938,13 +6805,11 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodV(JNIEnv * env, job
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualFloatMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualFloatMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -6962,13 +6827,13 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodV(JNIEnv * env, job
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualFloatMethodV", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -6989,14 +6854,17 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodV(JNIEnv * env, job
   result = bda_orig_jni_funcs->CallNonvirtualFloatMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7009,7 +6877,7 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodA(JNIEnv * env, job
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7021,13 +6889,11 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodA(JNIEnv * env, job
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualFloatMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualFloatMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -7045,13 +6911,13 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodA(JNIEnv * env, job
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualFloatMethodA", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7072,14 +6938,17 @@ static jfloat JNICALL bda_c2j_proxy_CallNonvirtualFloatMethodA(JNIEnv * env, job
   result = bda_orig_jni_funcs->CallNonvirtualFloatMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7092,7 +6961,7 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethod(JNIEnv * env, jo
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7105,13 +6974,11 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethod(JNIEnv * env, jo
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualDoubleMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualDoubleMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -7129,13 +6996,13 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethod(JNIEnv * env, jo
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualDoubleMethod", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7157,14 +7024,17 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethod(JNIEnv * env, jo
   result =   bda_orig_jni_funcs->CallNonvirtualDoubleMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7177,7 +7047,7 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodV(JNIEnv * env, j
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7189,13 +7059,11 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodV(JNIEnv * env, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualDoubleMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualDoubleMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -7213,13 +7081,13 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodV(JNIEnv * env, j
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualDoubleMethodV", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7240,14 +7108,17 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodV(JNIEnv * env, j
   result = bda_orig_jni_funcs->CallNonvirtualDoubleMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7260,7 +7131,7 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodA(JNIEnv * env, j
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7272,13 +7143,11 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodA(JNIEnv * env, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualDoubleMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualDoubleMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -7296,13 +7165,13 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodA(JNIEnv * env, j
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualDoubleMethodA", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7323,14 +7192,17 @@ static jdouble JNICALL bda_c2j_proxy_CallNonvirtualDoubleMethodA(JNIEnv * env, j
   result = bda_orig_jni_funcs->CallNonvirtualDoubleMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7342,7 +7214,7 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethod(JNIEnv * env, jobject
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7355,13 +7227,11 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethod(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualVoidMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualVoidMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p3);
     awrap.type = BDA_VA_LIST;
@@ -7379,13 +7249,13 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethod(JNIEnv * env, jobject
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualVoidMethod", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7407,14 +7277,17 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethod(JNIEnv * env, jobject
   bda_orig_jni_funcs->CallNonvirtualVoidMethodV(env, p1, p2, p3, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -7425,7 +7298,7 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodV(JNIEnv * env, jobjec
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7437,13 +7310,11 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodV(JNIEnv * env, jobjec
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualVoidMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualVoidMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p4;
@@ -7461,13 +7332,13 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodV(JNIEnv * env, jobjec
     &&  bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualVoidMethodV", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7488,14 +7359,17 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodV(JNIEnv * env, jobjec
    bda_orig_jni_funcs->CallNonvirtualVoidMethodV(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -7506,7 +7380,7 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodA(JNIEnv * env, jobjec
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7518,13 +7392,11 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodA(JNIEnv * env, jobjec
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallNonvirtualVoidMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallNonvirtualVoidMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p4;
@@ -7542,13 +7414,13 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodA(JNIEnv * env, jobjec
     && bda_check_jmethodid_nonvirtual(s, p1, p2, p3, awrap, "CallNonvirtualVoidMethodA", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7569,14 +7441,17 @@ static void JNICALL bda_c2j_proxy_CallNonvirtualVoidMethodA(JNIEnv * env, jobjec
    bda_orig_jni_funcs->CallNonvirtualVoidMethodA(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -7588,7 +7463,7 @@ static jfieldID JNICALL bda_c2j_proxy_GetFieldID(JNIEnv * env, jclass p1, const 
   /* local variables */
   jfieldID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7600,13 +7475,11 @@ static jfieldID JNICALL bda_c2j_proxy_GetFieldID(JNIEnv * env, jclass p1, const 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetFieldID++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetFieldID++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetFieldID")
@@ -7619,13 +7492,13 @@ static jfieldID JNICALL bda_c2j_proxy_GetFieldID(JNIEnv * env, jclass p1, const 
     && bda_check_jclass(s, p1, 1, "GetFieldID")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7646,17 +7519,20 @@ static jfieldID JNICALL bda_c2j_proxy_GetFieldID(JNIEnv * env, jclass p1, const 
   result = bda_orig_jni_funcs->GetFieldID(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
        bda_jfieldid_append(s, result, p1, 0, p2, p3);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7669,7 +7545,7 @@ static jobject JNICALL bda_c2j_proxy_GetObjectField(JNIEnv * env, jobject p1, jf
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7681,13 +7557,11 @@ static jobject JNICALL bda_c2j_proxy_GetObjectField(JNIEnv * env, jobject p1, jf
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetObjectField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetObjectField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetObjectField")
@@ -7699,13 +7573,13 @@ static jobject JNICALL bda_c2j_proxy_GetObjectField(JNIEnv * env, jobject p1, jf
     && bda_check_jfieldid_get_instance(s, p1, p2, 'O', "GetObjectField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7726,21 +7600,25 @@ static jobject JNICALL bda_c2j_proxy_GetObjectField(JNIEnv * env, jobject p1, jf
   result = bda_orig_jni_funcs->GetObjectField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "GetObjectField")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7753,7 +7631,7 @@ static jboolean JNICALL bda_c2j_proxy_GetBooleanField(JNIEnv * env, jobject p1, 
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7765,13 +7643,11 @@ static jboolean JNICALL bda_c2j_proxy_GetBooleanField(JNIEnv * env, jobject p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetBooleanField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetBooleanField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetBooleanField")
@@ -7783,13 +7659,13 @@ static jboolean JNICALL bda_c2j_proxy_GetBooleanField(JNIEnv * env, jobject p1, 
     && bda_check_jfieldid_get_instance(s, p1, p2, 'Z', "GetBooleanField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7810,14 +7686,17 @@ static jboolean JNICALL bda_c2j_proxy_GetBooleanField(JNIEnv * env, jobject p1, 
   result = bda_orig_jni_funcs->GetBooleanField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7830,7 +7709,7 @@ static jbyte JNICALL bda_c2j_proxy_GetByteField(JNIEnv * env, jobject p1, jfield
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7842,13 +7721,11 @@ static jbyte JNICALL bda_c2j_proxy_GetByteField(JNIEnv * env, jobject p1, jfield
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetByteField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetByteField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetByteField")
@@ -7860,13 +7737,13 @@ static jbyte JNICALL bda_c2j_proxy_GetByteField(JNIEnv * env, jobject p1, jfield
     && bda_check_jfieldid_get_instance(s, p1, p2, 'B', "GetByteField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7887,14 +7764,17 @@ static jbyte JNICALL bda_c2j_proxy_GetByteField(JNIEnv * env, jobject p1, jfield
   result = bda_orig_jni_funcs->GetByteField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7907,7 +7787,7 @@ static jchar JNICALL bda_c2j_proxy_GetCharField(JNIEnv * env, jobject p1, jfield
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7919,13 +7799,11 @@ static jchar JNICALL bda_c2j_proxy_GetCharField(JNIEnv * env, jobject p1, jfield
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetCharField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetCharField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetCharField")
@@ -7937,13 +7815,13 @@ static jchar JNICALL bda_c2j_proxy_GetCharField(JNIEnv * env, jobject p1, jfield
     && bda_check_jfieldid_get_instance(s, p1, p2, 'C', "GetCharField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -7964,14 +7842,17 @@ static jchar JNICALL bda_c2j_proxy_GetCharField(JNIEnv * env, jobject p1, jfield
   result = bda_orig_jni_funcs->GetCharField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -7984,7 +7865,7 @@ static jshort JNICALL bda_c2j_proxy_GetShortField(JNIEnv * env, jobject p1, jfie
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -7996,13 +7877,11 @@ static jshort JNICALL bda_c2j_proxy_GetShortField(JNIEnv * env, jobject p1, jfie
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetShortField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetShortField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetShortField")
@@ -8014,13 +7893,13 @@ static jshort JNICALL bda_c2j_proxy_GetShortField(JNIEnv * env, jobject p1, jfie
     && bda_check_jfieldid_get_instance(s, p1, p2, 'S', "GetShortField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8041,14 +7920,17 @@ static jshort JNICALL bda_c2j_proxy_GetShortField(JNIEnv * env, jobject p1, jfie
   result = bda_orig_jni_funcs->GetShortField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -8061,7 +7943,7 @@ static jint JNICALL bda_c2j_proxy_GetIntField(JNIEnv * env, jobject p1, jfieldID
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8073,13 +7955,11 @@ static jint JNICALL bda_c2j_proxy_GetIntField(JNIEnv * env, jobject p1, jfieldID
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetIntField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetIntField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetIntField")
@@ -8091,13 +7971,13 @@ static jint JNICALL bda_c2j_proxy_GetIntField(JNIEnv * env, jobject p1, jfieldID
     && bda_check_jfieldid_get_instance(s, p1, p2, 'I', "GetIntField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8118,14 +7998,17 @@ static jint JNICALL bda_c2j_proxy_GetIntField(JNIEnv * env, jobject p1, jfieldID
   result = bda_orig_jni_funcs->GetIntField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -8138,7 +8021,7 @@ static jlong JNICALL bda_c2j_proxy_GetLongField(JNIEnv * env, jobject p1, jfield
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8150,13 +8033,11 @@ static jlong JNICALL bda_c2j_proxy_GetLongField(JNIEnv * env, jobject p1, jfield
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetLongField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetLongField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetLongField")
@@ -8168,13 +8049,13 @@ static jlong JNICALL bda_c2j_proxy_GetLongField(JNIEnv * env, jobject p1, jfield
     && bda_check_jfieldid_get_instance(s, p1, p2, 'J', "GetLongField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8195,14 +8076,17 @@ static jlong JNICALL bda_c2j_proxy_GetLongField(JNIEnv * env, jobject p1, jfield
   result = bda_orig_jni_funcs->GetLongField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -8215,7 +8099,7 @@ static jfloat JNICALL bda_c2j_proxy_GetFloatField(JNIEnv * env, jobject p1, jfie
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8227,13 +8111,11 @@ static jfloat JNICALL bda_c2j_proxy_GetFloatField(JNIEnv * env, jobject p1, jfie
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetFloatField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetFloatField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetFloatField")
@@ -8245,13 +8127,13 @@ static jfloat JNICALL bda_c2j_proxy_GetFloatField(JNIEnv * env, jobject p1, jfie
     && bda_check_jfieldid_get_instance(s, p1, p2, 'F', "GetFloatField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8272,14 +8154,17 @@ static jfloat JNICALL bda_c2j_proxy_GetFloatField(JNIEnv * env, jobject p1, jfie
   result = bda_orig_jni_funcs->GetFloatField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -8292,7 +8177,7 @@ static jdouble JNICALL bda_c2j_proxy_GetDoubleField(JNIEnv * env, jobject p1, jf
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8304,13 +8189,11 @@ static jdouble JNICALL bda_c2j_proxy_GetDoubleField(JNIEnv * env, jobject p1, jf
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetDoubleField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetDoubleField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetDoubleField")
@@ -8322,13 +8205,13 @@ static jdouble JNICALL bda_c2j_proxy_GetDoubleField(JNIEnv * env, jobject p1, jf
     && bda_check_jfieldid_get_instance(s, p1, p2, 'D', "GetDoubleField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8349,14 +8232,17 @@ static jdouble JNICALL bda_c2j_proxy_GetDoubleField(JNIEnv * env, jobject p1, jf
   result = bda_orig_jni_funcs->GetDoubleField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -8368,7 +8254,7 @@ static void JNICALL bda_c2j_proxy_SetObjectField(JNIEnv * env, jobject p1, jfiel
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8380,13 +8266,11 @@ static void JNICALL bda_c2j_proxy_SetObjectField(JNIEnv * env, jobject p1, jfiel
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetObjectField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetObjectField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.l = p3;
 
@@ -8402,13 +8286,13 @@ static void JNICALL bda_c2j_proxy_SetObjectField(JNIEnv * env, jobject p1, jfiel
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetObjectField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8429,14 +8313,17 @@ static void JNICALL bda_c2j_proxy_SetObjectField(JNIEnv * env, jobject p1, jfiel
    bda_orig_jni_funcs->SetObjectField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8447,7 +8334,7 @@ static void JNICALL bda_c2j_proxy_SetBooleanField(JNIEnv * env, jobject p1, jfie
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8459,13 +8346,11 @@ static void JNICALL bda_c2j_proxy_SetBooleanField(JNIEnv * env, jobject p1, jfie
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetBooleanField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetBooleanField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.z = p3;
 
@@ -8480,13 +8365,13 @@ static void JNICALL bda_c2j_proxy_SetBooleanField(JNIEnv * env, jobject p1, jfie
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetBooleanField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8507,14 +8392,17 @@ static void JNICALL bda_c2j_proxy_SetBooleanField(JNIEnv * env, jobject p1, jfie
    bda_orig_jni_funcs->SetBooleanField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8525,7 +8413,7 @@ static void JNICALL bda_c2j_proxy_SetByteField(JNIEnv * env, jobject p1, jfieldI
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8537,13 +8425,11 @@ static void JNICALL bda_c2j_proxy_SetByteField(JNIEnv * env, jobject p1, jfieldI
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetByteField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetByteField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.b = p3;
 
@@ -8558,13 +8444,13 @@ static void JNICALL bda_c2j_proxy_SetByteField(JNIEnv * env, jobject p1, jfieldI
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetByteField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8585,14 +8471,17 @@ static void JNICALL bda_c2j_proxy_SetByteField(JNIEnv * env, jobject p1, jfieldI
    bda_orig_jni_funcs->SetByteField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8603,7 +8492,7 @@ static void JNICALL bda_c2j_proxy_SetCharField(JNIEnv * env, jobject p1, jfieldI
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8615,13 +8504,11 @@ static void JNICALL bda_c2j_proxy_SetCharField(JNIEnv * env, jobject p1, jfieldI
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetCharField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetCharField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.c = p3;
 
@@ -8636,13 +8523,13 @@ static void JNICALL bda_c2j_proxy_SetCharField(JNIEnv * env, jobject p1, jfieldI
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetCharField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8663,14 +8550,17 @@ static void JNICALL bda_c2j_proxy_SetCharField(JNIEnv * env, jobject p1, jfieldI
    bda_orig_jni_funcs->SetCharField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8681,7 +8571,7 @@ static void JNICALL bda_c2j_proxy_SetShortField(JNIEnv * env, jobject p1, jfield
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8693,13 +8583,11 @@ static void JNICALL bda_c2j_proxy_SetShortField(JNIEnv * env, jobject p1, jfield
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetShortField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetShortField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.s = p3;
 
@@ -8714,13 +8602,13 @@ static void JNICALL bda_c2j_proxy_SetShortField(JNIEnv * env, jobject p1, jfield
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetShortField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8741,14 +8629,17 @@ static void JNICALL bda_c2j_proxy_SetShortField(JNIEnv * env, jobject p1, jfield
    bda_orig_jni_funcs->SetShortField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8759,7 +8650,7 @@ static void JNICALL bda_c2j_proxy_SetIntField(JNIEnv * env, jobject p1, jfieldID
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8771,13 +8662,11 @@ static void JNICALL bda_c2j_proxy_SetIntField(JNIEnv * env, jobject p1, jfieldID
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetIntField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetIntField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.i = p3;
 
@@ -8792,13 +8681,13 @@ static void JNICALL bda_c2j_proxy_SetIntField(JNIEnv * env, jobject p1, jfieldID
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetIntField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8819,14 +8708,17 @@ static void JNICALL bda_c2j_proxy_SetIntField(JNIEnv * env, jobject p1, jfieldID
    bda_orig_jni_funcs->SetIntField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8837,7 +8729,7 @@ static void JNICALL bda_c2j_proxy_SetLongField(JNIEnv * env, jobject p1, jfieldI
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8849,13 +8741,11 @@ static void JNICALL bda_c2j_proxy_SetLongField(JNIEnv * env, jobject p1, jfieldI
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetLongField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetLongField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.j = p3;
 
@@ -8870,13 +8760,13 @@ static void JNICALL bda_c2j_proxy_SetLongField(JNIEnv * env, jobject p1, jfieldI
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetLongField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8897,14 +8787,17 @@ static void JNICALL bda_c2j_proxy_SetLongField(JNIEnv * env, jobject p1, jfieldI
    bda_orig_jni_funcs->SetLongField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8915,7 +8808,7 @@ static void JNICALL bda_c2j_proxy_SetFloatField(JNIEnv * env, jobject p1, jfield
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -8927,13 +8820,11 @@ static void JNICALL bda_c2j_proxy_SetFloatField(JNIEnv * env, jobject p1, jfield
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetFloatField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetFloatField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.f = p3;
 
@@ -8948,13 +8839,13 @@ static void JNICALL bda_c2j_proxy_SetFloatField(JNIEnv * env, jobject p1, jfield
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetFloatField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -8975,14 +8866,17 @@ static void JNICALL bda_c2j_proxy_SetFloatField(JNIEnv * env, jobject p1, jfield
    bda_orig_jni_funcs->SetFloatField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -8993,7 +8887,7 @@ static void JNICALL bda_c2j_proxy_SetDoubleField(JNIEnv * env, jobject p1, jfiel
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9005,13 +8899,11 @@ static void JNICALL bda_c2j_proxy_SetDoubleField(JNIEnv * env, jobject p1, jfiel
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetDoubleField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetDoubleField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.d = p3;
 
@@ -9026,13 +8918,13 @@ static void JNICALL bda_c2j_proxy_SetDoubleField(JNIEnv * env, jobject p1, jfiel
     && bda_check_access_set_instance_field(s, p1, p2, 2, "SetDoubleField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9053,14 +8945,17 @@ static void JNICALL bda_c2j_proxy_SetDoubleField(JNIEnv * env, jobject p1, jfiel
    bda_orig_jni_funcs->SetDoubleField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -9072,7 +8967,7 @@ static jmethodID JNICALL bda_c2j_proxy_GetStaticMethodID(JNIEnv * env, jclass p1
   /* local variables */
   jmethodID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9084,13 +8979,11 @@ static jmethodID JNICALL bda_c2j_proxy_GetStaticMethodID(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticMethodID++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticMethodID++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticMethodID")
@@ -9103,13 +8996,13 @@ static jmethodID JNICALL bda_c2j_proxy_GetStaticMethodID(JNIEnv * env, jclass p1
     && bda_check_jclass(s, p1, 1, "GetStaticMethodID")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9130,17 +9023,20 @@ static jmethodID JNICALL bda_c2j_proxy_GetStaticMethodID(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->GetStaticMethodID(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
        bda_jmethodid_append(result, 1, p1, p2, p3);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9153,7 +9049,7 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethod(JNIEnv * env, jclass
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9166,13 +9062,11 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethod(JNIEnv * env, jclass
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticObjectMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticObjectMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -9188,13 +9082,13 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethod(JNIEnv * env, jclass
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticObjectMethod", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9216,21 +9110,25 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethod(JNIEnv * env, jclass
   result =   bda_orig_jni_funcs->CallStaticObjectMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallStaticObjectMethod")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9243,7 +9141,7 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodV(JNIEnv * env, jclas
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9255,13 +9153,11 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodV(JNIEnv * env, jclas
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticObjectMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticObjectMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -9277,13 +9173,13 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodV(JNIEnv * env, jclas
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticObjectMethodV", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9304,21 +9200,25 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodV(JNIEnv * env, jclas
   result = bda_orig_jni_funcs->CallStaticObjectMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallStaticObjectMethodV")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9331,7 +9231,7 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodA(JNIEnv * env, jclas
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9343,13 +9243,11 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodA(JNIEnv * env, jclas
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticObjectMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticObjectMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -9365,13 +9263,13 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodA(JNIEnv * env, jclas
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticObjectMethodA", 'O')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9392,21 +9290,25 @@ static jobject JNICALL bda_c2j_proxy_CallStaticObjectMethodA(JNIEnv * env, jclas
   result = bda_orig_jni_funcs->CallStaticObjectMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "CallStaticObjectMethodA")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9419,7 +9321,7 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethod(JNIEnv * env, jcla
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9432,13 +9334,11 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethod(JNIEnv * env, jcla
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticBooleanMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticBooleanMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -9454,13 +9354,13 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethod(JNIEnv * env, jcla
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticBooleanMethod", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9482,14 +9382,17 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethod(JNIEnv * env, jcla
   result =   bda_orig_jni_funcs->CallStaticBooleanMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9502,7 +9405,7 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodV(JNIEnv * env, jcl
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9514,13 +9417,11 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodV(JNIEnv * env, jcl
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticBooleanMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticBooleanMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -9536,13 +9437,13 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodV(JNIEnv * env, jcl
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticBooleanMethodV", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9563,14 +9464,17 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodV(JNIEnv * env, jcl
   result = bda_orig_jni_funcs->CallStaticBooleanMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9583,7 +9487,7 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodA(JNIEnv * env, jcl
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9595,13 +9499,11 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodA(JNIEnv * env, jcl
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticBooleanMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticBooleanMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -9617,13 +9519,13 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodA(JNIEnv * env, jcl
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticBooleanMethodA", 'Z')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9644,14 +9546,17 @@ static jboolean JNICALL bda_c2j_proxy_CallStaticBooleanMethodA(JNIEnv * env, jcl
   result = bda_orig_jni_funcs->CallStaticBooleanMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9664,7 +9569,7 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethod(JNIEnv * env, jclass p1,
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9677,13 +9582,11 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethod(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticByteMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticByteMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -9699,13 +9602,13 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethod(JNIEnv * env, jclass p1,
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticByteMethod", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9727,14 +9630,17 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethod(JNIEnv * env, jclass p1,
   result =   bda_orig_jni_funcs->CallStaticByteMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9747,7 +9653,7 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodV(JNIEnv * env, jclass p1
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9759,13 +9665,11 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodV(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticByteMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticByteMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -9781,13 +9685,13 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodV(JNIEnv * env, jclass p1
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticByteMethodV", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9808,14 +9712,17 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodV(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticByteMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9828,7 +9735,7 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodA(JNIEnv * env, jclass p1
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9840,13 +9747,11 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodA(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticByteMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticByteMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -9862,13 +9767,13 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodA(JNIEnv * env, jclass p1
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticByteMethodA", 'B')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9889,14 +9794,17 @@ static jbyte JNICALL bda_c2j_proxy_CallStaticByteMethodA(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticByteMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9909,7 +9817,7 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethod(JNIEnv * env, jclass p1,
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -9922,13 +9830,11 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethod(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticCharMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticCharMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -9944,13 +9850,13 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethod(JNIEnv * env, jclass p1,
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticCharMethod", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -9972,14 +9878,17 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethod(JNIEnv * env, jclass p1,
   result =   bda_orig_jni_funcs->CallStaticCharMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -9992,7 +9901,7 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodV(JNIEnv * env, jclass p1
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10004,13 +9913,11 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodV(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticCharMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticCharMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -10026,13 +9933,13 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodV(JNIEnv * env, jclass p1
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticCharMethodV", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10053,14 +9960,17 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodV(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticCharMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10073,7 +9983,7 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodA(JNIEnv * env, jclass p1
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10085,13 +9995,11 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodA(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticCharMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticCharMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -10107,13 +10015,13 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodA(JNIEnv * env, jclass p1
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticCharMethodA", 'C')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10134,14 +10042,17 @@ static jchar JNICALL bda_c2j_proxy_CallStaticCharMethodA(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticCharMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10154,7 +10065,7 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethod(JNIEnv * env, jclass p
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10167,13 +10078,11 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethod(JNIEnv * env, jclass p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticShortMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticShortMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -10189,13 +10098,13 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethod(JNIEnv * env, jclass p
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticShortMethod", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10217,14 +10126,17 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethod(JNIEnv * env, jclass p
   result =   bda_orig_jni_funcs->CallStaticShortMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10237,7 +10149,7 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodV(JNIEnv * env, jclass 
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10249,13 +10161,11 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodV(JNIEnv * env, jclass 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticShortMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticShortMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -10271,13 +10181,13 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodV(JNIEnv * env, jclass 
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticShortMethodV", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10298,14 +10208,17 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodV(JNIEnv * env, jclass 
   result = bda_orig_jni_funcs->CallStaticShortMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10318,7 +10231,7 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodA(JNIEnv * env, jclass 
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10330,13 +10243,11 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodA(JNIEnv * env, jclass 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticShortMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticShortMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -10352,13 +10263,13 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodA(JNIEnv * env, jclass 
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticShortMethodA", 'S')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10379,14 +10290,17 @@ static jshort JNICALL bda_c2j_proxy_CallStaticShortMethodA(JNIEnv * env, jclass 
   result = bda_orig_jni_funcs->CallStaticShortMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10399,7 +10313,7 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethod(JNIEnv * env, jclass p1, j
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10412,13 +10326,11 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethod(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticIntMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticIntMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -10434,13 +10346,13 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethod(JNIEnv * env, jclass p1, j
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticIntMethod", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10462,14 +10374,17 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethod(JNIEnv * env, jclass p1, j
   result =   bda_orig_jni_funcs->CallStaticIntMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10482,7 +10397,7 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodV(JNIEnv * env, jclass p1, 
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10494,13 +10409,11 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodV(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticIntMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticIntMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -10516,13 +10429,13 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodV(JNIEnv * env, jclass p1, 
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticIntMethodV", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10543,14 +10456,17 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodV(JNIEnv * env, jclass p1, 
   result = bda_orig_jni_funcs->CallStaticIntMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10563,7 +10479,7 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodA(JNIEnv * env, jclass p1, 
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10575,13 +10491,11 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodA(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticIntMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticIntMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -10597,13 +10511,13 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodA(JNIEnv * env, jclass p1, 
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticIntMethodA", 'I')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10624,14 +10538,17 @@ static jint JNICALL bda_c2j_proxy_CallStaticIntMethodA(JNIEnv * env, jclass p1, 
   result = bda_orig_jni_funcs->CallStaticIntMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10644,7 +10561,7 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethod(JNIEnv * env, jclass p1,
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10657,13 +10574,11 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethod(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticLongMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticLongMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -10679,13 +10594,13 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethod(JNIEnv * env, jclass p1,
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticLongMethod", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10707,14 +10622,17 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethod(JNIEnv * env, jclass p1,
   result =   bda_orig_jni_funcs->CallStaticLongMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10727,7 +10645,7 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodV(JNIEnv * env, jclass p1
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10739,13 +10657,11 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodV(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticLongMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticLongMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -10761,13 +10677,13 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodV(JNIEnv * env, jclass p1
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticLongMethodV", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10788,14 +10704,17 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodV(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticLongMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10808,7 +10727,7 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodA(JNIEnv * env, jclass p1
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10820,13 +10739,11 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodA(JNIEnv * env, jclass p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticLongMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticLongMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -10842,13 +10759,13 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodA(JNIEnv * env, jclass p1
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticLongMethodA", 'J')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10869,14 +10786,17 @@ static jlong JNICALL bda_c2j_proxy_CallStaticLongMethodA(JNIEnv * env, jclass p1
   result = bda_orig_jni_funcs->CallStaticLongMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10889,7 +10809,7 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethod(JNIEnv * env, jclass p
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10902,13 +10822,11 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethod(JNIEnv * env, jclass p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticFloatMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticFloatMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -10924,13 +10842,13 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethod(JNIEnv * env, jclass p
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticFloatMethod", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -10952,14 +10870,17 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethod(JNIEnv * env, jclass p
   result =   bda_orig_jni_funcs->CallStaticFloatMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -10972,7 +10893,7 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodV(JNIEnv * env, jclass 
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -10984,13 +10905,11 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodV(JNIEnv * env, jclass 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticFloatMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticFloatMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -11006,13 +10925,13 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodV(JNIEnv * env, jclass 
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticFloatMethodV", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11033,14 +10952,17 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodV(JNIEnv * env, jclass 
   result = bda_orig_jni_funcs->CallStaticFloatMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11053,7 +10975,7 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodA(JNIEnv * env, jclass 
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11065,13 +10987,11 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodA(JNIEnv * env, jclass 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticFloatMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticFloatMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -11087,13 +11007,13 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodA(JNIEnv * env, jclass 
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticFloatMethodA", 'F')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11114,14 +11034,17 @@ static jfloat JNICALL bda_c2j_proxy_CallStaticFloatMethodA(JNIEnv * env, jclass 
   result = bda_orig_jni_funcs->CallStaticFloatMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11134,7 +11057,7 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethod(JNIEnv * env, jclass
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11147,13 +11070,11 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethod(JNIEnv * env, jclass
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticDoubleMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticDoubleMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -11169,13 +11090,13 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethod(JNIEnv * env, jclass
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticDoubleMethod", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11197,14 +11118,17 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethod(JNIEnv * env, jclass
   result =   bda_orig_jni_funcs->CallStaticDoubleMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11217,7 +11141,7 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodV(JNIEnv * env, jclas
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11229,13 +11153,11 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodV(JNIEnv * env, jclas
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticDoubleMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticDoubleMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -11251,13 +11173,13 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodV(JNIEnv * env, jclas
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticDoubleMethodV", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11278,14 +11200,17 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodV(JNIEnv * env, jclas
   result = bda_orig_jni_funcs->CallStaticDoubleMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11298,7 +11223,7 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodA(JNIEnv * env, jclas
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11310,13 +11235,11 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodA(JNIEnv * env, jclas
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticDoubleMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticDoubleMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -11332,13 +11255,13 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodA(JNIEnv * env, jclas
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticDoubleMethodA", 'D')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11359,14 +11282,17 @@ static jdouble JNICALL bda_c2j_proxy_CallStaticDoubleMethodA(JNIEnv * env, jclas
   result = bda_orig_jni_funcs->CallStaticDoubleMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11378,7 +11304,7 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethod(JNIEnv * env, jclass p1, 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11391,13 +11317,11 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethod(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticVoidMethod++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticVoidMethod++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     va_start(awrap.value.ap, p2);
     awrap.type = BDA_VA_LIST;
@@ -11413,13 +11337,13 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethod(JNIEnv * env, jclass p1, 
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticVoidMethod", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11441,14 +11365,17 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethod(JNIEnv * env, jclass p1, 
   bda_orig_jni_funcs->CallStaticVoidMethodV(env, p1, p2, args);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -11459,7 +11386,7 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodV(JNIEnv * env, jclass p1,
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11471,13 +11398,11 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodV(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticVoidMethodV++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticVoidMethodV++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_VA_LIST;
      awrap.value.ap = p3;
@@ -11493,13 +11418,13 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodV(JNIEnv * env, jclass p1,
     &&  bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticVoidMethodV", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11520,14 +11445,17 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodV(JNIEnv * env, jclass p1,
    bda_orig_jni_funcs->CallStaticVoidMethodV(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -11538,7 +11466,7 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodA(JNIEnv * env, jclass p1,
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11550,13 +11478,11 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodA(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.CallStaticVoidMethodA++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.CallStaticVoidMethodA++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;    struct bda_var_arg_wrap awrap;
     awrap.type = BDA_JARRAY;
     awrap.value.array = p3;
@@ -11572,13 +11498,13 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodA(JNIEnv * env, jclass p1,
     && bda_check_jmethodid_static(s, p1, p2, awrap, "CallStaticVoidMethodA", 'V')
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11599,14 +11525,17 @@ static void JNICALL bda_c2j_proxy_CallStaticVoidMethodA(JNIEnv * env, jclass p1,
    bda_orig_jni_funcs->CallStaticVoidMethodA(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -11618,7 +11547,7 @@ static jfieldID JNICALL bda_c2j_proxy_GetStaticFieldID(JNIEnv * env, jclass p1, 
   /* local variables */
   jfieldID result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11630,13 +11559,11 @@ static jfieldID JNICALL bda_c2j_proxy_GetStaticFieldID(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticFieldID++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticFieldID++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticFieldID")
@@ -11649,13 +11576,13 @@ static jfieldID JNICALL bda_c2j_proxy_GetStaticFieldID(JNIEnv * env, jclass p1, 
     && bda_check_jclass(s, p1, 1, "GetStaticFieldID")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11676,17 +11603,20 @@ static jfieldID JNICALL bda_c2j_proxy_GetStaticFieldID(JNIEnv * env, jclass p1, 
   result = bda_orig_jni_funcs->GetStaticFieldID(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
        bda_jfieldid_append(s, result, p1, 1, p2, p3);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11699,7 +11629,7 @@ static jobject JNICALL bda_c2j_proxy_GetStaticObjectField(JNIEnv * env, jclass p
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11711,13 +11641,11 @@ static jobject JNICALL bda_c2j_proxy_GetStaticObjectField(JNIEnv * env, jclass p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticObjectField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticObjectField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticObjectField")
@@ -11730,13 +11658,13 @@ static jobject JNICALL bda_c2j_proxy_GetStaticObjectField(JNIEnv * env, jclass p
     && bda_check_jfieldid_get_static(s, p1, p2, 'O', "GetStaticObjectField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11757,21 +11685,25 @@ static jobject JNICALL bda_c2j_proxy_GetStaticObjectField(JNIEnv * env, jclass p
   result = bda_orig_jni_funcs->GetStaticObjectField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "GetStaticObjectField")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11784,7 +11716,7 @@ static jboolean JNICALL bda_c2j_proxy_GetStaticBooleanField(JNIEnv * env, jclass
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11796,13 +11728,11 @@ static jboolean JNICALL bda_c2j_proxy_GetStaticBooleanField(JNIEnv * env, jclass
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticBooleanField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticBooleanField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticBooleanField")
@@ -11815,13 +11745,13 @@ static jboolean JNICALL bda_c2j_proxy_GetStaticBooleanField(JNIEnv * env, jclass
     && bda_check_jfieldid_get_static(s, p1, p2, 'Z', "GetStaticBooleanField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11842,14 +11772,17 @@ static jboolean JNICALL bda_c2j_proxy_GetStaticBooleanField(JNIEnv * env, jclass
   result = bda_orig_jni_funcs->GetStaticBooleanField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11862,7 +11795,7 @@ static jbyte JNICALL bda_c2j_proxy_GetStaticByteField(JNIEnv * env, jclass p1, j
   /* local variables */
   jbyte result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11874,13 +11807,11 @@ static jbyte JNICALL bda_c2j_proxy_GetStaticByteField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticByteField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticByteField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticByteField")
@@ -11893,13 +11824,13 @@ static jbyte JNICALL bda_c2j_proxy_GetStaticByteField(JNIEnv * env, jclass p1, j
     && bda_check_jfieldid_get_static(s, p1, p2, 'B', "GetStaticByteField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11920,14 +11851,17 @@ static jbyte JNICALL bda_c2j_proxy_GetStaticByteField(JNIEnv * env, jclass p1, j
   result = bda_orig_jni_funcs->GetStaticByteField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -11940,7 +11874,7 @@ static jchar JNICALL bda_c2j_proxy_GetStaticCharField(JNIEnv * env, jclass p1, j
   /* local variables */
   jchar result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -11952,13 +11886,11 @@ static jchar JNICALL bda_c2j_proxy_GetStaticCharField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticCharField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticCharField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticCharField")
@@ -11971,13 +11903,13 @@ static jchar JNICALL bda_c2j_proxy_GetStaticCharField(JNIEnv * env, jclass p1, j
     && bda_check_jfieldid_get_static(s, p1, p2, 'C', "GetStaticCharField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -11998,14 +11930,17 @@ static jchar JNICALL bda_c2j_proxy_GetStaticCharField(JNIEnv * env, jclass p1, j
   result = bda_orig_jni_funcs->GetStaticCharField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12018,7 +11953,7 @@ static jshort JNICALL bda_c2j_proxy_GetStaticShortField(JNIEnv * env, jclass p1,
   /* local variables */
   jshort result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12030,13 +11965,11 @@ static jshort JNICALL bda_c2j_proxy_GetStaticShortField(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticShortField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticShortField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticShortField")
@@ -12049,13 +11982,13 @@ static jshort JNICALL bda_c2j_proxy_GetStaticShortField(JNIEnv * env, jclass p1,
     && bda_check_jfieldid_get_static(s, p1, p2, 'S', "GetStaticShortField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12076,14 +12009,17 @@ static jshort JNICALL bda_c2j_proxy_GetStaticShortField(JNIEnv * env, jclass p1,
   result = bda_orig_jni_funcs->GetStaticShortField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12096,7 +12032,7 @@ static jint JNICALL bda_c2j_proxy_GetStaticIntField(JNIEnv * env, jclass p1, jfi
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12108,13 +12044,11 @@ static jint JNICALL bda_c2j_proxy_GetStaticIntField(JNIEnv * env, jclass p1, jfi
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticIntField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticIntField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticIntField")
@@ -12127,13 +12061,13 @@ static jint JNICALL bda_c2j_proxy_GetStaticIntField(JNIEnv * env, jclass p1, jfi
     && bda_check_jfieldid_get_static(s, p1, p2, 'I', "GetStaticIntField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12154,14 +12088,17 @@ static jint JNICALL bda_c2j_proxy_GetStaticIntField(JNIEnv * env, jclass p1, jfi
   result = bda_orig_jni_funcs->GetStaticIntField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12174,7 +12111,7 @@ static jlong JNICALL bda_c2j_proxy_GetStaticLongField(JNIEnv * env, jclass p1, j
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12186,13 +12123,11 @@ static jlong JNICALL bda_c2j_proxy_GetStaticLongField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticLongField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticLongField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticLongField")
@@ -12205,13 +12140,13 @@ static jlong JNICALL bda_c2j_proxy_GetStaticLongField(JNIEnv * env, jclass p1, j
     && bda_check_jfieldid_get_static(s, p1, p2, 'J', "GetStaticLongField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12232,14 +12167,17 @@ static jlong JNICALL bda_c2j_proxy_GetStaticLongField(JNIEnv * env, jclass p1, j
   result = bda_orig_jni_funcs->GetStaticLongField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12252,7 +12190,7 @@ static jfloat JNICALL bda_c2j_proxy_GetStaticFloatField(JNIEnv * env, jclass p1,
   /* local variables */
   jfloat result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12264,13 +12202,11 @@ static jfloat JNICALL bda_c2j_proxy_GetStaticFloatField(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticFloatField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticFloatField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticFloatField")
@@ -12283,13 +12219,13 @@ static jfloat JNICALL bda_c2j_proxy_GetStaticFloatField(JNIEnv * env, jclass p1,
     && bda_check_jfieldid_get_static(s, p1, p2, 'F', "GetStaticFloatField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12310,14 +12246,17 @@ static jfloat JNICALL bda_c2j_proxy_GetStaticFloatField(JNIEnv * env, jclass p1,
   result = bda_orig_jni_funcs->GetStaticFloatField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12330,7 +12269,7 @@ static jdouble JNICALL bda_c2j_proxy_GetStaticDoubleField(JNIEnv * env, jclass p
   /* local variables */
   jdouble result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12342,13 +12281,11 @@ static jdouble JNICALL bda_c2j_proxy_GetStaticDoubleField(JNIEnv * env, jclass p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStaticDoubleField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStaticDoubleField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStaticDoubleField")
@@ -12361,13 +12298,13 @@ static jdouble JNICALL bda_c2j_proxy_GetStaticDoubleField(JNIEnv * env, jclass p
     && bda_check_jfieldid_get_static(s, p1, p2, 'D', "GetStaticDoubleField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12388,14 +12325,17 @@ static jdouble JNICALL bda_c2j_proxy_GetStaticDoubleField(JNIEnv * env, jclass p
   result = bda_orig_jni_funcs->GetStaticDoubleField(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -12407,7 +12347,7 @@ static void JNICALL bda_c2j_proxy_SetStaticObjectField(JNIEnv * env, jclass p1, 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12419,13 +12359,11 @@ static void JNICALL bda_c2j_proxy_SetStaticObjectField(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticObjectField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticObjectField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.l = p3;
 
@@ -12442,13 +12380,13 @@ static void JNICALL bda_c2j_proxy_SetStaticObjectField(JNIEnv * env, jclass p1, 
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticObjectField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12469,14 +12407,17 @@ static void JNICALL bda_c2j_proxy_SetStaticObjectField(JNIEnv * env, jclass p1, 
    bda_orig_jni_funcs->SetStaticObjectField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12487,7 +12428,7 @@ static void JNICALL bda_c2j_proxy_SetStaticBooleanField(JNIEnv * env, jclass p1,
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12499,13 +12440,11 @@ static void JNICALL bda_c2j_proxy_SetStaticBooleanField(JNIEnv * env, jclass p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticBooleanField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticBooleanField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.z = p3;
 
@@ -12521,13 +12460,13 @@ static void JNICALL bda_c2j_proxy_SetStaticBooleanField(JNIEnv * env, jclass p1,
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticBooleanField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12548,14 +12487,17 @@ static void JNICALL bda_c2j_proxy_SetStaticBooleanField(JNIEnv * env, jclass p1,
    bda_orig_jni_funcs->SetStaticBooleanField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12566,7 +12508,7 @@ static void JNICALL bda_c2j_proxy_SetStaticByteField(JNIEnv * env, jclass p1, jf
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12578,13 +12520,11 @@ static void JNICALL bda_c2j_proxy_SetStaticByteField(JNIEnv * env, jclass p1, jf
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticByteField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticByteField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.b = p3;
 
@@ -12600,13 +12540,13 @@ static void JNICALL bda_c2j_proxy_SetStaticByteField(JNIEnv * env, jclass p1, jf
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticByteField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12627,14 +12567,17 @@ static void JNICALL bda_c2j_proxy_SetStaticByteField(JNIEnv * env, jclass p1, jf
    bda_orig_jni_funcs->SetStaticByteField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12645,7 +12588,7 @@ static void JNICALL bda_c2j_proxy_SetStaticCharField(JNIEnv * env, jclass p1, jf
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12657,13 +12600,11 @@ static void JNICALL bda_c2j_proxy_SetStaticCharField(JNIEnv * env, jclass p1, jf
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticCharField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticCharField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.c = p3;
 
@@ -12679,13 +12620,13 @@ static void JNICALL bda_c2j_proxy_SetStaticCharField(JNIEnv * env, jclass p1, jf
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticCharField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12706,14 +12647,17 @@ static void JNICALL bda_c2j_proxy_SetStaticCharField(JNIEnv * env, jclass p1, jf
    bda_orig_jni_funcs->SetStaticCharField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12724,7 +12668,7 @@ static void JNICALL bda_c2j_proxy_SetStaticShortField(JNIEnv * env, jclass p1, j
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12736,13 +12680,11 @@ static void JNICALL bda_c2j_proxy_SetStaticShortField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticShortField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticShortField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.s = p3;
 
@@ -12758,13 +12700,13 @@ static void JNICALL bda_c2j_proxy_SetStaticShortField(JNIEnv * env, jclass p1, j
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticShortField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12785,14 +12727,17 @@ static void JNICALL bda_c2j_proxy_SetStaticShortField(JNIEnv * env, jclass p1, j
    bda_orig_jni_funcs->SetStaticShortField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12803,7 +12748,7 @@ static void JNICALL bda_c2j_proxy_SetStaticIntField(JNIEnv * env, jclass p1, jfi
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12815,13 +12760,11 @@ static void JNICALL bda_c2j_proxy_SetStaticIntField(JNIEnv * env, jclass p1, jfi
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticIntField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticIntField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.i = p3;
 
@@ -12837,13 +12780,13 @@ static void JNICALL bda_c2j_proxy_SetStaticIntField(JNIEnv * env, jclass p1, jfi
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticIntField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12864,14 +12807,17 @@ static void JNICALL bda_c2j_proxy_SetStaticIntField(JNIEnv * env, jclass p1, jfi
    bda_orig_jni_funcs->SetStaticIntField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12882,7 +12828,7 @@ static void JNICALL bda_c2j_proxy_SetStaticLongField(JNIEnv * env, jclass p1, jf
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12894,13 +12840,11 @@ static void JNICALL bda_c2j_proxy_SetStaticLongField(JNIEnv * env, jclass p1, jf
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticLongField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticLongField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.j = p3;
 
@@ -12916,13 +12860,13 @@ static void JNICALL bda_c2j_proxy_SetStaticLongField(JNIEnv * env, jclass p1, jf
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticLongField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -12943,14 +12887,17 @@ static void JNICALL bda_c2j_proxy_SetStaticLongField(JNIEnv * env, jclass p1, jf
    bda_orig_jni_funcs->SetStaticLongField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -12961,7 +12908,7 @@ static void JNICALL bda_c2j_proxy_SetStaticFloatField(JNIEnv * env, jclass p1, j
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -12973,13 +12920,11 @@ static void JNICALL bda_c2j_proxy_SetStaticFloatField(JNIEnv * env, jclass p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticFloatField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticFloatField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.f = p3;
 
@@ -12995,13 +12940,13 @@ static void JNICALL bda_c2j_proxy_SetStaticFloatField(JNIEnv * env, jclass p1, j
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticFloatField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13022,14 +12967,17 @@ static void JNICALL bda_c2j_proxy_SetStaticFloatField(JNIEnv * env, jclass p1, j
    bda_orig_jni_funcs->SetStaticFloatField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -13040,7 +12988,7 @@ static void JNICALL bda_c2j_proxy_SetStaticDoubleField(JNIEnv * env, jclass p1, 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13052,13 +13000,11 @@ static void JNICALL bda_c2j_proxy_SetStaticDoubleField(JNIEnv * env, jclass p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetStaticDoubleField++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetStaticDoubleField++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;         jvalue v;
          v.d = p3;
 
@@ -13074,13 +13020,13 @@ static void JNICALL bda_c2j_proxy_SetStaticDoubleField(JNIEnv * env, jclass p1, 
     && bda_check_access_set_static_field(s, p1, p2, 2, "SetStaticDoubleField")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13101,14 +13047,17 @@ static void JNICALL bda_c2j_proxy_SetStaticDoubleField(JNIEnv * env, jclass p1, 
    bda_orig_jni_funcs->SetStaticDoubleField(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -13120,7 +13069,7 @@ static jstring JNICALL bda_c2j_proxy_NewString(JNIEnv * env, const jchar * p1, j
   /* local variables */
   jstring result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13132,13 +13081,11 @@ static jstring JNICALL bda_c2j_proxy_NewString(JNIEnv * env, const jchar * p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewString++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewString++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewString")
@@ -13147,13 +13094,13 @@ static jstring JNICALL bda_c2j_proxy_NewString(JNIEnv * env, const jchar * p1, j
     && bda_check_non_null(s, p1,  1, "NewString")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13174,21 +13121,25 @@ static jstring JNICALL bda_c2j_proxy_NewString(JNIEnv * env, const jchar * p1, j
   result = bda_orig_jni_funcs->NewString(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewString")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13201,7 +13152,7 @@ static jsize JNICALL bda_c2j_proxy_GetStringLength(JNIEnv * env, jstring p1)
   /* local variables */
   jsize result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13213,13 +13164,11 @@ static jsize JNICALL bda_c2j_proxy_GetStringLength(JNIEnv * env, jstring p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringLength++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringLength++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringLength")
@@ -13230,13 +13179,13 @@ static jsize JNICALL bda_c2j_proxy_GetStringLength(JNIEnv * env, jstring p1)
     && bda_check_jstring(s, p1, 1, "GetStringLength")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13257,14 +13206,17 @@ static jsize JNICALL bda_c2j_proxy_GetStringLength(JNIEnv * env, jstring p1)
   result = bda_orig_jni_funcs->GetStringLength(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13277,7 +13229,7 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringChars(JNIEnv * env, jstring 
   /* local variables */
   const jchar * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13289,13 +13241,11 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringChars(JNIEnv * env, jstring 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringChars++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringChars++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringChars")
@@ -13306,13 +13256,13 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringChars(JNIEnv * env, jstring 
     && bda_check_jstring(s, p1, 1, "GetStringChars")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13333,15 +13283,18 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringChars(JNIEnv * env, jstring 
   result = bda_orig_jni_funcs->GetStringChars(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetStringChars");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13353,7 +13306,7 @@ static void JNICALL bda_c2j_proxy_ReleaseStringChars(JNIEnv * env, jstring p1, c
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13365,13 +13318,11 @@ static void JNICALL bda_c2j_proxy_ReleaseStringChars(JNIEnv * env, jstring p1, c
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseStringChars++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseStringChars++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseStringChars")
@@ -13383,13 +13334,13 @@ static void JNICALL bda_c2j_proxy_ReleaseStringChars(JNIEnv * env, jstring p1, c
     && bda_check_resource_free(s, p2, "ReleaseStringChars")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13410,15 +13361,18 @@ static void JNICALL bda_c2j_proxy_ReleaseStringChars(JNIEnv * env, jstring p1, c
    bda_orig_jni_funcs->ReleaseStringChars(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_resource_release(s, p2, "ReleaseStringChars");
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -13430,7 +13384,7 @@ static jstring JNICALL bda_c2j_proxy_NewStringUTF(JNIEnv * env, const char * p1)
   /* local variables */
   jstring result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13442,13 +13396,11 @@ static jstring JNICALL bda_c2j_proxy_NewStringUTF(JNIEnv * env, const char * p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewStringUTF++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewStringUTF++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewStringUTF")
@@ -13457,13 +13409,13 @@ static jstring JNICALL bda_c2j_proxy_NewStringUTF(JNIEnv * env, const char * p1)
     && bda_check_non_null(s, p1,  1, "NewStringUTF")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13484,21 +13436,25 @@ static jstring JNICALL bda_c2j_proxy_NewStringUTF(JNIEnv * env, const char * p1)
   result = bda_orig_jni_funcs->NewStringUTF(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewStringUTF")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13511,7 +13467,7 @@ static jsize JNICALL bda_c2j_proxy_GetStringUTFLength(JNIEnv * env, jstring p1)
   /* local variables */
   jsize result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13523,13 +13479,11 @@ static jsize JNICALL bda_c2j_proxy_GetStringUTFLength(JNIEnv * env, jstring p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringUTFLength++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringUTFLength++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringUTFLength")
@@ -13540,13 +13494,13 @@ static jsize JNICALL bda_c2j_proxy_GetStringUTFLength(JNIEnv * env, jstring p1)
     && bda_check_jstring(s, p1, 1, "GetStringUTFLength")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13567,14 +13521,17 @@ static jsize JNICALL bda_c2j_proxy_GetStringUTFLength(JNIEnv * env, jstring p1)
   result = bda_orig_jni_funcs->GetStringUTFLength(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13587,7 +13544,7 @@ static const char * JNICALL bda_c2j_proxy_GetStringUTFChars(JNIEnv * env, jstrin
   /* local variables */
   const char * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13599,13 +13556,11 @@ static const char * JNICALL bda_c2j_proxy_GetStringUTFChars(JNIEnv * env, jstrin
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringUTFChars++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringUTFChars++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringUTFChars")
@@ -13616,13 +13571,13 @@ static const char * JNICALL bda_c2j_proxy_GetStringUTFChars(JNIEnv * env, jstrin
     && bda_check_jstring(s, p1, 1, "GetStringUTFChars")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13643,15 +13598,18 @@ static const char * JNICALL bda_c2j_proxy_GetStringUTFChars(JNIEnv * env, jstrin
   result = bda_orig_jni_funcs->GetStringUTFChars(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetStringUTFChars");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13663,7 +13621,7 @@ static void JNICALL bda_c2j_proxy_ReleaseStringUTFChars(JNIEnv * env, jstring p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13675,13 +13633,11 @@ static void JNICALL bda_c2j_proxy_ReleaseStringUTFChars(JNIEnv * env, jstring p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseStringUTFChars++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseStringUTFChars++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseStringUTFChars")
@@ -13693,13 +13649,13 @@ static void JNICALL bda_c2j_proxy_ReleaseStringUTFChars(JNIEnv * env, jstring p1
     && bda_check_resource_free(s, p2, "ReleaseStringUTFChars")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13720,15 +13676,18 @@ static void JNICALL bda_c2j_proxy_ReleaseStringUTFChars(JNIEnv * env, jstring p1
    bda_orig_jni_funcs->ReleaseStringUTFChars(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_resource_release(s, p2, "ReleaseStringUTFChars");
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -13740,7 +13699,7 @@ static jsize JNICALL bda_c2j_proxy_GetArrayLength(JNIEnv * env, jarray p1)
   /* local variables */
   jsize result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13752,13 +13711,11 @@ static jsize JNICALL bda_c2j_proxy_GetArrayLength(JNIEnv * env, jarray p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetArrayLength++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetArrayLength++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetArrayLength")
@@ -13769,13 +13726,13 @@ static jsize JNICALL bda_c2j_proxy_GetArrayLength(JNIEnv * env, jarray p1)
     && bda_check_jarray(s, p1, 1, "GetArrayLength")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13796,14 +13753,17 @@ static jsize JNICALL bda_c2j_proxy_GetArrayLength(JNIEnv * env, jarray p1)
   result = bda_orig_jni_funcs->GetArrayLength(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13816,7 +13776,7 @@ static jobjectArray JNICALL bda_c2j_proxy_NewObjectArray(JNIEnv * env, jsize p1,
   /* local variables */
   jobjectArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13828,13 +13788,11 @@ static jobjectArray JNICALL bda_c2j_proxy_NewObjectArray(JNIEnv * env, jsize p1,
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewObjectArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewObjectArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewObjectArray")
@@ -13847,13 +13805,13 @@ static jobjectArray JNICALL bda_c2j_proxy_NewObjectArray(JNIEnv * env, jsize p1,
     && bda_check_assignable_jclass_jobject(s, p2, p3, 2, "NewObjectArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13874,21 +13832,25 @@ static jobjectArray JNICALL bda_c2j_proxy_NewObjectArray(JNIEnv * env, jsize p1,
   result = bda_orig_jni_funcs->NewObjectArray(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewObjectArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13901,7 +13863,7 @@ static jobject JNICALL bda_c2j_proxy_GetObjectArrayElement(JNIEnv * env, jobject
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13913,13 +13875,11 @@ static jobject JNICALL bda_c2j_proxy_GetObjectArrayElement(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetObjectArrayElement++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetObjectArrayElement++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetObjectArrayElement")
@@ -13930,13 +13890,13 @@ static jobject JNICALL bda_c2j_proxy_GetObjectArrayElement(JNIEnv * env, jobject
     && bda_check_jobjectArray(s, p1, 1, "GetObjectArrayElement")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -13957,21 +13917,25 @@ static jobject JNICALL bda_c2j_proxy_GetObjectArrayElement(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->GetObjectArrayElement(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "GetObjectArrayElement")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -13983,7 +13947,7 @@ static void JNICALL bda_c2j_proxy_SetObjectArrayElement(JNIEnv * env, jobjectArr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -13995,13 +13959,11 @@ static void JNICALL bda_c2j_proxy_SetObjectArrayElement(JNIEnv * env, jobjectArr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetObjectArrayElement++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetObjectArrayElement++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetObjectArrayElement")
@@ -14015,13 +13977,13 @@ static void JNICALL bda_c2j_proxy_SetObjectArrayElement(JNIEnv * env, jobjectArr
     && bda_check_assignable_jobjectArray_jobject(s, p1, p3, 3,  "SetObjectArrayElement")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14042,14 +14004,17 @@ static void JNICALL bda_c2j_proxy_SetObjectArrayElement(JNIEnv * env, jobjectArr
    bda_orig_jni_funcs->SetObjectArrayElement(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -14061,7 +14026,7 @@ static jbooleanArray JNICALL bda_c2j_proxy_NewBooleanArray(JNIEnv * env, jsize p
   /* local variables */
   jbooleanArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14073,13 +14038,11 @@ static jbooleanArray JNICALL bda_c2j_proxy_NewBooleanArray(JNIEnv * env, jsize p
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewBooleanArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewBooleanArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewBooleanArray")
@@ -14087,13 +14050,13 @@ static jbooleanArray JNICALL bda_c2j_proxy_NewBooleanArray(JNIEnv * env, jsize p
     && bda_check_no_critical(s, "NewBooleanArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14114,21 +14077,25 @@ static jbooleanArray JNICALL bda_c2j_proxy_NewBooleanArray(JNIEnv * env, jsize p
   result = bda_orig_jni_funcs->NewBooleanArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewBooleanArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14141,7 +14108,7 @@ static jbyteArray JNICALL bda_c2j_proxy_NewByteArray(JNIEnv * env, jsize p1)
   /* local variables */
   jbyteArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14153,13 +14120,11 @@ static jbyteArray JNICALL bda_c2j_proxy_NewByteArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewByteArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewByteArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewByteArray")
@@ -14167,13 +14132,13 @@ static jbyteArray JNICALL bda_c2j_proxy_NewByteArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewByteArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14194,21 +14159,25 @@ static jbyteArray JNICALL bda_c2j_proxy_NewByteArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewByteArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewByteArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14221,7 +14190,7 @@ static jcharArray JNICALL bda_c2j_proxy_NewCharArray(JNIEnv * env, jsize p1)
   /* local variables */
   jcharArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14233,13 +14202,11 @@ static jcharArray JNICALL bda_c2j_proxy_NewCharArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewCharArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewCharArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewCharArray")
@@ -14247,13 +14214,13 @@ static jcharArray JNICALL bda_c2j_proxy_NewCharArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewCharArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14274,21 +14241,25 @@ static jcharArray JNICALL bda_c2j_proxy_NewCharArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewCharArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewCharArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14301,7 +14272,7 @@ static jshortArray JNICALL bda_c2j_proxy_NewShortArray(JNIEnv * env, jsize p1)
   /* local variables */
   jshortArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14313,13 +14284,11 @@ static jshortArray JNICALL bda_c2j_proxy_NewShortArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewShortArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewShortArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewShortArray")
@@ -14327,13 +14296,13 @@ static jshortArray JNICALL bda_c2j_proxy_NewShortArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewShortArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14354,21 +14323,25 @@ static jshortArray JNICALL bda_c2j_proxy_NewShortArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewShortArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewShortArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14381,7 +14354,7 @@ static jintArray JNICALL bda_c2j_proxy_NewIntArray(JNIEnv * env, jsize p1)
   /* local variables */
   jintArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14393,13 +14366,11 @@ static jintArray JNICALL bda_c2j_proxy_NewIntArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewIntArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewIntArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewIntArray")
@@ -14407,13 +14378,13 @@ static jintArray JNICALL bda_c2j_proxy_NewIntArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewIntArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14434,21 +14405,25 @@ static jintArray JNICALL bda_c2j_proxy_NewIntArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewIntArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewIntArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14461,7 +14436,7 @@ static jlongArray JNICALL bda_c2j_proxy_NewLongArray(JNIEnv * env, jsize p1)
   /* local variables */
   jlongArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14473,13 +14448,11 @@ static jlongArray JNICALL bda_c2j_proxy_NewLongArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewLongArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewLongArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewLongArray")
@@ -14487,13 +14460,13 @@ static jlongArray JNICALL bda_c2j_proxy_NewLongArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewLongArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14514,21 +14487,25 @@ static jlongArray JNICALL bda_c2j_proxy_NewLongArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewLongArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewLongArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14541,7 +14518,7 @@ static jfloatArray JNICALL bda_c2j_proxy_NewFloatArray(JNIEnv * env, jsize p1)
   /* local variables */
   jfloatArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14553,13 +14530,11 @@ static jfloatArray JNICALL bda_c2j_proxy_NewFloatArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewFloatArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewFloatArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewFloatArray")
@@ -14567,13 +14542,13 @@ static jfloatArray JNICALL bda_c2j_proxy_NewFloatArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewFloatArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14594,21 +14569,25 @@ static jfloatArray JNICALL bda_c2j_proxy_NewFloatArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewFloatArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewFloatArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14621,7 +14600,7 @@ static jdoubleArray JNICALL bda_c2j_proxy_NewDoubleArray(JNIEnv * env, jsize p1)
   /* local variables */
   jdoubleArray result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14633,13 +14612,11 @@ static jdoubleArray JNICALL bda_c2j_proxy_NewDoubleArray(JNIEnv * env, jsize p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewDoubleArray++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewDoubleArray++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewDoubleArray")
@@ -14647,13 +14624,13 @@ static jdoubleArray JNICALL bda_c2j_proxy_NewDoubleArray(JNIEnv * env, jsize p1)
     && bda_check_no_critical(s, "NewDoubleArray")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14674,21 +14651,25 @@ static jdoubleArray JNICALL bda_c2j_proxy_NewDoubleArray(JNIEnv * env, jsize p1)
   result = bda_orig_jni_funcs->NewDoubleArray(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewDoubleArray")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14701,7 +14682,7 @@ static jboolean * JNICALL bda_c2j_proxy_GetBooleanArrayElements(JNIEnv * env, jb
   /* local variables */
   jboolean * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14713,13 +14694,11 @@ static jboolean * JNICALL bda_c2j_proxy_GetBooleanArrayElements(JNIEnv * env, jb
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetBooleanArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetBooleanArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetBooleanArrayElements")
@@ -14730,13 +14709,13 @@ static jboolean * JNICALL bda_c2j_proxy_GetBooleanArrayElements(JNIEnv * env, jb
     && bda_check_jbooleanArray(s, p1, 1, "GetBooleanArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14757,15 +14736,18 @@ static jboolean * JNICALL bda_c2j_proxy_GetBooleanArrayElements(JNIEnv * env, jb
   result = bda_orig_jni_funcs->GetBooleanArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetBooleanArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14778,7 +14760,7 @@ static jbyte * JNICALL bda_c2j_proxy_GetByteArrayElements(JNIEnv * env, jbyteArr
   /* local variables */
   jbyte * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14790,13 +14772,11 @@ static jbyte * JNICALL bda_c2j_proxy_GetByteArrayElements(JNIEnv * env, jbyteArr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetByteArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetByteArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetByteArrayElements")
@@ -14807,13 +14787,13 @@ static jbyte * JNICALL bda_c2j_proxy_GetByteArrayElements(JNIEnv * env, jbyteArr
     && bda_check_jbyteArray(s, p1, 1, "GetByteArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14834,15 +14814,18 @@ static jbyte * JNICALL bda_c2j_proxy_GetByteArrayElements(JNIEnv * env, jbyteArr
   result = bda_orig_jni_funcs->GetByteArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetByteArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14855,7 +14838,7 @@ static jchar * JNICALL bda_c2j_proxy_GetCharArrayElements(JNIEnv * env, jcharArr
   /* local variables */
   jchar * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14867,13 +14850,11 @@ static jchar * JNICALL bda_c2j_proxy_GetCharArrayElements(JNIEnv * env, jcharArr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetCharArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetCharArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetCharArrayElements")
@@ -14884,13 +14865,13 @@ static jchar * JNICALL bda_c2j_proxy_GetCharArrayElements(JNIEnv * env, jcharArr
     && bda_check_jcharArray(s, p1, 1, "GetCharArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14911,15 +14892,18 @@ static jchar * JNICALL bda_c2j_proxy_GetCharArrayElements(JNIEnv * env, jcharArr
   result = bda_orig_jni_funcs->GetCharArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetCharArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -14932,7 +14916,7 @@ static jshort * JNICALL bda_c2j_proxy_GetShortArrayElements(JNIEnv * env, jshort
   /* local variables */
   jshort * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -14944,13 +14928,11 @@ static jshort * JNICALL bda_c2j_proxy_GetShortArrayElements(JNIEnv * env, jshort
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetShortArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetShortArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetShortArrayElements")
@@ -14961,13 +14943,13 @@ static jshort * JNICALL bda_c2j_proxy_GetShortArrayElements(JNIEnv * env, jshort
     && bda_check_jshortArray(s, p1, 1, "GetShortArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -14988,15 +14970,18 @@ static jshort * JNICALL bda_c2j_proxy_GetShortArrayElements(JNIEnv * env, jshort
   result = bda_orig_jni_funcs->GetShortArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetShortArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -15009,7 +14994,7 @@ static jint * JNICALL bda_c2j_proxy_GetIntArrayElements(JNIEnv * env, jintArray 
   /* local variables */
   jint * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15021,13 +15006,11 @@ static jint * JNICALL bda_c2j_proxy_GetIntArrayElements(JNIEnv * env, jintArray 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetIntArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetIntArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetIntArrayElements")
@@ -15038,13 +15021,13 @@ static jint * JNICALL bda_c2j_proxy_GetIntArrayElements(JNIEnv * env, jintArray 
     && bda_check_jintArray(s, p1, 1, "GetIntArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15065,15 +15048,18 @@ static jint * JNICALL bda_c2j_proxy_GetIntArrayElements(JNIEnv * env, jintArray 
   result = bda_orig_jni_funcs->GetIntArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetIntArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -15086,7 +15072,7 @@ static jlong * JNICALL bda_c2j_proxy_GetLongArrayElements(JNIEnv * env, jlongArr
   /* local variables */
   jlong * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15098,13 +15084,11 @@ static jlong * JNICALL bda_c2j_proxy_GetLongArrayElements(JNIEnv * env, jlongArr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetLongArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetLongArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetLongArrayElements")
@@ -15115,13 +15099,13 @@ static jlong * JNICALL bda_c2j_proxy_GetLongArrayElements(JNIEnv * env, jlongArr
     && bda_check_jlongArray(s, p1, 1, "GetLongArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15142,15 +15126,18 @@ static jlong * JNICALL bda_c2j_proxy_GetLongArrayElements(JNIEnv * env, jlongArr
   result = bda_orig_jni_funcs->GetLongArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetLongArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -15163,7 +15150,7 @@ static jfloat * JNICALL bda_c2j_proxy_GetFloatArrayElements(JNIEnv * env, jfloat
   /* local variables */
   jfloat * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15175,13 +15162,11 @@ static jfloat * JNICALL bda_c2j_proxy_GetFloatArrayElements(JNIEnv * env, jfloat
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetFloatArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetFloatArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetFloatArrayElements")
@@ -15192,13 +15177,13 @@ static jfloat * JNICALL bda_c2j_proxy_GetFloatArrayElements(JNIEnv * env, jfloat
     && bda_check_jfloatArray(s, p1, 1, "GetFloatArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15219,15 +15204,18 @@ static jfloat * JNICALL bda_c2j_proxy_GetFloatArrayElements(JNIEnv * env, jfloat
   result = bda_orig_jni_funcs->GetFloatArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetFloatArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -15240,7 +15228,7 @@ static jdouble * JNICALL bda_c2j_proxy_GetDoubleArrayElements(JNIEnv * env, jdou
   /* local variables */
   jdouble * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15252,13 +15240,11 @@ static jdouble * JNICALL bda_c2j_proxy_GetDoubleArrayElements(JNIEnv * env, jdou
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetDoubleArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetDoubleArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetDoubleArrayElements")
@@ -15269,13 +15255,13 @@ static jdouble * JNICALL bda_c2j_proxy_GetDoubleArrayElements(JNIEnv * env, jdou
     && bda_check_jdoubleArray(s, p1, 1, "GetDoubleArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15296,15 +15282,18 @@ static jdouble * JNICALL bda_c2j_proxy_GetDoubleArrayElements(JNIEnv * env, jdou
   result = bda_orig_jni_funcs->GetDoubleArrayElements(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if (result != NULL) {bda_resource_acquire(s, result, "GetDoubleArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -15316,7 +15305,7 @@ static void JNICALL bda_c2j_proxy_ReleaseBooleanArrayElements(JNIEnv * env, jboo
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15328,13 +15317,11 @@ static void JNICALL bda_c2j_proxy_ReleaseBooleanArrayElements(JNIEnv * env, jboo
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseBooleanArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseBooleanArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseBooleanArrayElements")
@@ -15346,13 +15333,13 @@ static void JNICALL bda_c2j_proxy_ReleaseBooleanArrayElements(JNIEnv * env, jboo
     && bda_check_resource_free(s, p2, "ReleaseBooleanArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15373,15 +15360,18 @@ static void JNICALL bda_c2j_proxy_ReleaseBooleanArrayElements(JNIEnv * env, jboo
    bda_orig_jni_funcs->ReleaseBooleanArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseBooleanArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15392,7 +15382,7 @@ static void JNICALL bda_c2j_proxy_ReleaseByteArrayElements(JNIEnv * env, jbyteAr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15404,13 +15394,11 @@ static void JNICALL bda_c2j_proxy_ReleaseByteArrayElements(JNIEnv * env, jbyteAr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseByteArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseByteArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseByteArrayElements")
@@ -15422,13 +15410,13 @@ static void JNICALL bda_c2j_proxy_ReleaseByteArrayElements(JNIEnv * env, jbyteAr
     && bda_check_resource_free(s, p2, "ReleaseByteArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15449,15 +15437,18 @@ static void JNICALL bda_c2j_proxy_ReleaseByteArrayElements(JNIEnv * env, jbyteAr
    bda_orig_jni_funcs->ReleaseByteArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseByteArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15468,7 +15459,7 @@ static void JNICALL bda_c2j_proxy_ReleaseCharArrayElements(JNIEnv * env, jcharAr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15480,13 +15471,11 @@ static void JNICALL bda_c2j_proxy_ReleaseCharArrayElements(JNIEnv * env, jcharAr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseCharArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseCharArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseCharArrayElements")
@@ -15498,13 +15487,13 @@ static void JNICALL bda_c2j_proxy_ReleaseCharArrayElements(JNIEnv * env, jcharAr
     && bda_check_resource_free(s, p2, "ReleaseCharArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15525,15 +15514,18 @@ static void JNICALL bda_c2j_proxy_ReleaseCharArrayElements(JNIEnv * env, jcharAr
    bda_orig_jni_funcs->ReleaseCharArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseCharArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15544,7 +15536,7 @@ static void JNICALL bda_c2j_proxy_ReleaseShortArrayElements(JNIEnv * env, jshort
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15556,13 +15548,11 @@ static void JNICALL bda_c2j_proxy_ReleaseShortArrayElements(JNIEnv * env, jshort
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseShortArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseShortArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseShortArrayElements")
@@ -15574,13 +15564,13 @@ static void JNICALL bda_c2j_proxy_ReleaseShortArrayElements(JNIEnv * env, jshort
     && bda_check_resource_free(s, p2, "ReleaseShortArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15601,15 +15591,18 @@ static void JNICALL bda_c2j_proxy_ReleaseShortArrayElements(JNIEnv * env, jshort
    bda_orig_jni_funcs->ReleaseShortArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseShortArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15620,7 +15613,7 @@ static void JNICALL bda_c2j_proxy_ReleaseIntArrayElements(JNIEnv * env, jintArra
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15632,13 +15625,11 @@ static void JNICALL bda_c2j_proxy_ReleaseIntArrayElements(JNIEnv * env, jintArra
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseIntArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseIntArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseIntArrayElements")
@@ -15650,13 +15641,13 @@ static void JNICALL bda_c2j_proxy_ReleaseIntArrayElements(JNIEnv * env, jintArra
     && bda_check_resource_free(s, p2, "ReleaseIntArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15677,15 +15668,18 @@ static void JNICALL bda_c2j_proxy_ReleaseIntArrayElements(JNIEnv * env, jintArra
    bda_orig_jni_funcs->ReleaseIntArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseIntArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15696,7 +15690,7 @@ static void JNICALL bda_c2j_proxy_ReleaseLongArrayElements(JNIEnv * env, jlongAr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15708,13 +15702,11 @@ static void JNICALL bda_c2j_proxy_ReleaseLongArrayElements(JNIEnv * env, jlongAr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseLongArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseLongArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseLongArrayElements")
@@ -15726,13 +15718,13 @@ static void JNICALL bda_c2j_proxy_ReleaseLongArrayElements(JNIEnv * env, jlongAr
     && bda_check_resource_free(s, p2, "ReleaseLongArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15753,15 +15745,18 @@ static void JNICALL bda_c2j_proxy_ReleaseLongArrayElements(JNIEnv * env, jlongAr
    bda_orig_jni_funcs->ReleaseLongArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseLongArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15772,7 +15767,7 @@ static void JNICALL bda_c2j_proxy_ReleaseFloatArrayElements(JNIEnv * env, jfloat
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15784,13 +15779,11 @@ static void JNICALL bda_c2j_proxy_ReleaseFloatArrayElements(JNIEnv * env, jfloat
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseFloatArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseFloatArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseFloatArrayElements")
@@ -15802,13 +15795,13 @@ static void JNICALL bda_c2j_proxy_ReleaseFloatArrayElements(JNIEnv * env, jfloat
     && bda_check_resource_free(s, p2, "ReleaseFloatArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15829,15 +15822,18 @@ static void JNICALL bda_c2j_proxy_ReleaseFloatArrayElements(JNIEnv * env, jfloat
    bda_orig_jni_funcs->ReleaseFloatArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseFloatArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15848,7 +15844,7 @@ static void JNICALL bda_c2j_proxy_ReleaseDoubleArrayElements(JNIEnv * env, jdoub
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15860,13 +15856,11 @@ static void JNICALL bda_c2j_proxy_ReleaseDoubleArrayElements(JNIEnv * env, jdoub
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseDoubleArrayElements++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseDoubleArrayElements++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseDoubleArrayElements")
@@ -15878,13 +15872,13 @@ static void JNICALL bda_c2j_proxy_ReleaseDoubleArrayElements(JNIEnv * env, jdoub
     && bda_check_resource_free(s, p2, "ReleaseDoubleArrayElements")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15905,15 +15899,18 @@ static void JNICALL bda_c2j_proxy_ReleaseDoubleArrayElements(JNIEnv * env, jdoub
    bda_orig_jni_funcs->ReleaseDoubleArrayElements(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     if ( p3 != JNI_COMMIT) {bda_resource_release(s, p2, "ReleaseDoubleArrayElements");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15924,7 +15921,7 @@ static void JNICALL bda_c2j_proxy_GetBooleanArrayRegion(JNIEnv * env, jbooleanAr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -15936,13 +15933,11 @@ static void JNICALL bda_c2j_proxy_GetBooleanArrayRegion(JNIEnv * env, jbooleanAr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetBooleanArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetBooleanArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetBooleanArrayRegion")
@@ -15954,13 +15949,13 @@ static void JNICALL bda_c2j_proxy_GetBooleanArrayRegion(JNIEnv * env, jbooleanAr
     && bda_check_jbooleanArray(s, p1, 1, "GetBooleanArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -15981,14 +15976,17 @@ static void JNICALL bda_c2j_proxy_GetBooleanArrayRegion(JNIEnv * env, jbooleanAr
    bda_orig_jni_funcs->GetBooleanArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -15999,7 +15997,7 @@ static void JNICALL bda_c2j_proxy_GetByteArrayRegion(JNIEnv * env, jbyteArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16011,13 +16009,11 @@ static void JNICALL bda_c2j_proxy_GetByteArrayRegion(JNIEnv * env, jbyteArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetByteArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetByteArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetByteArrayRegion")
@@ -16029,13 +16025,13 @@ static void JNICALL bda_c2j_proxy_GetByteArrayRegion(JNIEnv * env, jbyteArray p1
     && bda_check_jbyteArray(s, p1, 1, "GetByteArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16056,14 +16052,17 @@ static void JNICALL bda_c2j_proxy_GetByteArrayRegion(JNIEnv * env, jbyteArray p1
    bda_orig_jni_funcs->GetByteArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16074,7 +16073,7 @@ static void JNICALL bda_c2j_proxy_GetCharArrayRegion(JNIEnv * env, jcharArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16086,13 +16085,11 @@ static void JNICALL bda_c2j_proxy_GetCharArrayRegion(JNIEnv * env, jcharArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetCharArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetCharArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetCharArrayRegion")
@@ -16104,13 +16101,13 @@ static void JNICALL bda_c2j_proxy_GetCharArrayRegion(JNIEnv * env, jcharArray p1
     && bda_check_jcharArray(s, p1, 1, "GetCharArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16131,14 +16128,17 @@ static void JNICALL bda_c2j_proxy_GetCharArrayRegion(JNIEnv * env, jcharArray p1
    bda_orig_jni_funcs->GetCharArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16149,7 +16149,7 @@ static void JNICALL bda_c2j_proxy_GetShortArrayRegion(JNIEnv * env, jshortArray 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16161,13 +16161,11 @@ static void JNICALL bda_c2j_proxy_GetShortArrayRegion(JNIEnv * env, jshortArray 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetShortArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetShortArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetShortArrayRegion")
@@ -16179,13 +16177,13 @@ static void JNICALL bda_c2j_proxy_GetShortArrayRegion(JNIEnv * env, jshortArray 
     && bda_check_jshortArray(s, p1, 1, "GetShortArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16206,14 +16204,17 @@ static void JNICALL bda_c2j_proxy_GetShortArrayRegion(JNIEnv * env, jshortArray 
    bda_orig_jni_funcs->GetShortArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16224,7 +16225,7 @@ static void JNICALL bda_c2j_proxy_GetIntArrayRegion(JNIEnv * env, jintArray p1, 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16236,13 +16237,11 @@ static void JNICALL bda_c2j_proxy_GetIntArrayRegion(JNIEnv * env, jintArray p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetIntArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetIntArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetIntArrayRegion")
@@ -16254,13 +16253,13 @@ static void JNICALL bda_c2j_proxy_GetIntArrayRegion(JNIEnv * env, jintArray p1, 
     && bda_check_jintArray(s, p1, 1, "GetIntArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16281,14 +16280,17 @@ static void JNICALL bda_c2j_proxy_GetIntArrayRegion(JNIEnv * env, jintArray p1, 
    bda_orig_jni_funcs->GetIntArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16299,7 +16301,7 @@ static void JNICALL bda_c2j_proxy_GetLongArrayRegion(JNIEnv * env, jlongArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16311,13 +16313,11 @@ static void JNICALL bda_c2j_proxy_GetLongArrayRegion(JNIEnv * env, jlongArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetLongArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetLongArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetLongArrayRegion")
@@ -16329,13 +16329,13 @@ static void JNICALL bda_c2j_proxy_GetLongArrayRegion(JNIEnv * env, jlongArray p1
     && bda_check_jlongArray(s, p1, 1, "GetLongArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16356,14 +16356,17 @@ static void JNICALL bda_c2j_proxy_GetLongArrayRegion(JNIEnv * env, jlongArray p1
    bda_orig_jni_funcs->GetLongArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16374,7 +16377,7 @@ static void JNICALL bda_c2j_proxy_GetFloatArrayRegion(JNIEnv * env, jfloatArray 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16386,13 +16389,11 @@ static void JNICALL bda_c2j_proxy_GetFloatArrayRegion(JNIEnv * env, jfloatArray 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetFloatArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetFloatArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetFloatArrayRegion")
@@ -16404,13 +16405,13 @@ static void JNICALL bda_c2j_proxy_GetFloatArrayRegion(JNIEnv * env, jfloatArray 
     && bda_check_jfloatArray(s, p1, 1, "GetFloatArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16431,14 +16432,17 @@ static void JNICALL bda_c2j_proxy_GetFloatArrayRegion(JNIEnv * env, jfloatArray 
    bda_orig_jni_funcs->GetFloatArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16449,7 +16453,7 @@ static void JNICALL bda_c2j_proxy_GetDoubleArrayRegion(JNIEnv * env, jdoubleArra
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16461,13 +16465,11 @@ static void JNICALL bda_c2j_proxy_GetDoubleArrayRegion(JNIEnv * env, jdoubleArra
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetDoubleArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetDoubleArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetDoubleArrayRegion")
@@ -16479,13 +16481,13 @@ static void JNICALL bda_c2j_proxy_GetDoubleArrayRegion(JNIEnv * env, jdoubleArra
     && bda_check_jdoubleArray(s, p1, 1, "GetDoubleArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16506,14 +16508,17 @@ static void JNICALL bda_c2j_proxy_GetDoubleArrayRegion(JNIEnv * env, jdoubleArra
    bda_orig_jni_funcs->GetDoubleArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16524,7 +16529,7 @@ static void JNICALL bda_c2j_proxy_SetBooleanArrayRegion(JNIEnv * env, jbooleanAr
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16536,13 +16541,11 @@ static void JNICALL bda_c2j_proxy_SetBooleanArrayRegion(JNIEnv * env, jbooleanAr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetBooleanArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetBooleanArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetBooleanArrayRegion")
@@ -16554,13 +16557,13 @@ static void JNICALL bda_c2j_proxy_SetBooleanArrayRegion(JNIEnv * env, jbooleanAr
     && bda_check_jbooleanArray(s, p1, 1, "SetBooleanArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16581,14 +16584,17 @@ static void JNICALL bda_c2j_proxy_SetBooleanArrayRegion(JNIEnv * env, jbooleanAr
    bda_orig_jni_funcs->SetBooleanArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16599,7 +16605,7 @@ static void JNICALL bda_c2j_proxy_SetByteArrayRegion(JNIEnv * env, jbyteArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16611,13 +16617,11 @@ static void JNICALL bda_c2j_proxy_SetByteArrayRegion(JNIEnv * env, jbyteArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetByteArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetByteArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetByteArrayRegion")
@@ -16629,13 +16633,13 @@ static void JNICALL bda_c2j_proxy_SetByteArrayRegion(JNIEnv * env, jbyteArray p1
     && bda_check_jbyteArray(s, p1, 1, "SetByteArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16656,14 +16660,17 @@ static void JNICALL bda_c2j_proxy_SetByteArrayRegion(JNIEnv * env, jbyteArray p1
    bda_orig_jni_funcs->SetByteArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16674,7 +16681,7 @@ static void JNICALL bda_c2j_proxy_SetCharArrayRegion(JNIEnv * env, jcharArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16686,13 +16693,11 @@ static void JNICALL bda_c2j_proxy_SetCharArrayRegion(JNIEnv * env, jcharArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetCharArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetCharArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetCharArrayRegion")
@@ -16704,13 +16709,13 @@ static void JNICALL bda_c2j_proxy_SetCharArrayRegion(JNIEnv * env, jcharArray p1
     && bda_check_jcharArray(s, p1, 1, "SetCharArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16731,14 +16736,17 @@ static void JNICALL bda_c2j_proxy_SetCharArrayRegion(JNIEnv * env, jcharArray p1
    bda_orig_jni_funcs->SetCharArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16749,7 +16757,7 @@ static void JNICALL bda_c2j_proxy_SetShortArrayRegion(JNIEnv * env, jshortArray 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16761,13 +16769,11 @@ static void JNICALL bda_c2j_proxy_SetShortArrayRegion(JNIEnv * env, jshortArray 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetShortArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetShortArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetShortArrayRegion")
@@ -16779,13 +16785,13 @@ static void JNICALL bda_c2j_proxy_SetShortArrayRegion(JNIEnv * env, jshortArray 
     && bda_check_jshortArray(s, p1, 1, "SetShortArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16806,14 +16812,17 @@ static void JNICALL bda_c2j_proxy_SetShortArrayRegion(JNIEnv * env, jshortArray 
    bda_orig_jni_funcs->SetShortArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16824,7 +16833,7 @@ static void JNICALL bda_c2j_proxy_SetIntArrayRegion(JNIEnv * env, jintArray p1, 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16836,13 +16845,11 @@ static void JNICALL bda_c2j_proxy_SetIntArrayRegion(JNIEnv * env, jintArray p1, 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetIntArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetIntArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetIntArrayRegion")
@@ -16854,13 +16861,13 @@ static void JNICALL bda_c2j_proxy_SetIntArrayRegion(JNIEnv * env, jintArray p1, 
     && bda_check_jintArray(s, p1, 1, "SetIntArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16881,14 +16888,17 @@ static void JNICALL bda_c2j_proxy_SetIntArrayRegion(JNIEnv * env, jintArray p1, 
    bda_orig_jni_funcs->SetIntArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16899,7 +16909,7 @@ static void JNICALL bda_c2j_proxy_SetLongArrayRegion(JNIEnv * env, jlongArray p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16911,13 +16921,11 @@ static void JNICALL bda_c2j_proxy_SetLongArrayRegion(JNIEnv * env, jlongArray p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetLongArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetLongArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetLongArrayRegion")
@@ -16929,13 +16937,13 @@ static void JNICALL bda_c2j_proxy_SetLongArrayRegion(JNIEnv * env, jlongArray p1
     && bda_check_jlongArray(s, p1, 1, "SetLongArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -16956,14 +16964,17 @@ static void JNICALL bda_c2j_proxy_SetLongArrayRegion(JNIEnv * env, jlongArray p1
    bda_orig_jni_funcs->SetLongArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -16974,7 +16985,7 @@ static void JNICALL bda_c2j_proxy_SetFloatArrayRegion(JNIEnv * env, jfloatArray 
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -16986,13 +16997,11 @@ static void JNICALL bda_c2j_proxy_SetFloatArrayRegion(JNIEnv * env, jfloatArray 
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetFloatArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetFloatArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetFloatArrayRegion")
@@ -17004,13 +17013,13 @@ static void JNICALL bda_c2j_proxy_SetFloatArrayRegion(JNIEnv * env, jfloatArray 
     && bda_check_jfloatArray(s, p1, 1, "SetFloatArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17031,14 +17040,17 @@ static void JNICALL bda_c2j_proxy_SetFloatArrayRegion(JNIEnv * env, jfloatArray 
    bda_orig_jni_funcs->SetFloatArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17049,7 +17061,7 @@ static void JNICALL bda_c2j_proxy_SetDoubleArrayRegion(JNIEnv * env, jdoubleArra
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17061,13 +17073,11 @@ static void JNICALL bda_c2j_proxy_SetDoubleArrayRegion(JNIEnv * env, jdoubleArra
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.SetDoubleArrayRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.SetDoubleArrayRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "SetDoubleArrayRegion")
@@ -17079,13 +17089,13 @@ static void JNICALL bda_c2j_proxy_SetDoubleArrayRegion(JNIEnv * env, jdoubleArra
     && bda_check_jdoubleArray(s, p1, 1, "SetDoubleArrayRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17106,14 +17116,17 @@ static void JNICALL bda_c2j_proxy_SetDoubleArrayRegion(JNIEnv * env, jdoubleArra
    bda_orig_jni_funcs->SetDoubleArrayRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17125,7 +17138,7 @@ static jint JNICALL bda_c2j_proxy_RegisterNatives(JNIEnv * env, jclass p1, const
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17137,13 +17150,11 @@ static jint JNICALL bda_c2j_proxy_RegisterNatives(JNIEnv * env, jclass p1, const
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.RegisterNatives++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.RegisterNatives++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "RegisterNatives")
@@ -17155,13 +17166,13 @@ static jint JNICALL bda_c2j_proxy_RegisterNatives(JNIEnv * env, jclass p1, const
     && bda_check_jclass(s, p1, 1, "RegisterNatives")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17182,14 +17193,17 @@ static jint JNICALL bda_c2j_proxy_RegisterNatives(JNIEnv * env, jclass p1, const
   result = bda_orig_jni_funcs->RegisterNatives(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17202,7 +17216,7 @@ static jint JNICALL bda_c2j_proxy_UnregisterNatives(JNIEnv * env, jclass p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17214,13 +17228,11 @@ static jint JNICALL bda_c2j_proxy_UnregisterNatives(JNIEnv * env, jclass p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.UnregisterNatives++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.UnregisterNatives++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "UnregisterNatives")
@@ -17231,13 +17243,13 @@ static jint JNICALL bda_c2j_proxy_UnregisterNatives(JNIEnv * env, jclass p1)
     && bda_check_jclass(s, p1, 1, "UnregisterNatives")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17258,14 +17270,17 @@ static jint JNICALL bda_c2j_proxy_UnregisterNatives(JNIEnv * env, jclass p1)
   result = bda_orig_jni_funcs->UnregisterNatives(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17278,7 +17293,7 @@ static jint JNICALL bda_c2j_proxy_MonitorEnter(JNIEnv * env, jobject p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17290,13 +17305,11 @@ static jint JNICALL bda_c2j_proxy_MonitorEnter(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.MonitorEnter++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.MonitorEnter++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "MonitorEnter")
@@ -17306,13 +17319,13 @@ static jint JNICALL bda_c2j_proxy_MonitorEnter(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "MonitorEnter")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17333,17 +17346,20 @@ static jint JNICALL bda_c2j_proxy_MonitorEnter(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->MonitorEnter(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result == 0) {
      bda_monitor_enter(s, p1);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17356,7 +17372,7 @@ static jint JNICALL bda_c2j_proxy_MonitorExit(JNIEnv * env, jobject p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17368,13 +17384,11 @@ static jint JNICALL bda_c2j_proxy_MonitorExit(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.MonitorExit++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.MonitorExit++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "MonitorExit")
@@ -17383,13 +17397,13 @@ static jint JNICALL bda_c2j_proxy_MonitorExit(JNIEnv * env, jobject p1)
     && (bda_orig_jni_funcs->ExceptionCheck(env) || bda_check_ref_dangling(s, p1, 1, "MonitorExit"))
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17410,17 +17424,20 @@ static jint JNICALL bda_c2j_proxy_MonitorExit(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->MonitorExit(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result == 0) {
      bda_monitor_exit(s, p1);
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17433,7 +17450,7 @@ static jint JNICALL bda_c2j_proxy_GetJavaVM(JNIEnv * env, JavaVM ** p1)
   /* local variables */
   jint result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17445,13 +17462,11 @@ static jint JNICALL bda_c2j_proxy_GetJavaVM(JNIEnv * env, JavaVM ** p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetJavaVM++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetJavaVM++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetJavaVM")
@@ -17460,13 +17475,13 @@ static jint JNICALL bda_c2j_proxy_GetJavaVM(JNIEnv * env, JavaVM ** p1)
     && bda_check_non_null(s, p1,  1, "GetJavaVM")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17487,14 +17502,17 @@ static jint JNICALL bda_c2j_proxy_GetJavaVM(JNIEnv * env, JavaVM ** p1)
   result = bda_orig_jni_funcs->GetJavaVM(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17506,7 +17524,7 @@ static void JNICALL bda_c2j_proxy_GetStringRegion(JNIEnv * env, jstring p1, jsiz
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17518,13 +17536,11 @@ static void JNICALL bda_c2j_proxy_GetStringRegion(JNIEnv * env, jstring p1, jsiz
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringRegion")
@@ -17536,13 +17552,13 @@ static void JNICALL bda_c2j_proxy_GetStringRegion(JNIEnv * env, jstring p1, jsiz
     && bda_check_jstring(s, p1, 1, "GetStringRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17563,14 +17579,17 @@ static void JNICALL bda_c2j_proxy_GetStringRegion(JNIEnv * env, jstring p1, jsiz
    bda_orig_jni_funcs->GetStringRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17581,7 +17600,7 @@ static void JNICALL bda_c2j_proxy_GetStringUTFRegion(JNIEnv * env, jstring p1, j
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17593,13 +17612,11 @@ static void JNICALL bda_c2j_proxy_GetStringUTFRegion(JNIEnv * env, jstring p1, j
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringUTFRegion++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringUTFRegion++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringUTFRegion")
@@ -17611,13 +17628,13 @@ static void JNICALL bda_c2j_proxy_GetStringUTFRegion(JNIEnv * env, jstring p1, j
     && bda_check_jstring(s, p1, 1, "GetStringUTFRegion")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17638,14 +17655,17 @@ static void JNICALL bda_c2j_proxy_GetStringUTFRegion(JNIEnv * env, jstring p1, j
    bda_orig_jni_funcs->GetStringUTFRegion(env, p1, p2, p3, p4);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17657,7 +17677,7 @@ static void * JNICALL bda_c2j_proxy_GetPrimitiveArrayCritical(JNIEnv * env, jarr
   /* local variables */
   void * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17669,13 +17689,11 @@ static void * JNICALL bda_c2j_proxy_GetPrimitiveArrayCritical(JNIEnv * env, jarr
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetPrimitiveArrayCritical++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetPrimitiveArrayCritical++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetPrimitiveArrayCritical")
@@ -17685,13 +17703,13 @@ static void * JNICALL bda_c2j_proxy_GetPrimitiveArrayCritical(JNIEnv * env, jarr
     && bda_check_jarray(s, p1, 1, "GetPrimitiveArrayCritical")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17712,16 +17730,19 @@ static void * JNICALL bda_c2j_proxy_GetPrimitiveArrayCritical(JNIEnv * env, jarr
   result = bda_orig_jni_funcs->GetPrimitiveArrayCritical(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_enter_critical(s, (void*)result);
     if (result != NULL) {bda_resource_acquire(s, result, "GetPrimitiveArrayCritical");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17733,7 +17754,7 @@ static void JNICALL bda_c2j_proxy_ReleasePrimitiveArrayCritical(JNIEnv * env, ja
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17742,16 +17763,14 @@ static void JNICALL bda_c2j_proxy_ReleasePrimitiveArrayCritical(JNIEnv * env, ja
   GET_RETURN_ADDRESS(ret_addr);
 
   /* Obtain a state variable for the current thraed. */
-  s = bda_state_find(env);
+  s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleasePrimitiveArrayCritical++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleasePrimitiveArrayCritical++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleasePrimitiveArrayCritical")
@@ -17762,13 +17781,13 @@ static void JNICALL bda_c2j_proxy_ReleasePrimitiveArrayCritical(JNIEnv * env, ja
     && bda_check_resource_free(s, p2, "ReleasePrimitiveArrayCritical")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17789,16 +17808,19 @@ static void JNICALL bda_c2j_proxy_ReleasePrimitiveArrayCritical(JNIEnv * env, ja
    bda_orig_jni_funcs->ReleasePrimitiveArrayCritical(env, p1, p2, p3);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_leave_critical(s, (void*)p2);
     bda_resource_release(s, p2, "ReleasePrimitiveArrayCritical");
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17810,7 +17832,7 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringCritical(JNIEnv * env, jstri
   /* local variables */
   const jchar * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17822,13 +17844,11 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringCritical(JNIEnv * env, jstri
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetStringCritical++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetStringCritical++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetStringCritical")
@@ -17838,13 +17858,13 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringCritical(JNIEnv * env, jstri
     && bda_check_jstring(s, p1, 1, "GetStringCritical")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17865,16 +17885,19 @@ static const jchar * JNICALL bda_c2j_proxy_GetStringCritical(JNIEnv * env, jstri
   result = bda_orig_jni_funcs->GetStringCritical(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_enter_critical(s, (void*)result);
     if (result != NULL) {bda_resource_acquire(s, result, "GetStringCritical");}
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -17886,7 +17909,7 @@ static void JNICALL bda_c2j_proxy_ReleaseStringCritical(JNIEnv * env, jstring p1
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17895,16 +17918,14 @@ static void JNICALL bda_c2j_proxy_ReleaseStringCritical(JNIEnv * env, jstring p1
   GET_RETURN_ADDRESS(ret_addr);
 
   /* Obtain a state variable for the current thraed. */
-  s = bda_state_find(env);
+  s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ReleaseStringCritical++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ReleaseStringCritical++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ReleaseStringCritical")
@@ -17914,13 +17935,13 @@ static void JNICALL bda_c2j_proxy_ReleaseStringCritical(JNIEnv * env, jstring p1
     && (bda_orig_jni_funcs->ExceptionCheck(env) || bda_check_jstring(s, p1, 1, "ReleaseStringCritical"))
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -17941,16 +17962,19 @@ static void JNICALL bda_c2j_proxy_ReleaseStringCritical(JNIEnv * env, jstring p1
    bda_orig_jni_funcs->ReleaseStringCritical(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
     bda_leave_critical(s, (void*)p2);
     bda_resource_release(s, p2, "ReleaseStringCritical");
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
 }
@@ -17962,7 +17986,7 @@ static jweak JNICALL bda_c2j_proxy_NewWeakGlobalRef(JNIEnv * env, jobject p1)
   /* local variables */
   jweak result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -17974,13 +17998,11 @@ static jweak JNICALL bda_c2j_proxy_NewWeakGlobalRef(JNIEnv * env, jobject p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewWeakGlobalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewWeakGlobalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewWeakGlobalRef")
@@ -17990,13 +18012,13 @@ static jweak JNICALL bda_c2j_proxy_NewWeakGlobalRef(JNIEnv * env, jobject p1)
     && bda_check_ref_dangling(s, p1, 1, "NewWeakGlobalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18017,14 +18039,17 @@ static jweak JNICALL bda_c2j_proxy_NewWeakGlobalRef(JNIEnv * env, jobject p1)
   result = bda_orig_jni_funcs->NewWeakGlobalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
     if (result != NULL) {
       bda_global_ref_add(result, 1);
     }
@@ -18039,7 +18064,7 @@ static void JNICALL bda_c2j_proxy_DeleteWeakGlobalRef(JNIEnv * env, jweak p1)
 {
   /* local variables */
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18051,13 +18076,11 @@ static void JNICALL bda_c2j_proxy_DeleteWeakGlobalRef(JNIEnv * env, jweak p1)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.DeleteWeakGlobalRef++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.DeleteWeakGlobalRef++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "DeleteWeakGlobalRef")
@@ -18067,13 +18090,13 @@ static void JNICALL bda_c2j_proxy_DeleteWeakGlobalRef(JNIEnv * env, jweak p1)
     && bda_check_jobject_ref_type(s, p1, JNIWeakGlobalRefType , 1, "DeleteWeakGlobalRef")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18094,14 +18117,17 @@ static void JNICALL bda_c2j_proxy_DeleteWeakGlobalRef(JNIEnv * env, jweak p1)
    bda_orig_jni_funcs->DeleteWeakGlobalRef(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
    bda_global_ref_delete(p1, 1);
   }
 
@@ -18114,7 +18140,7 @@ static jboolean JNICALL bda_c2j_proxy_ExceptionCheck(JNIEnv * env)
   /* local variables */
   jboolean result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18126,26 +18152,24 @@ static jboolean JNICALL bda_c2j_proxy_ExceptionCheck(JNIEnv * env)
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.ExceptionCheck++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.ExceptionCheck++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "ExceptionCheck")
     && bda_check_no_critical(s, "ExceptionCheck")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert)&& !success){
+    if ((agent_options.jinn)&& !success){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18166,14 +18190,17 @@ static jboolean JNICALL bda_c2j_proxy_ExceptionCheck(JNIEnv * env)
   result = bda_orig_jni_funcs->ExceptionCheck(env);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -18186,7 +18213,7 @@ static jobject JNICALL bda_c2j_proxy_NewDirectByteBuffer(JNIEnv * env, void * p1
   /* local variables */
   jobject result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18198,13 +18225,11 @@ static jobject JNICALL bda_c2j_proxy_NewDirectByteBuffer(JNIEnv * env, void * p1
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.NewDirectByteBuffer++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.NewDirectByteBuffer++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "NewDirectByteBuffer")
@@ -18213,13 +18238,13 @@ static jobject JNICALL bda_c2j_proxy_NewDirectByteBuffer(JNIEnv * env, void * p1
     && bda_check_non_null(s, p1,  1, "NewDirectByteBuffer")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18240,21 +18265,25 @@ static jobject JNICALL bda_c2j_proxy_NewDirectByteBuffer(JNIEnv * env, void * p1
   result = bda_orig_jni_funcs->NewDirectByteBuffer(env, p1, p2);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
    if (result != NULL) {
       if (!bda_check_local_frame_overflow(s, "NewDirectByteBuffer")) {
          bda_orig_jni_funcs->DeleteLocalRef(env, result);
          result = NULL;
       } else {
-         bda_local_ref_add(s, result);      }
+         bda_local_ref_add(s, result);
+      }
    }
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -18267,7 +18296,7 @@ static void * JNICALL bda_c2j_proxy_GetDirectBufferAddress(JNIEnv * env, jobject
   /* local variables */
   void * result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18279,13 +18308,11 @@ static void * JNICALL bda_c2j_proxy_GetDirectBufferAddress(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetDirectBufferAddress++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetDirectBufferAddress++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetDirectBufferAddress")
@@ -18296,13 +18323,13 @@ static void * JNICALL bda_c2j_proxy_GetDirectBufferAddress(JNIEnv * env, jobject
     && bda_check_assignable_jobject_jclass(s, p1, bda_clazz_nio_buffer, 1, "GetDirectBufferAddress")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18323,14 +18350,17 @@ static void * JNICALL bda_c2j_proxy_GetDirectBufferAddress(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->GetDirectBufferAddress(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -18343,7 +18373,7 @@ static jlong JNICALL bda_c2j_proxy_GetDirectBufferCapacity(JNIEnv * env, jobject
   /* local variables */
   jlong result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18355,13 +18385,11 @@ static jlong JNICALL bda_c2j_proxy_GetDirectBufferCapacity(JNIEnv * env, jobject
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetDirectBufferCapacity++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetDirectBufferCapacity++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetDirectBufferCapacity")
@@ -18372,13 +18400,13 @@ static jlong JNICALL bda_c2j_proxy_GetDirectBufferCapacity(JNIEnv * env, jobject
     && bda_check_assignable_jobject_jclass(s, p1, bda_clazz_nio_buffer, 1, "GetDirectBufferCapacity")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18399,14 +18427,17 @@ static jlong JNICALL bda_c2j_proxy_GetDirectBufferCapacity(JNIEnv * env, jobject
   result = bda_orig_jni_funcs->GetDirectBufferCapacity(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -18419,7 +18450,7 @@ static jobjectRefType JNICALL bda_c2j_proxy_GetObjectRefType(JNIEnv * env, jobje
   /* local variables */
   jobjectRefType result;
   void *fp, *ret_addr, *ret_addr_from_original;
-  struct bda_c2j_info c2j;
+  struct bda_jni_function_frame c2j;
   struct bda_state_info *s;
   enum bda_mode saved_mode;
 
@@ -18431,13 +18462,11 @@ static jobjectRefType JNICALL bda_c2j_proxy_GetObjectRefType(JNIEnv * env, jobje
   s = bda_get_state_info(env);
   /* Update call counts. */
   if (s != NULL){
-    bda_c2j_count.GetObjectRefType++;
-    if (s->mode == USR_NATIVE) {bda_c2j_count_user.GetObjectRefType++;}
     saved_mode = s->mode;
   }
 
   /* Check the JNI Function call. */
-  if (agent_options.jniassert && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
+  if (bda_jvmti && agent_options.jinn && (s != NULL) && (s->mode != JVM) && !bda_is_in_jdwp_region(ret_addr)) {
     int success;
     success = 1 
     && bda_check_env_match(s, env, "GetObjectRefType")
@@ -18447,13 +18476,13 @@ static jobjectRefType JNICALL bda_c2j_proxy_GetObjectRefType(JNIEnv * env, jobje
     && bda_check_ref_dangling(s, p1, 1, "GetObjectRefType")
     ;
     // Just return if an exception is pending here.
-    if ((agent_options.jniassert )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
+    if ((agent_options.jinn )&& bda_orig_jni_funcs->ExceptionCheck(s->env) == JNI_TRUE){
       s->mode = saved_mode;
       return 0;
     }
   }
 
-  /* Push the c2j_info structure. */
+  /* Push the jni_function_frame structure. */
   if (s != NULL) {
 #if defined(__GNUC__)
     ret_addr_from_original = &&L_RETURN;
@@ -18474,14 +18503,17 @@ static jobjectRefType JNICALL bda_c2j_proxy_GetObjectRefType(JNIEnv * env, jobje
   result = bda_orig_jni_funcs->GetObjectRefType(env, p1);
   L_RETURN:
 
-  /* Pop the c2j_info structure. */
+  /* Pop the jni_function_frame structure. */
   if (s != NULL) {
     bda_state_c2j_return(s, &c2j);
     s->mode = saved_mode;
   }
 
   /* Check the JNI function return. */
-  if ((s != NULL) && agent_options.jniassert && (s->mode != JVM)) {
+  if ((s != NULL) && agent_options.jinn && (s->mode != JVM)) {
+  }
+
+  if ((s != NULL) && agent_options.jinn) {
   }
 
   return result;
@@ -18723,1387 +18755,4 @@ void bda_c2j_proxy_install(jvmtiEnv *jvmti)
   proxy_jni_funcs->GetObjectRefType = bda_c2j_proxy_GetObjectRefType;
   err = (*jvmti)->SetJNIFunctionTable(jvmti, proxy_jni_funcs);
   assert(err == JVMTI_ERROR_NONE);
-  memset(&bda_c2j_count, 0, sizeof(bda_c2j_count));
-  memset(&bda_c2j_count_user, 0, sizeof(bda_c2j_count_user));
-}
-void bda_c2j_proxy_dump_stat()
-{
-  int sum = 0;
-  int sum_user = 0;
-  int count, count_user;
-
-  count = bda_c2j_count.GetVersion;
-  count_user = bda_c2j_count_user.GetVersion;
-  printf("%7u %7u %s\n", count, count_user, "GetVersion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.DefineClass;
-  count_user = bda_c2j_count_user.DefineClass;
-  printf("%7u %7u %s\n", count, count_user, "DefineClass");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.FindClass;
-  count_user = bda_c2j_count_user.FindClass;
-  printf("%7u %7u %s\n", count, count_user, "FindClass");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.FromReflectedMethod;
-  count_user = bda_c2j_count_user.FromReflectedMethod;
-  printf("%7u %7u %s\n", count, count_user, "FromReflectedMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.FromReflectedField;
-  count_user = bda_c2j_count_user.FromReflectedField;
-  printf("%7u %7u %s\n", count, count_user, "FromReflectedField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ToReflectedMethod;
-  count_user = bda_c2j_count_user.ToReflectedMethod;
-  printf("%7u %7u %s\n", count, count_user, "ToReflectedMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetSuperclass;
-  count_user = bda_c2j_count_user.GetSuperclass;
-  printf("%7u %7u %s\n", count, count_user, "GetSuperclass");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.IsAssignableFrom;
-  count_user = bda_c2j_count_user.IsAssignableFrom;
-  printf("%7u %7u %s\n", count, count_user, "IsAssignableFrom");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ToReflectedField;
-  count_user = bda_c2j_count_user.ToReflectedField;
-  printf("%7u %7u %s\n", count, count_user, "ToReflectedField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.Throw;
-  count_user = bda_c2j_count_user.Throw;
-  printf("%7u %7u %s\n", count, count_user, "Throw");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ThrowNew;
-  count_user = bda_c2j_count_user.ThrowNew;
-  printf("%7u %7u %s\n", count, count_user, "ThrowNew");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ExceptionOccurred;
-  count_user = bda_c2j_count_user.ExceptionOccurred;
-  printf("%7u %7u %s\n", count, count_user, "ExceptionOccurred");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ExceptionDescribe;
-  count_user = bda_c2j_count_user.ExceptionDescribe;
-  printf("%7u %7u %s\n", count, count_user, "ExceptionDescribe");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ExceptionClear;
-  count_user = bda_c2j_count_user.ExceptionClear;
-  printf("%7u %7u %s\n", count, count_user, "ExceptionClear");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.FatalError;
-  count_user = bda_c2j_count_user.FatalError;
-  printf("%7u %7u %s\n", count, count_user, "FatalError");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.PushLocalFrame;
-  count_user = bda_c2j_count_user.PushLocalFrame;
-  printf("%7u %7u %s\n", count, count_user, "PushLocalFrame");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.PopLocalFrame;
-  count_user = bda_c2j_count_user.PopLocalFrame;
-  printf("%7u %7u %s\n", count, count_user, "PopLocalFrame");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewGlobalRef;
-  count_user = bda_c2j_count_user.NewGlobalRef;
-  printf("%7u %7u %s\n", count, count_user, "NewGlobalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.DeleteGlobalRef;
-  count_user = bda_c2j_count_user.DeleteGlobalRef;
-  printf("%7u %7u %s\n", count, count_user, "DeleteGlobalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.DeleteLocalRef;
-  count_user = bda_c2j_count_user.DeleteLocalRef;
-  printf("%7u %7u %s\n", count, count_user, "DeleteLocalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.IsSameObject;
-  count_user = bda_c2j_count_user.IsSameObject;
-  printf("%7u %7u %s\n", count, count_user, "IsSameObject");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewLocalRef;
-  count_user = bda_c2j_count_user.NewLocalRef;
-  printf("%7u %7u %s\n", count, count_user, "NewLocalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.EnsureLocalCapacity;
-  count_user = bda_c2j_count_user.EnsureLocalCapacity;
-  printf("%7u %7u %s\n", count, count_user, "EnsureLocalCapacity");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.AllocObject;
-  count_user = bda_c2j_count_user.AllocObject;
-  printf("%7u %7u %s\n", count, count_user, "AllocObject");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewObject;
-  count_user = bda_c2j_count_user.NewObject;
-  printf("%7u %7u %s\n", count, count_user, "NewObject");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewObjectV;
-  count_user = bda_c2j_count_user.NewObjectV;
-  printf("%7u %7u %s\n", count, count_user, "NewObjectV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewObjectA;
-  count_user = bda_c2j_count_user.NewObjectA;
-  printf("%7u %7u %s\n", count, count_user, "NewObjectA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetObjectClass;
-  count_user = bda_c2j_count_user.GetObjectClass;
-  printf("%7u %7u %s\n", count, count_user, "GetObjectClass");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.IsInstanceOf;
-  count_user = bda_c2j_count_user.IsInstanceOf;
-  printf("%7u %7u %s\n", count, count_user, "IsInstanceOf");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetMethodID;
-  count_user = bda_c2j_count_user.GetMethodID;
-  printf("%7u %7u %s\n", count, count_user, "GetMethodID");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallObjectMethod;
-  count_user = bda_c2j_count_user.CallObjectMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallObjectMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallObjectMethodV;
-  count_user = bda_c2j_count_user.CallObjectMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallObjectMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallObjectMethodA;
-  count_user = bda_c2j_count_user.CallObjectMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallObjectMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallBooleanMethod;
-  count_user = bda_c2j_count_user.CallBooleanMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallBooleanMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallBooleanMethodV;
-  count_user = bda_c2j_count_user.CallBooleanMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallBooleanMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallBooleanMethodA;
-  count_user = bda_c2j_count_user.CallBooleanMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallBooleanMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallByteMethod;
-  count_user = bda_c2j_count_user.CallByteMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallByteMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallByteMethodV;
-  count_user = bda_c2j_count_user.CallByteMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallByteMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallByteMethodA;
-  count_user = bda_c2j_count_user.CallByteMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallByteMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallCharMethod;
-  count_user = bda_c2j_count_user.CallCharMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallCharMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallCharMethodV;
-  count_user = bda_c2j_count_user.CallCharMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallCharMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallCharMethodA;
-  count_user = bda_c2j_count_user.CallCharMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallCharMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallShortMethod;
-  count_user = bda_c2j_count_user.CallShortMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallShortMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallShortMethodV;
-  count_user = bda_c2j_count_user.CallShortMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallShortMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallShortMethodA;
-  count_user = bda_c2j_count_user.CallShortMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallShortMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallIntMethod;
-  count_user = bda_c2j_count_user.CallIntMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallIntMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallIntMethodV;
-  count_user = bda_c2j_count_user.CallIntMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallIntMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallIntMethodA;
-  count_user = bda_c2j_count_user.CallIntMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallIntMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallLongMethod;
-  count_user = bda_c2j_count_user.CallLongMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallLongMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallLongMethodV;
-  count_user = bda_c2j_count_user.CallLongMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallLongMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallLongMethodA;
-  count_user = bda_c2j_count_user.CallLongMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallLongMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallFloatMethod;
-  count_user = bda_c2j_count_user.CallFloatMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallFloatMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallFloatMethodV;
-  count_user = bda_c2j_count_user.CallFloatMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallFloatMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallFloatMethodA;
-  count_user = bda_c2j_count_user.CallFloatMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallFloatMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallDoubleMethod;
-  count_user = bda_c2j_count_user.CallDoubleMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallDoubleMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallDoubleMethodV;
-  count_user = bda_c2j_count_user.CallDoubleMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallDoubleMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallDoubleMethodA;
-  count_user = bda_c2j_count_user.CallDoubleMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallDoubleMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallVoidMethod;
-  count_user = bda_c2j_count_user.CallVoidMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallVoidMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallVoidMethodV;
-  count_user = bda_c2j_count_user.CallVoidMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallVoidMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallVoidMethodA;
-  count_user = bda_c2j_count_user.CallVoidMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallVoidMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualObjectMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualObjectMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualObjectMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualObjectMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualObjectMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualObjectMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualObjectMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualObjectMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualObjectMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualBooleanMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualBooleanMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualBooleanMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualBooleanMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualBooleanMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualBooleanMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualBooleanMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualBooleanMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualBooleanMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualByteMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualByteMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualByteMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualByteMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualByteMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualByteMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualByteMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualByteMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualByteMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualCharMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualCharMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualCharMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualCharMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualCharMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualCharMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualCharMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualCharMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualCharMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualShortMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualShortMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualShortMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualShortMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualShortMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualShortMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualShortMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualShortMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualShortMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualIntMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualIntMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualIntMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualIntMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualIntMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualIntMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualIntMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualIntMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualIntMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualLongMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualLongMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualLongMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualLongMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualLongMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualLongMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualLongMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualLongMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualLongMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualFloatMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualFloatMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualFloatMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualFloatMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualFloatMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualFloatMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualFloatMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualFloatMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualFloatMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualDoubleMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualDoubleMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualDoubleMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualDoubleMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualDoubleMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualDoubleMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualDoubleMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualDoubleMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualDoubleMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualVoidMethod;
-  count_user = bda_c2j_count_user.CallNonvirtualVoidMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualVoidMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualVoidMethodV;
-  count_user = bda_c2j_count_user.CallNonvirtualVoidMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualVoidMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallNonvirtualVoidMethodA;
-  count_user = bda_c2j_count_user.CallNonvirtualVoidMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallNonvirtualVoidMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetFieldID;
-  count_user = bda_c2j_count_user.GetFieldID;
-  printf("%7u %7u %s\n", count, count_user, "GetFieldID");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetObjectField;
-  count_user = bda_c2j_count_user.GetObjectField;
-  printf("%7u %7u %s\n", count, count_user, "GetObjectField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetBooleanField;
-  count_user = bda_c2j_count_user.GetBooleanField;
-  printf("%7u %7u %s\n", count, count_user, "GetBooleanField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetByteField;
-  count_user = bda_c2j_count_user.GetByteField;
-  printf("%7u %7u %s\n", count, count_user, "GetByteField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetCharField;
-  count_user = bda_c2j_count_user.GetCharField;
-  printf("%7u %7u %s\n", count, count_user, "GetCharField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetShortField;
-  count_user = bda_c2j_count_user.GetShortField;
-  printf("%7u %7u %s\n", count, count_user, "GetShortField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetIntField;
-  count_user = bda_c2j_count_user.GetIntField;
-  printf("%7u %7u %s\n", count, count_user, "GetIntField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetLongField;
-  count_user = bda_c2j_count_user.GetLongField;
-  printf("%7u %7u %s\n", count, count_user, "GetLongField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetFloatField;
-  count_user = bda_c2j_count_user.GetFloatField;
-  printf("%7u %7u %s\n", count, count_user, "GetFloatField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetDoubleField;
-  count_user = bda_c2j_count_user.GetDoubleField;
-  printf("%7u %7u %s\n", count, count_user, "GetDoubleField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetObjectField;
-  count_user = bda_c2j_count_user.SetObjectField;
-  printf("%7u %7u %s\n", count, count_user, "SetObjectField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetBooleanField;
-  count_user = bda_c2j_count_user.SetBooleanField;
-  printf("%7u %7u %s\n", count, count_user, "SetBooleanField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetByteField;
-  count_user = bda_c2j_count_user.SetByteField;
-  printf("%7u %7u %s\n", count, count_user, "SetByteField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetCharField;
-  count_user = bda_c2j_count_user.SetCharField;
-  printf("%7u %7u %s\n", count, count_user, "SetCharField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetShortField;
-  count_user = bda_c2j_count_user.SetShortField;
-  printf("%7u %7u %s\n", count, count_user, "SetShortField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetIntField;
-  count_user = bda_c2j_count_user.SetIntField;
-  printf("%7u %7u %s\n", count, count_user, "SetIntField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetLongField;
-  count_user = bda_c2j_count_user.SetLongField;
-  printf("%7u %7u %s\n", count, count_user, "SetLongField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetFloatField;
-  count_user = bda_c2j_count_user.SetFloatField;
-  printf("%7u %7u %s\n", count, count_user, "SetFloatField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetDoubleField;
-  count_user = bda_c2j_count_user.SetDoubleField;
-  printf("%7u %7u %s\n", count, count_user, "SetDoubleField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticMethodID;
-  count_user = bda_c2j_count_user.GetStaticMethodID;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticMethodID");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticObjectMethod;
-  count_user = bda_c2j_count_user.CallStaticObjectMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticObjectMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticObjectMethodV;
-  count_user = bda_c2j_count_user.CallStaticObjectMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticObjectMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticObjectMethodA;
-  count_user = bda_c2j_count_user.CallStaticObjectMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticObjectMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticBooleanMethod;
-  count_user = bda_c2j_count_user.CallStaticBooleanMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticBooleanMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticBooleanMethodV;
-  count_user = bda_c2j_count_user.CallStaticBooleanMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticBooleanMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticBooleanMethodA;
-  count_user = bda_c2j_count_user.CallStaticBooleanMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticBooleanMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticByteMethod;
-  count_user = bda_c2j_count_user.CallStaticByteMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticByteMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticByteMethodV;
-  count_user = bda_c2j_count_user.CallStaticByteMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticByteMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticByteMethodA;
-  count_user = bda_c2j_count_user.CallStaticByteMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticByteMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticCharMethod;
-  count_user = bda_c2j_count_user.CallStaticCharMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticCharMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticCharMethodV;
-  count_user = bda_c2j_count_user.CallStaticCharMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticCharMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticCharMethodA;
-  count_user = bda_c2j_count_user.CallStaticCharMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticCharMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticShortMethod;
-  count_user = bda_c2j_count_user.CallStaticShortMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticShortMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticShortMethodV;
-  count_user = bda_c2j_count_user.CallStaticShortMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticShortMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticShortMethodA;
-  count_user = bda_c2j_count_user.CallStaticShortMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticShortMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticIntMethod;
-  count_user = bda_c2j_count_user.CallStaticIntMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticIntMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticIntMethodV;
-  count_user = bda_c2j_count_user.CallStaticIntMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticIntMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticIntMethodA;
-  count_user = bda_c2j_count_user.CallStaticIntMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticIntMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticLongMethod;
-  count_user = bda_c2j_count_user.CallStaticLongMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticLongMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticLongMethodV;
-  count_user = bda_c2j_count_user.CallStaticLongMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticLongMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticLongMethodA;
-  count_user = bda_c2j_count_user.CallStaticLongMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticLongMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticFloatMethod;
-  count_user = bda_c2j_count_user.CallStaticFloatMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticFloatMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticFloatMethodV;
-  count_user = bda_c2j_count_user.CallStaticFloatMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticFloatMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticFloatMethodA;
-  count_user = bda_c2j_count_user.CallStaticFloatMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticFloatMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticDoubleMethod;
-  count_user = bda_c2j_count_user.CallStaticDoubleMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticDoubleMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticDoubleMethodV;
-  count_user = bda_c2j_count_user.CallStaticDoubleMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticDoubleMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticDoubleMethodA;
-  count_user = bda_c2j_count_user.CallStaticDoubleMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticDoubleMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticVoidMethod;
-  count_user = bda_c2j_count_user.CallStaticVoidMethod;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticVoidMethod");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticVoidMethodV;
-  count_user = bda_c2j_count_user.CallStaticVoidMethodV;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticVoidMethodV");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.CallStaticVoidMethodA;
-  count_user = bda_c2j_count_user.CallStaticVoidMethodA;
-  printf("%7u %7u %s\n", count, count_user, "CallStaticVoidMethodA");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticFieldID;
-  count_user = bda_c2j_count_user.GetStaticFieldID;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticFieldID");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticObjectField;
-  count_user = bda_c2j_count_user.GetStaticObjectField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticObjectField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticBooleanField;
-  count_user = bda_c2j_count_user.GetStaticBooleanField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticBooleanField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticByteField;
-  count_user = bda_c2j_count_user.GetStaticByteField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticByteField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticCharField;
-  count_user = bda_c2j_count_user.GetStaticCharField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticCharField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticShortField;
-  count_user = bda_c2j_count_user.GetStaticShortField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticShortField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticIntField;
-  count_user = bda_c2j_count_user.GetStaticIntField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticIntField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticLongField;
-  count_user = bda_c2j_count_user.GetStaticLongField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticLongField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticFloatField;
-  count_user = bda_c2j_count_user.GetStaticFloatField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticFloatField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStaticDoubleField;
-  count_user = bda_c2j_count_user.GetStaticDoubleField;
-  printf("%7u %7u %s\n", count, count_user, "GetStaticDoubleField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticObjectField;
-  count_user = bda_c2j_count_user.SetStaticObjectField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticObjectField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticBooleanField;
-  count_user = bda_c2j_count_user.SetStaticBooleanField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticBooleanField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticByteField;
-  count_user = bda_c2j_count_user.SetStaticByteField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticByteField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticCharField;
-  count_user = bda_c2j_count_user.SetStaticCharField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticCharField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticShortField;
-  count_user = bda_c2j_count_user.SetStaticShortField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticShortField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticIntField;
-  count_user = bda_c2j_count_user.SetStaticIntField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticIntField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticLongField;
-  count_user = bda_c2j_count_user.SetStaticLongField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticLongField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticFloatField;
-  count_user = bda_c2j_count_user.SetStaticFloatField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticFloatField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetStaticDoubleField;
-  count_user = bda_c2j_count_user.SetStaticDoubleField;
-  printf("%7u %7u %s\n", count, count_user, "SetStaticDoubleField");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewString;
-  count_user = bda_c2j_count_user.NewString;
-  printf("%7u %7u %s\n", count, count_user, "NewString");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringLength;
-  count_user = bda_c2j_count_user.GetStringLength;
-  printf("%7u %7u %s\n", count, count_user, "GetStringLength");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringChars;
-  count_user = bda_c2j_count_user.GetStringChars;
-  printf("%7u %7u %s\n", count, count_user, "GetStringChars");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseStringChars;
-  count_user = bda_c2j_count_user.ReleaseStringChars;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseStringChars");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewStringUTF;
-  count_user = bda_c2j_count_user.NewStringUTF;
-  printf("%7u %7u %s\n", count, count_user, "NewStringUTF");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringUTFLength;
-  count_user = bda_c2j_count_user.GetStringUTFLength;
-  printf("%7u %7u %s\n", count, count_user, "GetStringUTFLength");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringUTFChars;
-  count_user = bda_c2j_count_user.GetStringUTFChars;
-  printf("%7u %7u %s\n", count, count_user, "GetStringUTFChars");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseStringUTFChars;
-  count_user = bda_c2j_count_user.ReleaseStringUTFChars;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseStringUTFChars");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetArrayLength;
-  count_user = bda_c2j_count_user.GetArrayLength;
-  printf("%7u %7u %s\n", count, count_user, "GetArrayLength");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewObjectArray;
-  count_user = bda_c2j_count_user.NewObjectArray;
-  printf("%7u %7u %s\n", count, count_user, "NewObjectArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetObjectArrayElement;
-  count_user = bda_c2j_count_user.GetObjectArrayElement;
-  printf("%7u %7u %s\n", count, count_user, "GetObjectArrayElement");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetObjectArrayElement;
-  count_user = bda_c2j_count_user.SetObjectArrayElement;
-  printf("%7u %7u %s\n", count, count_user, "SetObjectArrayElement");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewBooleanArray;
-  count_user = bda_c2j_count_user.NewBooleanArray;
-  printf("%7u %7u %s\n", count, count_user, "NewBooleanArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewByteArray;
-  count_user = bda_c2j_count_user.NewByteArray;
-  printf("%7u %7u %s\n", count, count_user, "NewByteArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewCharArray;
-  count_user = bda_c2j_count_user.NewCharArray;
-  printf("%7u %7u %s\n", count, count_user, "NewCharArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewShortArray;
-  count_user = bda_c2j_count_user.NewShortArray;
-  printf("%7u %7u %s\n", count, count_user, "NewShortArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewIntArray;
-  count_user = bda_c2j_count_user.NewIntArray;
-  printf("%7u %7u %s\n", count, count_user, "NewIntArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewLongArray;
-  count_user = bda_c2j_count_user.NewLongArray;
-  printf("%7u %7u %s\n", count, count_user, "NewLongArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewFloatArray;
-  count_user = bda_c2j_count_user.NewFloatArray;
-  printf("%7u %7u %s\n", count, count_user, "NewFloatArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewDoubleArray;
-  count_user = bda_c2j_count_user.NewDoubleArray;
-  printf("%7u %7u %s\n", count, count_user, "NewDoubleArray");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetBooleanArrayElements;
-  count_user = bda_c2j_count_user.GetBooleanArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetBooleanArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetByteArrayElements;
-  count_user = bda_c2j_count_user.GetByteArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetByteArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetCharArrayElements;
-  count_user = bda_c2j_count_user.GetCharArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetCharArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetShortArrayElements;
-  count_user = bda_c2j_count_user.GetShortArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetShortArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetIntArrayElements;
-  count_user = bda_c2j_count_user.GetIntArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetIntArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetLongArrayElements;
-  count_user = bda_c2j_count_user.GetLongArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetLongArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetFloatArrayElements;
-  count_user = bda_c2j_count_user.GetFloatArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetFloatArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetDoubleArrayElements;
-  count_user = bda_c2j_count_user.GetDoubleArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "GetDoubleArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseBooleanArrayElements;
-  count_user = bda_c2j_count_user.ReleaseBooleanArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseBooleanArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseByteArrayElements;
-  count_user = bda_c2j_count_user.ReleaseByteArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseByteArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseCharArrayElements;
-  count_user = bda_c2j_count_user.ReleaseCharArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseCharArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseShortArrayElements;
-  count_user = bda_c2j_count_user.ReleaseShortArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseShortArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseIntArrayElements;
-  count_user = bda_c2j_count_user.ReleaseIntArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseIntArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseLongArrayElements;
-  count_user = bda_c2j_count_user.ReleaseLongArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseLongArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseFloatArrayElements;
-  count_user = bda_c2j_count_user.ReleaseFloatArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseFloatArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseDoubleArrayElements;
-  count_user = bda_c2j_count_user.ReleaseDoubleArrayElements;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseDoubleArrayElements");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetBooleanArrayRegion;
-  count_user = bda_c2j_count_user.GetBooleanArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetBooleanArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetByteArrayRegion;
-  count_user = bda_c2j_count_user.GetByteArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetByteArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetCharArrayRegion;
-  count_user = bda_c2j_count_user.GetCharArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetCharArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetShortArrayRegion;
-  count_user = bda_c2j_count_user.GetShortArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetShortArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetIntArrayRegion;
-  count_user = bda_c2j_count_user.GetIntArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetIntArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetLongArrayRegion;
-  count_user = bda_c2j_count_user.GetLongArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetLongArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetFloatArrayRegion;
-  count_user = bda_c2j_count_user.GetFloatArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetFloatArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetDoubleArrayRegion;
-  count_user = bda_c2j_count_user.GetDoubleArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetDoubleArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetBooleanArrayRegion;
-  count_user = bda_c2j_count_user.SetBooleanArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetBooleanArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetByteArrayRegion;
-  count_user = bda_c2j_count_user.SetByteArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetByteArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetCharArrayRegion;
-  count_user = bda_c2j_count_user.SetCharArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetCharArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetShortArrayRegion;
-  count_user = bda_c2j_count_user.SetShortArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetShortArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetIntArrayRegion;
-  count_user = bda_c2j_count_user.SetIntArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetIntArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetLongArrayRegion;
-  count_user = bda_c2j_count_user.SetLongArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetLongArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetFloatArrayRegion;
-  count_user = bda_c2j_count_user.SetFloatArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetFloatArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.SetDoubleArrayRegion;
-  count_user = bda_c2j_count_user.SetDoubleArrayRegion;
-  printf("%7u %7u %s\n", count, count_user, "SetDoubleArrayRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.RegisterNatives;
-  count_user = bda_c2j_count_user.RegisterNatives;
-  printf("%7u %7u %s\n", count, count_user, "RegisterNatives");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.UnregisterNatives;
-  count_user = bda_c2j_count_user.UnregisterNatives;
-  printf("%7u %7u %s\n", count, count_user, "UnregisterNatives");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.MonitorEnter;
-  count_user = bda_c2j_count_user.MonitorEnter;
-  printf("%7u %7u %s\n", count, count_user, "MonitorEnter");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.MonitorExit;
-  count_user = bda_c2j_count_user.MonitorExit;
-  printf("%7u %7u %s\n", count, count_user, "MonitorExit");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetJavaVM;
-  count_user = bda_c2j_count_user.GetJavaVM;
-  printf("%7u %7u %s\n", count, count_user, "GetJavaVM");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringRegion;
-  count_user = bda_c2j_count_user.GetStringRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetStringRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringUTFRegion;
-  count_user = bda_c2j_count_user.GetStringUTFRegion;
-  printf("%7u %7u %s\n", count, count_user, "GetStringUTFRegion");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetPrimitiveArrayCritical;
-  count_user = bda_c2j_count_user.GetPrimitiveArrayCritical;
-  printf("%7u %7u %s\n", count, count_user, "GetPrimitiveArrayCritical");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleasePrimitiveArrayCritical;
-  count_user = bda_c2j_count_user.ReleasePrimitiveArrayCritical;
-  printf("%7u %7u %s\n", count, count_user, "ReleasePrimitiveArrayCritical");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetStringCritical;
-  count_user = bda_c2j_count_user.GetStringCritical;
-  printf("%7u %7u %s\n", count, count_user, "GetStringCritical");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ReleaseStringCritical;
-  count_user = bda_c2j_count_user.ReleaseStringCritical;
-  printf("%7u %7u %s\n", count, count_user, "ReleaseStringCritical");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewWeakGlobalRef;
-  count_user = bda_c2j_count_user.NewWeakGlobalRef;
-  printf("%7u %7u %s\n", count, count_user, "NewWeakGlobalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.DeleteWeakGlobalRef;
-  count_user = bda_c2j_count_user.DeleteWeakGlobalRef;
-  printf("%7u %7u %s\n", count, count_user, "DeleteWeakGlobalRef");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.ExceptionCheck;
-  count_user = bda_c2j_count_user.ExceptionCheck;
-  printf("%7u %7u %s\n", count, count_user, "ExceptionCheck");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.NewDirectByteBuffer;
-  count_user = bda_c2j_count_user.NewDirectByteBuffer;
-  printf("%7u %7u %s\n", count, count_user, "NewDirectByteBuffer");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetDirectBufferAddress;
-  count_user = bda_c2j_count_user.GetDirectBufferAddress;
-  printf("%7u %7u %s\n", count, count_user, "GetDirectBufferAddress");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetDirectBufferCapacity;
-  count_user = bda_c2j_count_user.GetDirectBufferCapacity;
-  printf("%7u %7u %s\n", count, count_user, "GetDirectBufferCapacity");
-  sum += count;
-  sum_user += count_user;
-
-  count = bda_c2j_count.GetObjectRefType;
-  count_user = bda_c2j_count_user.GetObjectRefType;
-  printf("%7u %7u %s\n", count, count_user, "GetObjectRefType");
-  sum += count;
-  sum_user += count_user;
-  printf("%7u %7u All JNI functions\n", sum, sum_user);
 }

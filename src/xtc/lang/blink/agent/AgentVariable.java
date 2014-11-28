@@ -1,10 +1,12 @@
 package xtc.lang.blink.agent;
 
+import static java.lang.String.format;
+
 /**
- * The Blink support for the convenience variables in the Java
- * debugger. This class in particular represent a poly-morphic
- * convenience variable to hold both the java primitive and the
- * reference values.
+ * Blink's support for the convenience variables in Java. This class 
+ * in particular represents a set of polymorphic
+ * convenience variables to hold both the java primitive and reference
+ * values.
  *
  * @author Byeongcheol Lee 
  */
@@ -17,25 +19,19 @@ public class AgentVariable {
   private Object value;
 
   /** A Java expression to read the value from the Java debugger. */
-  private String expr;
-
-  /** The JNI type representation. */
-  private String jniType;
+  private String accessExpression;
 
   /** The Java type representation. */
-  private String javaType;
+  private String typeName;
 
   /** Constructor. */
   private AgentVariable(int id) {this.id = id;}
-  
+
   /** The Blink Java multi-typed variable array. */
   private static AgentVariable[] jvars;
 
   /** The next unique variable identifier. */
   private static int nextVJIdentifier;
-
-  /** The Java expression for the "jvars." */
-  private static final String JVARS_EXPRESSION = "xtc.lang.blink.agent.AgentVariable.jvars";
 
   /** Perform initialization. */
   public static void init() {
@@ -68,6 +64,75 @@ public class AgentVariable {
     nextVJIdentifier = 0;
   }
 
+  private static String genAccessExpression(int vid, String methodName, String typeName) {
+    return format("((%s)%s.%s(%d))",
+        typeName,
+        "xtc.lang.blink.agent.AgentVariable",
+        methodName, vid);
+  }
+  /**
+   * Take a class instance and return the fully qualified name of the
+   * type that the class instance represents.
+   *
+   * @param cls The class instance.
+   * @return The fully qualified name.
+   */
+  private static String getFullyQualifiedName(Class<?> cls) {
+    String type = cls.getName();
+    int i = 0, dim = 0;
+    if (type.charAt(i) == '[') {
+      for(; type.charAt(i) == '[';i++) {
+        dim++;
+       }
+    }
+    StringBuilder type_rhs = new StringBuilder();
+    for(int d = 0; d < dim;d++) {
+      type_rhs.append('[');
+     }
+    for(int d = 0; d < dim;d++) {
+      type_rhs.append(']');
+    }
+    String type_lhs;
+    if (dim == 0) {
+      type_lhs = type;
+    } else {
+      switch(type.charAt(i)) {
+      case 'L':
+        type_lhs = type.substring(i+1, type.length() - 1);
+       break;
+      case 'Z':
+        type_lhs = "boolean";
+        break;
+      case 'B':
+        type_lhs = "byte";
+        break;
+      case 'C':
+        type_lhs = "char";
+        break;
+      case 'D':
+        type_lhs = "double";
+        break;
+      case 'F':
+        type_lhs = "float";
+        break;
+      case 'I':
+        type_lhs = "int";
+        break;
+      case 'J':
+        type_lhs = "long";
+        break;
+      case 'S':
+        type_lhs = "short";
+        break;
+      default:
+        type_lhs = "failure";
+        break;
+      }
+    }
+  
+    return type_lhs + type_rhs.toString();
+  }
+
   /**
    * Take a boolean primitive value, create convenience variable, and
    * assign the boolean value to the convenience variable.
@@ -75,13 +140,11 @@ public class AgentVariable {
    * @param value
    * @return The convenience variable identifier.
    */
-  public static int setVjFromJavaExpr(boolean value) {
+  public static int set(boolean value) {
     AgentVariable vj = createVariable();
     vj.value = new Boolean(value);
-    vj.expr = "((Boolean)" + JVARS_EXPRESSION + "[" + vj.id + "].value)" 
-            + ".getBoolean()";
-    vj.jniType = "jboolean";
-    vj.javaType = "boolean";
+    vj.typeName = "boolean";
+    vj.accessExpression = genAccessExpression(vj.id, "getAsBoolean", vj.typeName); 
     return vj.id;
   }
 
@@ -92,13 +155,11 @@ public class AgentVariable {
    * @param value
    * @return The convenience variable identifier.
    */
-  public static int setVjFromJavaExpr(int value) {
+  public static int set(int value) {
     AgentVariable vj = createVariable();
     vj.value = new Integer(value);
-    vj.expr = "((Integer)" + JVARS_EXPRESSION + "[" + vj.id + "].value)"
-            + ".intValue()";
-    vj.jniType = "jint";
-    vj.javaType = "int";
+    vj.typeName = "int";
+    vj.accessExpression = genAccessExpression(vj.id, "getAsInt", vj.typeName);
     return vj.id;
   }
 
@@ -109,41 +170,33 @@ public class AgentVariable {
    * @param value
    * @return The convenience variable identifier.
    */
-  public static int setVjFromJavaExpr(double value) {
+  public static int set(double value) {
     AgentVariable vj = createVariable();
     vj.value = new Double(value);
-    vj.expr = "((Double)" + JVARS_EXPRESSION + "[" + vj.id + "].value)" 
-            + ".doubleValue()";
-    vj.jniType = "jdouble";
-    vj.javaType = "double";
+    vj.typeName = "double";
+    vj.accessExpression = genAccessExpression(vj.id, "getAsDouble", vj.typeName);
     return vj.id;
   }
 
   /**
-   * Take an reference value, create convenience variable, and assign
+   * Take a reference value, create convenience variable, and assign
    * the reference value to the convenience variable.
    *
    * @param obj The reference.
    * @return The convenience variable identifier.
    */
-  public static int setVjFromJavaExpr(Object obj) {
+  public static int set(Object obj) {
     AgentVariable vj = createVariable();
     if (obj != null) {
+      String fqname = getFullyQualifiedName(obj.getClass());
       vj.value = obj;
-      String type = obj.getClass().getName();
-      if (type.equals("[D")) {
-        vj.expr = "((double[])" + JVARS_EXPRESSION + "[" + vj.id + "].value)";
-      } else {
-        vj.expr = "((" + type + ")" +  JVARS_EXPRESSION + "[" + vj.id + "].value)";
-      }
-      vj.javaType = type;
+      vj.typeName = fqname;
+      vj.accessExpression = genAccessExpression(vj.id, "getAsObject", vj.typeName); 
     } else {
       vj.value = null;
-      vj.expr="null";
-      vj.javaType = "NULL";
+      vj.typeName = "java.lang.Object";
+      vj.accessExpression="(null)";
     }
-    vj.jniType = "jobject";
-
     return vj.id;
   }
 
@@ -153,8 +206,8 @@ public class AgentVariable {
    * @param vjid The convenience variable identifier.
    * @return The Java expression.
    */
-  public static String getVJExpr(int vjid) {
-    return jvars[vjid].expr;
+  public static String getJavaExpression(int vjid) {
+    return jvars[vjid].accessExpression;
   }
 
   /** 
@@ -162,25 +215,16 @@ public class AgentVariable {
    * @param vjid The convenience variable identifier.
    * @return The Java expression.
    */
-  public static String get_java_type(int vjid) {
-    return jvars[vjid].javaType;
+  public static String getTypeName(int vjid) {
+    return jvars[vjid].typeName;
   }
 
-  /** 
-   * Get the JNI type representation of a convenience variable.
-   * @param vjid The convenience variable identifier.
-   * @return The JNI representation.
-   */
-  public static String get_vj_jni_type(int vjid) {
-    return jvars[vjid].jniType;
-  }
-  
   /** 
    * Get the boolean value of the convience variable.
    * @param vjid The convenience variable identifier.
    * @return The boolean value.
    */
-  public static boolean get_vj_jboolean(int vjid) {
+  public static boolean getAsBoolean(int vjid) {
     Object obj = jvars[vjid].value;
     Boolean bobj = (Boolean)obj;
     return bobj.booleanValue();
@@ -191,7 +235,7 @@ public class AgentVariable {
    * @param vjid The convenience variable identifier.
    * @return The integer value.
    */
-  public static int get_vj_jint(int vjid) {
+  public static int getAsInt(int vjid) {
     Object obj = jvars[vjid].value;
     Integer bobj = (Integer)obj;
     return bobj.intValue();
@@ -202,7 +246,7 @@ public class AgentVariable {
    * @param vjid The convenience variable identifier.
    * @return The double value.
    */
-  public static double get_vj_jdouble(int vjid) {
+  public static double getAsDouble(int vjid) {
     Object obj = jvars[vjid].value;
     Double bobj = (Double)obj;
     return bobj.doubleValue();
@@ -213,7 +257,7 @@ public class AgentVariable {
    * @param vjid The convenience variable identifier.
    * @return The reference value.
    */
-  public static Object get_vj_jobject(int vjid) {
+  public static Object getAsObject(int vjid) {
     Object obj = jvars[vjid].value;
     Object bobj = (Object)obj;
     return bobj;

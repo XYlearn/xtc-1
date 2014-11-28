@@ -33,8 +33,6 @@ import xtc.lang.cpp.Syntax.Text;
 import xtc.lang.cpp.Syntax.Directive;
 import xtc.lang.cpp.Syntax.Conditional;
 
-import xtc.util.Runtime;
-
 import xtc.lang.cpp.PresenceConditionManager.PresenceCondition;
 
 /** The conditional macro table.
@@ -47,12 +45,9 @@ import xtc.lang.cpp.PresenceConditionManager.PresenceCondition;
  * (5) the table is optimized by having no duplicate definitions
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.61 $
+ * @version $Revision: 1.62 $
  */
 public class MacroTable {
-  /** The xtc runtime. */
-  Runtime runtime;
-
   /** The token creator. */
   TokenCreator tokenCreator;
 
@@ -62,31 +57,71 @@ public class MacroTable {
   /** Track enabled/disabled macro names */
   Set<String> disabled;
 
+  /** Whether to collect configuration variable names or not. */
+  private boolean getConfigurationVariables = false;
+  
   /** Records unique configuration variable names. */
-  Set<String> configurationVariables;
-  
+  public Set<String> configurationVariables = null;
+
+  /** Whether to collect header guard names or not. */
+  private boolean getHeaderGuards = false;
+
   /** Records unique header guard names. */
-  Set<String> headerGuards;
-  
+  public Set<String> headerGuards = null;
+
+  /** Only allow macros with a given prefix to be free macros. */
+  private boolean restrictPrefix = false;
+
+  /** The restricted prefix. */
+  private String prefix = null;
+
   /** Make a new empty macro table */
-  public MacroTable(Runtime runtime, TokenCreator tokenCreator) {
-    this.runtime = runtime;
+  public MacroTable(TokenCreator tokenCreator) {
     this.tokenCreator = tokenCreator;
 
     table = new HashMap<String, List<Entry>>();
     disabled = new HashSet<String>();
+  }
 
-    if (runtime.test("configurationVariables")) {
+  public void getConfigurationVariables(boolean b) {
+    getConfigurationVariables = b;
+
+    if (getConfigurationVariables && null == configurationVariables) {
       configurationVariables = new HashSet<String>();
-    } else {
-      configurationVariables = null;
+      getHeaderGuards(true);
     }
+  }
 
-    if (runtime.test("headerGuards")
-        || runtime.test("configurationVariables")) {
+  public boolean getConfigurationVariables() {
+    return getConfigurationVariables;
+  }
+
+  public void getHeaderGuards(boolean b) {
+    getHeaderGuards = b;
+
+    if (getHeaderGuards && null == headerGuards) {
       headerGuards = new HashSet<String>();
+    }
+  }
+
+  public boolean getHeaderGuards() {
+    return getHeaderGuards;
+  }
+
+  /**
+   * Only allow macros with a given prefix to be free macros.  Pass
+   * null to turn this feature off.  It is off by default.
+   *
+   * @param prefix Give a string to turn restricted prefix on.  Give
+   * null to turn it off.
+   */
+  public void restrictPrefix(String prefix) {
+    if (null == prefix) {
+      restrictPrefix = false;
+      this.prefix = null;
     } else {
-      headerGuards = null;
+      restrictPrefix = true;
+      this.prefix = prefix;
     }
   }
   
@@ -168,18 +203,11 @@ public class MacroTable {
         PresenceCondition negation;
         
         negation = presenceCondition.not();
-        if (runtime.test("cppmode")
-            || (null != runtime.getString("TypeChef-x")
-                && ! name.startsWith(runtime.getString("TypeChef-x")))) {
-
+        if (restrictPrefix && !name.startsWith(prefix)) {
           // Assume the macro is undefined.
-
           defs.add(new Entry(Macro.undefined, negation));
-
         } else {
-
           // Let the macro be free.
-
           defs.add(new Entry(Macro.free, negation));
         }
         negation.delRef();
@@ -333,8 +361,7 @@ public class MacroTable {
     // already defined!  In openHeader, we make sure the header guard
     // is not already contained in the macro table.
 
-    if (runtime.test("headerGuards")
-        || runtime.test("configurationVariables")) {
+    if (getHeaderGuards) {
       headerGuards.add(guardMacro);
     }
 
@@ -559,9 +586,7 @@ public class MacroTable {
         sb.append(")");
       }
       sb.append("\n");
-      /*if (! runtime.test("noConditions"))*/ {
-        sb.append(presenceCondition);
-      }
+      sb.append(presenceCondition);
       sb.append("\n");
       
       return sb.toString();

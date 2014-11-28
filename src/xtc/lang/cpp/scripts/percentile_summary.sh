@@ -20,12 +20,13 @@
 
 # Finds specific percentiles from a data file.
 
-pctls=".5 .9 1" # the default list of percentiles to find
-
-while getopts :p: opt; do
+while getopts :p:q: opt; do
     case $opt in
         p)
             pctls=$OPTARG
+            ;;
+        q)
+            quietmode=$OPTARG
             ;;
         \?)
             echo "(`basename $0`)" "Invalid argument: -$OPTARG"
@@ -39,9 +40,20 @@ done
 shift $(($OPTIND - 1))
 
 if [[ $# -lt 3 ]]; then
-    echo "USAGE: `basename $0` [-p \"pctls\"] file row_name col_number"
+    echo "USAGE"
+    echo "  `basename $0` [-q percentile] [-p \"percentiles\"] file row_name col_number"
     echo ""
-    echo "EXAMPLE: `basename $0` -p \".5 .8 .9 1\" performance.txt performance 3"
+    echo -e "  -p percentiles\tspecifies the (p)ercentiles to find"
+    echo -e "  -q percentile\t\t(q)uiet mode only prints a single percentile without any other text"
+    echo ""
+    echo "EXAMPLES"
+    echo "  `basename $0` -p \".5 .8 .9 1\" performance.txt performance 3"
+    echo "  `basename $0` -q .5 performance.txt performance 3"
+    echo ""
+    echo "DETAILS"
+    echo "  The file format expected are rows of data with the columns separated by spaces."
+    echo "  The first column, col_number 1, is a row_name identifying the type of data.  The"
+    echo "  percentile is specified as a decimal number."
     exit
 fi
 
@@ -51,11 +63,27 @@ field=$3
 
 count=`cat $file | grep $item | wc -l`
 
-echo "Out of $count rows."
-for pctl in $pctls; do
+function get_percentile {
+    pctl=$1
     n=`perl -w -e "use POSIX; print ceil($count * $pctl), qq{\n}"`  # ugh
-    echo "Percentile $pctl ($n rows)"
     echo `cat $file | grep $item | awk -v col=$field '{ print $col }' \
         | sort -n | head -n $n | tail -n 1`
-    echo
-done
+}
+
+if [[ "$quietmode" != "" ]]; then
+    if [[ "$pctls" != "" ]]; then
+        echo "error: only -p or -q may be used, not both"
+        exit 1
+    fi
+    get_percentile $quietmode
+else
+    if [[ "$pctls" == "" ]]; then
+        pctls=".5 .9 1" # the default list of percentiles to find
+    fi
+    echo "Out of $count rows."
+    for pctl in $pctls; do
+        echo "Percentile $pctl ($n rows)"
+        get_percentile $pctl
+        echo
+    done
+fi

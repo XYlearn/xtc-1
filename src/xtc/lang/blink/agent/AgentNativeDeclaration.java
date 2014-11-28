@@ -68,9 +68,6 @@ public interface AgentNativeDeclaration {
   /** The native entry to call the agent's Java dummy code. */
   public static final String BDA_DUMMY_JAVA = "bda_dummy_java";
 
-  /** The native entry to call the agent's native dummy code. */
-  public static final String BDA_DUMMY_NATIVE = "bda_dummy_native";
-
   /** A blink agent's master breakpoint. */
   public static final String BDA_CBP = "bda_cbp";
 
@@ -98,9 +95,6 @@ public interface AgentNativeDeclaration {
   /** Yield the control from C debugger to Java debugger.*/
   public static final String BDA_C2J = "bda_c2j";
 
-  /** The native entry name to get JNI environment variable. */
-  public static final String BDA_ENSURE_JNIENV = "bda_ensure_jnienv";
-  
   /** The native entry name to get language transition count. */
   public static final String BDA_GET_CURRENT_TRANSITION_COUNT = "bda_get_current_transition_count";
 }

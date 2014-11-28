@@ -32,7 +32,7 @@ import java.util.List;
  * preprocessor to control macro expansion.
  *
  * @author Robert Grimm, Paul Gazzillo
- * @version $Revision: 1.28 $
+ * @version $Revision: 1.34 $
  */
 public abstract class Syntax extends xtc.tree.Token {
 
@@ -141,6 +141,17 @@ public abstract class Syntax extends xtc.tree.Token {
    */
   public Conditional toConditional() {
     throw new ClassCastException("Not a conditional: " + this);
+  }
+
+  /**
+   * Convert this syntax object to an error.
+   *
+   * @return This syntax object as an error.
+   * @throws ClassCastException Signals that this syntax object is not
+   *   an error.
+   */
+  public Error toError() {
+    throw new ClassCastException("Not an error: " + this);
   }
 
   private int toMask(int num) {
@@ -257,7 +268,8 @@ public abstract class Syntax extends xtc.tree.Token {
     COMMA,
     ELLIPSIS,
     HASH,
-    DOUBLE_HASH
+    DOUBLE_HASH,
+    NUMBER
   }
 
   /** The interface for language tags. */
@@ -330,6 +342,7 @@ public abstract class Syntax extends xtc.tree.Token {
       return Kind.LANGUAGE;
     }
 
+    @Override
     public Language<Tag> toLanguage() {
       return this;
     }
@@ -405,7 +418,9 @@ public abstract class Syntax extends xtc.tree.Token {
     LINEMARKER("#"),
     ERROR("#error"),
     WARNING("#warning"),
-    PRAGMA("#pragma");
+    PRAGMA("#pragma"),
+    INVALID("#"),
+    ;
 
     private String text;
 
@@ -648,6 +663,52 @@ public abstract class Syntax extends xtc.tree.Token {
 
     public String getTokenText() {
       return "CONDITIONAL_BLOCK" + branches;
+    }
+  }
+
+  public static enum ErrorType {
+    ERROR,
+    FATAL,
+    WARNING
+  }
+
+  public static class Error extends Syntax {
+    public final String message;
+    public final ErrorType type;
+
+    public Error(String message, ErrorType type) {
+      this.message = message;
+      this.type = type;
+    }
+
+    public Error(String message, boolean fatal) {
+      this(message, fatal ? ErrorType.FATAL : ErrorType.ERROR);
+    }
+
+    public Syntax copy() {
+      throw new UnsupportedOperationException();
+    }
+
+    public Kind kind() {
+      return Kind.ERROR;
+    }
+
+    public String getTokenText() {
+      StringBuilder sb = new StringBuilder();
+
+      sb.append("#error ");
+      sb.append(message);
+      sb.append("\n");
+
+      return sb.toString();
+    }
+
+    public Error toError() {
+      return this;
+    }
+
+    public String toString() {
+      return this.getTokenText();
     }
   }
 

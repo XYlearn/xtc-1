@@ -25,6 +25,11 @@ if [ -z "$file" ]; then
     exit
 fi
 
+if [ ! -f "$file" ]; then
+    echo "File not found: $file" >&2
+    exit
+fi
+
 cat $file | awk '
 BEGIN{
     defines = 0

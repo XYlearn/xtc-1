@@ -7,43 +7,43 @@
 
 struct agent_options agent_options =
 {
-    0, /* mcount */
     1, /* jnissert */
-    0, /* bia */
-    0, /* nointerpose */
+    1, /* failstop */
+    1, /* interpose */
+    0, /* stats */
 };
 
 struct agent_option_key_value {
-  const char * name;
+  const char *name;
   int name_len;
-  const char * value;
+  const char *value;
   int value_len;
 };
 
-static void agent_usage(const char * reason)
+static void agent_usage(const char *reason)
 {
   if (reason) {
     printf("can not understand: %s\n", reason);
   }
   printf(
-    "    Dynamic Error Detector for JNI\n"
+    "The JVMTI agent for Blink and Jinn\n"
     "usage: java -agentlib:jinn=[help]|[<option>=<value>, ...]\n"
-    "Options\n"
-    "mcount=y|n        n  Report the execution counts for Java native methods and JNI functions.\n"
-    "jniassert=y|n     y  Throw JNI assertion failure error.\n"
-    "bia=y|n           n  Turn on Blink intermediate agent.\n"
-    "nointerpose=y|n   n  Do not interpose transitions for experimental measurement.\n"
+    "options\n"
+    "  jinn=y|n          y  Check JNI programmig rules.\n"
+    "  failstop=y|n      y  Generate a Java exception at a failure.\n"
+    "  interpose=y|n     y  Interposing on transitions.\n"
+    "  stats=y|n         n  Turn on statistics.\n"
     );
   exit(0);
 }
 
-static int agent_strcmp(const char * s1, int s1_len, const char* s2)
+static int agent_strcmp(const char *s1, int s1_len, const char *s2)
 {
   return (s1_len == strlen(s2)) && (strncmp(s1, s2, s1_len) == 0);
 }
 
 static int agent_handle_boolean_option(const char *opt_name, int *value,
-                                       struct agent_option_key_value * opt,
+                                       struct agent_option_key_value *opt,
                                        const char *usage)
 {
   if ( (opt->name_len != strlen(opt_name)) || !agent_strcmp(opt->name, opt->name_len, opt_name))  {
@@ -59,18 +59,22 @@ static int agent_handle_boolean_option(const char *opt_name, int *value,
   return 1;
 }
 
-static void agent_handle_option(struct agent_option_key_value * opt)
+static void agent_handle_option(struct agent_option_key_value *opt)
 {
-  if (agent_handle_boolean_option("mcount", &agent_options.mcount, opt, "mcount takes either y or n")
-      || agent_handle_boolean_option("jniassert", &agent_options.jniassert, opt, "jniassert takes either y or n")
-      || agent_handle_boolean_option("bia", &agent_options.bia, opt, "bia takes either y or n")
-      || agent_handle_boolean_option("nointerpose", &agent_options.nointerpose, opt, "nointerpose takes either y or n")) {
+  if (agent_handle_boolean_option("jinn", &agent_options.jinn,
+                                  opt, "jinn takes either y or n")
+      || agent_handle_boolean_option("failstop", &agent_options.failstop, 
+                                     opt, "failstop takes either y or n")
+      || agent_handle_boolean_option("interpose", &agent_options.interpose,
+                                     opt, "interpose takes either y or n")
+      || agent_handle_boolean_option("stats", &agent_options.stats,
+                                     opt, "stats takes either y or n")) {
   } else {
     agent_usage("can not recognize the option");
   }
 }
 
-void agent_parse_options(const char * options)
+void agent_parse_options(const char *options)
 {
   /* parse options. */
   if (options != NULL) {
@@ -93,7 +97,8 @@ void agent_parse_options(const char * options)
         } else {
           struct agent_option_key_value opt = {
             options + name_index, name_length, 
-            options + value_index, value_length};
+            options + value_index, value_length
+          };
           agent_handle_option(&opt);
           name_index = i+1;
           name_length = 0;
@@ -110,8 +115,15 @@ void agent_parse_options(const char * options)
     } else {
       struct agent_option_key_value opt = {
         options + name_index, name_length, 
-        options + value_index, value_length};
+        options + value_index, value_length
+      };
       agent_handle_option(&opt);
     }
+  }
+
+  if (!agent_options.interpose) {
+      if (agent_options.jinn) {
+          agent_usage("\"jinn\" requires \"interpose\" to be \"y\".");
+      }
   }
 }

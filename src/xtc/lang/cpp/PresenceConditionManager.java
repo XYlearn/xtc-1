@@ -21,12 +21,16 @@ package xtc.lang.cpp;
 import java.io.Writer;
 import java.io.StringWriter;
 import java.io.IOException;
+import java.io.StringReader;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+
+import xtc.lang.cpp.Syntax.Kind;
 
 import net.sf.javabdd.BDDFactory;
 import net.sf.javabdd.BDD;
@@ -35,7 +39,7 @@ import net.sf.javabdd.BDD;
   * using BDDs.
   *
   * @author Paul Gazzillo
-  * @version $Revision: 1.2 $
+  * @version $Revision: 1.6 $
   */
 class PresenceConditionManager {
 
@@ -295,6 +299,125 @@ class PresenceConditionManager {
   public BDDFactory getBDDFactory() {
     return B;
   }
+
+  /**
+   * Return a new presence condition with the disjunction of all
+   * variables, turned off or on according to the parameters.
+   *
+   * @param defaultSetting true for all variables on, false for off.
+   * @param exceptions null for none, list of strings to set opposite
+   * the defaultSetting.
+   * @return The new presence condition.
+   */
+  public BDD evaluateBDDs(ConditionEvaluator evaluator) {
+    BDD b = B.one();
+
+    for (int i = 0; i < vars.indices.size(); i++) {
+      String varString = vars.indices.get(i);
+      final CLexer clexer = new CLexer(new StringReader(varString));
+      clexer.setFileName("string expression");
+
+      Iterator<Syntax> stream = new Iterator<Syntax>() {
+          Syntax syntax;
+    
+          public Syntax next() {
+            try {
+              syntax = clexer.yylex();
+            } catch (IOException e) {
+              e.printStackTrace();
+              throw new RuntimeException();
+            }
+            return syntax;
+          }
+    
+          public boolean hasNext() {
+            return syntax.kind() != Kind.EOF;
+          }
+
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+
+      stream.next();
+
+      BDD result = evaluator.evaluate(stream);
+
+      if (result.isOne()) {
+        b.andWith(B.ithVar(i));
+      } else if (result.isZero()) {
+        BDD ith = B.ithVar(i);
+        BDD not = ith.not();
+        ith.free();
+        b.andWith(not);
+      } else {
+        System.err.println("unresolved BDD variable");
+        System.err.println(varString);
+        BDD ith = B.ithVar(i);
+        BDD not = ith.not();
+        ith.free();
+        b.andWith(not);
+        // System.exit(1);
+      }
+    }
+
+    return b;
+  }
+
+  /**
+   * Return a new presence condition with the disjunction of all
+   * variables, turned off or on according to the parameters.
+   *
+   * @param defaultSetting true for all variables on, false for off.
+   * @param exceptions null for none, list of strings to set opposite
+   * the defaultSetting.
+   * @return The new presence condition.
+   */
+  public BDD createConfiguration(boolean defaultSetting,
+                                 List<String> exceptions) {
+    BDD b = B.one();
+
+    for (int i = 0; i < vars.indices.size(); i++) {
+      boolean setting = defaultSetting;
+      String varString = vars.indices.get(i);
+
+      if (null != exceptions && exceptions.contains(varString)) {
+        setting = ! setting;
+      }
+
+      if (setting) {
+        b.andWith(B.ithVar(i));
+      } else {
+        BDD ith = B.ithVar(i);
+        BDD not = ith.not();
+        ith.free();
+        b.andWith(not);
+      }
+    }
+
+    return b;
+  }
+
+  /**
+   * Return a new presence condition with the disjunction of all
+   * variables.
+   *
+   * @return The new presence condition.
+   */
+  public BDD allYes() {
+    return createConfiguration(true, null);
+  }
+
+  /**
+   * Return a new presence condition with the disjunction of all
+   * variables negated.
+   *
+   * @return The new presence condition.
+   */
+  public BDD allNo() {
+    return createConfiguration(false, null);
+  }
+
   
   /** A reference-counted presence condition that automatically cleans up BDD when
     * nothing references it anymore.
