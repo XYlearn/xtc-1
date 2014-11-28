@@ -45,10 +45,10 @@ public class DebuggerContext {
    * @return The list.
    */
   private List<LocalVariable> getJeannieLocals(JeannieCallFrame jframe, 
-      Blink dbg, SymbolMapper remapper) throws IOException {
+      Blink dbg, SymbolMapper remapper)  {
     LinkedList<LocalVariable> localList = new LinkedList<LocalVariable>();
   
-    //Obtain symbol remap information.
+    // Obtain symbol remap information.
     String sourceFile = jframe.getSourceFile();
     int line = jframe.getLineNumber();
     if (sourceFile == null || line <= 0) {
@@ -57,7 +57,7 @@ public class DebuggerContext {
     assert sourceFile != null && line > 0;
     List<VariableRemapEntry> list = remapper.lookup(sourceFile, line);
   
-    //Obtain values from Java side.
+    // Obtain values from Java side.
     dbg.ensureJDBContext();
     for(VariableRemapEntry v: list) {
       if (v.targetLanguage == TargetSourceLanguage.JAVA) {
@@ -91,9 +91,12 @@ public class DebuggerContext {
     int nsize = callStack.size(); 
     for(int i = currentFrameNumber;i < nsize;i++) {
       CallStack.ICallFrame f = callStack.getCallFrame(i);
-      sb.append("  [" + i + "] "+ f + "\n"); 
+      if (f.getSourceFile() != null) {
+        dbg.out(" [%d] %s at %s:%d\n", i, f.getName(), f.getSourceFile(), f.getLineNumber());
+      } else {
+        dbg.out(" [%d] %s\n", i, f.getName());
+      }
     }
-    dbg.out(sb.toString());
   }
 
   /**
@@ -143,7 +146,7 @@ public class DebuggerContext {
    * @param remapper The symbol remapper.
    */
   public void showLocals(Blink dbg, SymbolMapper remapper) 
-    throws IOException {
+     {
     
     //obtain a list of local variable info.
     List<LocalVariable> l = null;
@@ -177,13 +180,13 @@ public class DebuggerContext {
    *
    * @param dbg The debugger.
    */
-  public void showSourceCode(Blink dbg) throws IOException{
+  public void showSourceCode(Blink dbg) {
     MicroCallFrame frame = callStack.getCallFrame(currentFrameNumber).getTopMicroFrame();
     if (frame instanceof JavaCallFrame) {
       JavaCallFrame jframe = (JavaCallFrame)frame;
       dbg.ensureJDBContext();
       String msg = dbg.jdb.list(jframe);
-      dbg.out(msg);
+      dbg.out("%s", msg);
     } else {
       assert frame instanceof NativeCallFrame;
       dbg.ensureGDBContext();
@@ -192,7 +195,7 @@ public class DebuggerContext {
       int line = nframe.getLineNumber(); 
       if (sourceFile != null && line > 0) {
         String lines = dbg.ndb.getSourceLines(sourceFile, line, 10);
-        dbg.out(lines);
+        dbg.out("%s", lines);
       } else {
         dbg.err("line number is not availble.\n");
       }
@@ -200,12 +203,12 @@ public class DebuggerContext {
   }
 
   /** Find the current Java frame. */
-  public JavaCallFrame getCurrentJavaFrame() throws IOException {
+  public JavaCallFrame getCurrentJavaFrame()  {
     return callStack.getJavaCallFrame(currentFrameNumber);
   }
   
   /** Find the current native frame. */
-  public NativeCallFrame getCurrentNativeFrame() throws IOException{
+  public NativeCallFrame getCurrentNativeFrame() {
     return callStack.getNativeCallFrame(currentFrameNumber);
   }
 

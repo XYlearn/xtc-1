@@ -3,7 +3,7 @@ package xtc.lang.blink;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.io.IOException;
+import java.io.File;
 
 import xtc.lang.blink.CallStack.NativeCallFrame.NativeFrameType;
 
@@ -24,8 +24,7 @@ public final class CallStack {
    * @param remapper The symbol remapper.
    * @return The call stack.
    */
-  public static CallStack extractCallStack(Blink dbg, SymbolMapper remapper)
-      throws IOException {
+  public static CallStack extractCallStack(Blink dbg, SymbolMapper remapper) {
     FrameLanguage lang;
     List<JavaCallFrame> jFrames;
     List<NativeCallFrame> nFrames;
@@ -54,11 +53,6 @@ public final class CallStack {
     default:
       assert false : "should not be reachable.";
       return null;
-    }
-    
-    if (dbg.options.getVerboseLevel() >=1) {
-      dbg.out("building mixed frames\n");
-      dbg.out(toString(jFrames, nFrames));
     }
 
     // build mixed frames.
@@ -172,23 +166,27 @@ public final class CallStack {
     List<ICallFrame> mixedFrames = new LinkedList<ICallFrame>();
     LinkedList<MicroCallFrame> framesForJeannie = null;
     String jeannieMethodName = null;
-    for(final MicroCallFrame frame :frames) {
+    for (final MicroCallFrame frame : frames) {
       String sname = frame.getSymbolName();
       String srcName = frame.getSourceFile();
-      SymbolMapper.MethodRemapEntry e = remapper.lookupMethodRemap(sname, srcName);
+      SymbolMapper.MethodRemapEntry e = null;
+      if (srcName != null && new File(srcName).canRead()) {
+        e = remapper.lookupMethodRemap(sname, srcName);
+      }
       boolean isJeannieMicroFrame = (e != null);
       if (isJeannieMicroFrame) {
         if (framesForJeannie == null) {
           // The start of the Jeannie frame.
-          jeannieMethodName = e.getSourceLanguageName(); 
+          jeannieMethodName = e.getSourceLanguageName();
           framesForJeannie = new LinkedList<MicroCallFrame>();
         }
         // The middle or the end of Jeannie frame.
         framesForJeannie.add(frame);
       } else {
-         //Flush any pending Jeannie frame.        
+        // Flush any pending Jeannie frame.
         if (framesForJeannie != null) {
-          mixedFrames.add(new JeannieCallFrame(jeannieMethodName, framesForJeannie));
+          mixedFrames.add(new JeannieCallFrame(jeannieMethodName,
+              framesForJeannie));
           framesForJeannie = null;
         }
         // add a normal Java/C frame.
@@ -323,6 +321,9 @@ public final class CallStack {
    */
   static interface ICallFrame {
 
+    /** Getter for the name. */
+    public String getName();
+    
     /** Getter for the line number. */
     public int getLineNumber();
 
@@ -405,7 +406,10 @@ public final class CallStack {
       this.isJavaNativeMethod = isJavaNativeMethod;
     }
 
-    /** Getters. */
+    public String getName() {
+        return String.format("%s.%s", className, methodName);
+    }
+
     public int getJdbIdentifier() {
       return frameID;
     }
@@ -471,6 +475,10 @@ public final class CallStack {
       this.frameID = frameID;
       this.functionName = functionName;
       this.type = type;
+    }
+    
+    public String getName() {
+      return functionName;
     }
 
     /** Getter method for the gdb identifier. */
@@ -558,6 +566,10 @@ public final class CallStack {
     /** Getter method for the language. */
     public FrameLanguage getLanguage() {
       return FrameLanguage.JEANNIE;
+    }
+
+    public String getName() {
+      return name;
     }
 
     /** Getter method for the top micro frame. */

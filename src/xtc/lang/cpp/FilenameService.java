@@ -31,7 +31,7 @@ import java.net.Socket;
  * will get a unique line of the file.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.9 $
+ * @version $Revision: 1.11 $
  */
 class FilenameService {
 
@@ -45,7 +45,7 @@ class FilenameService {
     if (args.length < 3) {
       System.err.println(
                          "USAGE: \n" +
-                         "  java FilenameService -server port file\n" +
+                         "  java FilenameService -server port file (port 0 uses random port)\n" +
                          "  java FilenameService -client server port\n" +
                          "\n" +
                          "EXIT CODES:\n" +
@@ -68,6 +68,8 @@ class FilenameService {
         String filename = br.readLine();
 
         ServerSocket server = new ServerSocket(port);
+
+        System.out.println(server.getLocalPort());
 
         while (null != filename) {
           Socket socket = server.accept();
@@ -112,20 +114,22 @@ class FilenameService {
       try {
         String server = args[1];
         int port = Integer.parseInt(args[2]);
-        Socket socket= new Socket(server, port);
-        BufferedReader in
-          = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        String filename;
 
-        String filename = in.readLine();
+        do {
+          Socket socket= new Socket(server, port);
+          BufferedReader in =
+            new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+          filename = in.readLine();
+          socket.close();
+        } while (null == filename);
 
         if (filename.equals("$end")) {
-          socket.close();
           System.exit(3);
         }
 
         System.out.println(filename);
-
-        socket.close();
 
       } catch (java.net.ConnectException e) {
         e.printStackTrace();

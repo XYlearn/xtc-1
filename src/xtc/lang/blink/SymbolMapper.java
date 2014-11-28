@@ -1,5 +1,7 @@
 package xtc.lang.blink;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -84,13 +86,9 @@ public class SymbolMapper {
    */
   private SourceVariableMapper getRemapInformation(String sourceFileName) {
     SourceVariableMapper mapper = null;
-    if (!varibleRemap.containsKey(sourceFileName)) {
-      //the first time
-      try {
-        String remapFile = sourceFileName + ".symbols";
-        mapper = new SourceVariableMapper(remapFile);
-      } catch (IOException e) {
-      }
+    String remapFileName =sourceFileName + ".symbols";
+    if (new File(remapFileName).canRead() && !varibleRemap.containsKey(sourceFileName)) {
+      mapper = new SourceVariableMapper(remapFileName);
     } else {
       mapper = varibleRemap.get(sourceFileName);
     }
@@ -283,13 +281,18 @@ public class SymbolMapper {
      * 
      * @param remapFile The file containing the variable remapping information.
      */
-    public SourceVariableMapper(String remapFile) throws IOException {
+    public SourceVariableMapper(String remapFile)  {
       this.remapFile = remapFile;
+      try {
       updateRemapEntry();
+      } catch(IOException e) {
+        throw new RuntimeException(e);
+      }
     }
 
-    /** Update the remap entry from the remap file.*/
-    private void updateRemapEntry() throws IOException {
+    /** Update the remap entry from the remap file.
+     * @throws FileNotFoundException */
+    private void updateRemapEntry() throws IOException  {
       ventries.clear();
 
       Pattern variableRemapEntryPattern = Pattern

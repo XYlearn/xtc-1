@@ -9,5 +9,5 @@ package xtc.lang.blink.agent;
  */
 public interface AgentCommandOptions {
   /** Agent source file name.*/
-  public static final String JNICHECK = "jniassert";
+  public static final String JNICHECK = "jinn";
 }

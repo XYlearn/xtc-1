@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec java -ea xtc.lang.blink.Blink $*
+exec java -classpath $JAVA_DEV_ROOT/classes -ea xtc.lang.blink.Blink $*

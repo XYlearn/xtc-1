@@ -110,7 +110,7 @@ ifeq ($(JAVAC),jikes)
 JAVAC_OPTIONS     = -d $(CLASS_DIR) -sourcepath $(SOURCE_DIR) \
 		    -classpath $(CLASS_DIR)$(PATH_SEP)$(JAVA_RUNTIME)
 else
-JAVAC_OPTIONS     = -source 1.5 -d $(CLASS_DIR) -sourcepath $(SOURCE_DIR)
+JAVAC_OPTIONS     = -d $(CLASS_DIR) -sourcepath $(SOURCE_DIR)
 endif
 
 JAVAH_OPTIONS     = 

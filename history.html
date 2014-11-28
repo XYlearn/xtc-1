@@ -11,6 +11,30 @@
 
 <!-- ======================================================================= -->
 
+<dt>2.4.0 (8/17/14)</dt>
+
+<dd>Major feature release.
+
+<p>This release significantly improves Blink. The Jeannie expression
+evaluator has been greatly simplified to reduce the number of commands
+sent to the component debuggers. The intermediate agent has been
+enhanced to remove hard-coded limitations such as the maximum number
+of threads and synchronized accesses to shared data structures. This
+version is the one used for all experiment in the SPE&nbsp;&rsquo;14
+paper &ldquo;Debugging Mixed-Environment Programs with Blink&rdquo;
+by Byeongcheol Lee, Martin Hirzel, Robert Grimm, and Kathryn
+S. McKinley.</p>
+
+<p>This release also improves SuperC's AST node names, fixes various
+bugs in AST creation, and adds further regression tests.</p>
+
+<p>Clang's C structure layout appears to be different from that of
+gcc, leading to a regression test failure on Mac OS 10.9.</p>
+
+</dd>
+
+<!-- ======================================================================= -->
+
 <dt>2.3.1 (4/4/12)</dt>
 
 <dd>Minor bug fix release.  This release fixes incorrect license

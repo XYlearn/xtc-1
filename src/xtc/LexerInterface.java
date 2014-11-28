@@ -6,6 +6,7 @@ import xtc.util.Runtime;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -77,7 +78,7 @@ public class LexerInterface {
      * The file is read with a separate preprocessor, that's why we may return multiple here
      * continue with the second after the first is done.
      */
-    public static List<Stream> createLexer(String commandlineStr,
+    public static List<Iterator<Syntax>> createLexer(String commandlineStr,
                                            Reader in,
                                            File file,
                                            final ErrorHandler errorHandler,
@@ -87,7 +88,7 @@ public class LexerInterface {
                                            XtcMacroFilter macroFilter) throws FileNotFoundException {
 
 //        Reader in = new FileReader(file);
-        List<Stream> result = new ArrayList<Stream>();
+        List<Iterator<Syntax>> result = new ArrayList<Iterator<Syntax>>();
 
         StopWatch lexerTimer = null;
 
@@ -108,7 +109,10 @@ public class LexerInterface {
 
         final MacroTable macroTable = new MacroTable(runtime, tokenCreator, macroFilter);
         final PresenceConditionManager presenceConditionManager = new PresenceConditionManager();
-
+        ExpressionParser expressionParser = ExpressionParser.fromRats();
+        ConditionEvaluator conditionEvaluator = new ConditionEvaluator(expressionParser,
+                presenceConditionManager,
+                macroTable);
 
         if (null != commandlineStr || commandlineStr.isEmpty()) {
             Syntax syntax;
@@ -124,7 +128,7 @@ public class LexerInterface {
                     new File("<command-line>"),
                     iquote, I, sysdirs, runtime,
                     tokenCreator, lexerTimer);
-            Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+            Iterator<Syntax> preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager, conditionEvaluator,
                     tokenCreator, runtime);
 
             result.add(preprocessor);
@@ -135,7 +139,7 @@ public class LexerInterface {
             HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
                     tokenCreator, lexerTimer);
 
-            Stream preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+            Iterator<Syntax> preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,conditionEvaluator,
                     tokenCreator, runtime);
 
             result.add(preprocessor);

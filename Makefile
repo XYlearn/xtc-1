@@ -470,10 +470,10 @@ check-cpp: pre-check
 		$(FONDA_DIR)/cpp_testsuite/cpp/*.c \
 		$(FONDA_DIR)/cpp_testsuite/preprocessor/*.c \
 		$(FONDA_DIR)/cpp_testsuite/new_interactions/*.c
-	$(JAVA_DEV_ROOT)/src/xtc/lang/cpp/scripts/regression.sh -k .ast \
-		-C "$(CPP) $(CPPFLAGS)" \
-		$(FONDA_DIR)/cpp_testsuite/grammar/*.c \
-		$(FONDA_DIR)/cpp_testsuite/parser/*.c
+	# $(JAVA_DEV_ROOT)/src/xtc/lang/cpp/scripts/regression.sh -k .ast \
+	# 	-C "$(CPP) $(CPPFLAGS)" \
+	# 	$(FONDA_DIR)/cpp_testsuite/grammar/*.c \
+	# 	$(FONDA_DIR)/cpp_testsuite/parser/*.c
 	$(JAVA_DEV_ROOT)/src/xtc/lang/cpp/scripts/regression.sh \
 		-C "$(CPP) $(CPPFLAGS)" \
 		-a -S-E $(FONDA_DIR)/cpp_testsuite/new_interactions/*.c

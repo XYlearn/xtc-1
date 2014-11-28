@@ -18,6 +18,8 @@
  */
 package xtc.lang.cpp;
 
+import java.util.Iterator;
+
 import xtc.lang.cpp.Syntax.Kind;
 
 /**
@@ -26,32 +28,36 @@ import xtc.lang.cpp.Syntax.Kind;
  *
  * @author Paul Gazzillo
  */
-public class TokenFilter implements Stream {
+public class TokenFilter implements Iterator<Syntax> {
   /** The stream to read syntax from. */
-  Stream stream;
+  Iterator<Syntax> stream;
 
   /**
    * Create a new token filter stream.
    *
    * @param stream The stream to filter.
    */
-  public TokenFilter(Stream stream) {
+  public TokenFilter(Iterator<Syntax> stream) {
     this.stream = stream;
   }
 
-  public Syntax scan() throws java.io.IOException {
-    Syntax syntax = this.stream.scan();
+  public Syntax next() {
+    Syntax syntax = this.stream.next();
       
     while (syntax.kind() != Kind.LANGUAGE
            && syntax.kind() != Kind.EOF
            && syntax.kind() != Kind.CONDITIONAL) {
-      syntax = this.stream.scan();
+      syntax = this.stream.next();
     }
 
     return syntax;
   }
 
-  public boolean done() {
-    return this.stream.done();
+  public boolean hasNext() {
+    return this.stream.hasNext();
+  }
+
+  public void remove() {
+    throw new RuntimeException();
   }
 }

@@ -29,7 +29,7 @@ import java.util.HashSet;
  * (un)definitions, and the filename.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.5 $
+ * @version $Revision: 1.6 $
  */
 public class GCCShunt {
   /**
@@ -77,6 +77,10 @@ public class GCCShunt {
 "\n" +
 "      Include the kbuild-related arguments, Write only the path-related arguments to a given file.\n" +
 "\n" +
+"  --emit-exceptions\n" +
+"\n" +
+"      Emit defines and undefines as a list in -configureExceptions.\n" +
+"\n" +
 // "ERROR CODES\n" +
 // "  1 - no arguments given\n" +
 // "  2 - no gcc filename was given\n" +
@@ -94,6 +98,8 @@ public class GCCShunt {
     boolean VERBOSE = false;
     String configsFile = null;
     String supercFile = null;
+    boolean EMIT_EXCEPTIONS = false;
+    String exceptions = "";
 
     boolean nostdinc = false;
     for (int i = 0; i < args.length; i++) {
@@ -134,6 +140,22 @@ public class GCCShunt {
         if (KBUILD && isKbuildName(args[i+1])) {
           superc += " " + arg + " " + args[i+1];
         }
+        if (EMIT_EXCEPTIONS) {
+          String config_string = args[i+1];
+          // String config_string = arg.substring(0, 2);
+          String[] config_split = config_string.split("=");
+          String config_var = config_split[0];
+          String config_def = config_split.length > 1 ? config_split[1] : null;
+          String exception = "";
+
+          if (arg.equals("-D")) {
+            exception = config_var + "="
+              + ((config_def != null) ? config_def : "y");
+          } else if (arg.equals("-U")) {
+            exception = "# " + config_var + " is not set";
+          }
+          exceptions += exception + ",";
+        }
         i++;
 
       } else if (arg.startsWith("-D")
@@ -142,6 +164,8 @@ public class GCCShunt {
         configs += " " + arg.substring(0, 2) + " " + arg.substring(2);
         if (KBUILD && isKbuildName(arg.substring(2))) {
           superc += " " + arg.substring(0, 2) + " " + arg.substring(2);
+        }
+        if (EMIT_EXCEPTIONS) {
         }
 
       } else if (arg.equals("--shunt-filename")) {
@@ -155,6 +179,8 @@ public class GCCShunt {
         supercFile = args[i+1];
       } else if (arg.equals("--shunt-kbuild")) {
         KBUILD = true;
+      } else if (arg.equals("--emit-exceptions")) {
+        EMIT_EXCEPTIONS = true;
       }
     }
 
@@ -198,6 +224,10 @@ public class GCCShunt {
 
     if (VERBOSE) {
       System.out.println(configs);
+    }
+
+    if (EMIT_EXCEPTIONS) {
+      System.out.println(exceptions);
     }
   }
 }

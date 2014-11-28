@@ -9,7 +9,6 @@
 \algrenewcommand{\algorithmiccomment}[1]{$\triangleright$ #1}
 \usepackage{verbatim}
 \usepackage[usenames,dvipsnames]{color}
-\usepackage{framed}\definecolor{shadecolor}{gray}{.85}
 \usepackage{colortbl}
 \usepackage{rotating}
 %\usepackage[normalem]{ulem}
@@ -26,8 +25,6 @@
   numbersep=5pt,
   columns=fullflexible
 }
-\usepackage{pbox}
-\usepackage{multirow}
 
 \newcommand{\SuperC}{{\textsf{Su\-perC}}}
 \newcommand{\rats}{\textit{Rats!}}
@@ -139,10 +136,11 @@ flag is turned on.  Below is the format of the data output.
   macro is hoisted before invoking, even if their is only one
   resulting function.  \verb"nhoisted" shows how many function-like macro
   invocations resulted from hoisting.
-\item[\texttt{paste token|conditional token|conditional location nhoisted}] -
-  a token-pasting.  Each argument's type, token or conditional, is
-  indicated.  \verb"nhoisted" is the number of token-paste operations
-  resulting from the hoisting.
+\item[\texttt{paste token|conditional token|conditional location
+    nhoisted nvalid}] - a token-pasting.  Each argument's type, token
+  or conditional, is indicated.  \verb"nhoisted" is the number of
+  token-paste operations resulting from the hoisting and \verb"nvalid"
+  is the number of valid pastes out of the hoisted ones.
 \item[\texttt{stringify token|conditional location nhoisted}] - a
   token-pasting.  The argument's type, token or conditional, is
   indicated.  \verb"nhoisted" is the number of stringification operations
@@ -385,7 +383,9 @@ patch -R < instrument_embedded_conditionals.patch
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Implementing a New Language}
+\section{Implementing Languages}
+
+\subsection{Overview}
 
 The preprocessor and the parser are language-independent.  To use them
 for a specific language, they need the following:
@@ -420,5 +420,52 @@ for a specific language, they need the following:
   implement the \verb"Actions.Context" interface, e.g.,
   \verb"CParsingContext.java"
 \end{enumerate}
+
+\subsection{Declarative AST Generation}
+
+SuperC supports declarative AST generation.  The Bison grammar is
+annotated with special comments next to a production's name that tell
+SuperC's parser how to build the AST node.  The annotations must
+appear right after the production's name between \verb'/**' and
+\verb'**/' comment markers in a comma-delimited list.  Here are the
+supported annotations and what they do:
+\begin{description}
+\item[list] flattens left-recursive lists into the same level.
+\item[layout] is used for punctuation.  Its semantic value is null
+  unless source is being preserved.
+\item[void] always makes semantic value null.
+\item[name(\textit{NodeName})] uses \textit{NodeName} for the AST
+  node's name instead of the production's symol.
+\item[passthrough] uses the child's semantic value for a production
+  with only one child.  This flattens long chains of nested
+  productions in, for example, C's expression grammar.
+\item[action] makes the production a semantic action.  The production
+  should be empty.
+\item[complete] identifies a complete syntactic units.  Only these
+  productions can go under conditional nodes.
+\end{description}
+Here is an example from the C grammar that defines external
+declarations.
+\begin{quote}
+\begin{verbatim}
+ExternalDeclaration:  /** passthrough, complete **/
+        FunctionDefinitionExtension
+        | DeclarationExtension
+        | AssemblyDefinition
+        | EmptyDefinition
+        ;
+\end{verbatim}
+\end{quote}
+Because of \textbf{passthrough}, the semantic value of this production
+is taken from the child node, e.g.,
+\verb'FunctionDefinitionExtension'.  Since this syntactic unit is
+\verb'complete', it may appear directly under a conditional node.
+
+\textbf{list}, \textbf{layout}, \textbf{void}, \textbf{passthrough},
+and \textbf{action} are mutually-exclusive.  \textbf{complete} and
+\textbf{name} can be added to any symbol.  \texbf{layout} is the only
+annotation that can be used on tokens.
+
+here are examples where each node declaration is used.
 
 \end{document}

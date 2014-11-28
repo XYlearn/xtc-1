@@ -22,7 +22,9 @@ import java.lang.StringBuilder;
 
 import java.io.IOException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.Reader;
 import java.io.FileNotFoundException;
@@ -35,6 +37,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import xtc.tree.Locatable;
 import xtc.util.Runtime;
@@ -62,10 +65,11 @@ import xtc.tree.Location;
  * headers.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.87 $
+ * @version $Revision: 1.91 $
  */
-public class HeaderFileManager implements Stream {
-  /** Quote include directories from the CPP tool */
+public class HeaderFileManager implements Iterator<Syntax> {
+    private final Runtime runtime;
+    /** Quote include directories from the CPP tool */
   private List<String> iquote;
   
   /** I directories from the CPP tool */
@@ -74,14 +78,14 @@ public class HeaderFileManager implements Stream {
   /** System directories from the CPP tool */
   private List<String> sysdirs;
 
-  /** The xtc runtime. */
-  private Runtime runtime;
-
   /** The token creator. */
   private TokenCreator tokenCreator;
 
   /** The lexer timer. */
   private StopWatch lexerTimer;
+
+  /** The encoding to use for header files. */
+  private String encoding;
 
   /** The main file name.  Used for __BASE_FILE__. */
   final public String baseFile;
@@ -96,10 +100,13 @@ public class HeaderFileManager implements Stream {
   private Map<String, String> guards;
   
   /** Whether the output statistics. */
-  private final boolean statisticsCollection;
+  private boolean statisticsCollection = false;
 
   /** Show errors. */
-  private final boolean showErrors;
+  private boolean showErrors = true;
+
+  /** Do timing. */
+  private boolean timing = false;
 
   /**
    * The names of headers that don't have guards.  This avoids having
@@ -112,21 +119,22 @@ public class HeaderFileManager implements Stream {
    * they are included.
    */
   private long totalSize = 0;
-  
+
   /**
    * Create a new file manager, given the main file reader, the main
    * file object, and the header search paths.
    */
   public HeaderFileManager(Reader in, File file, List<String> iquote,
-                           List<String> I, List<String> sysdirs,
-                           Runtime runtime, TokenCreator tokenCreator,
-                           StopWatch lexerTimer) {
+                           List<String> I, List<String> sysdirs, Runtime runtime,
+                           TokenCreator tokenCreator, StopWatch lexerTimer,
+                           String encoding) {
+      this.runtime=runtime;
     this.iquote = iquote;
     this.I = I;
     this.sysdirs = sysdirs;
-    this.runtime = runtime;
     this.tokenCreator = tokenCreator;
     this.lexerTimer = lexerTimer;
+    this.encoding = encoding;
 
     this.baseFile = file.toString();
     this.include = new PFile(file.toString(), file, false);
@@ -134,9 +142,42 @@ public class HeaderFileManager implements Stream {
     this.includes = new LinkedList<Include>();
     this.guards = new HashMap<String, String>();
     this.unguarded = new HashSet<String>();
+  }
+  
+  /**
+   * Create a new file manager, given the main file reader, the main
+   * file object, and the header search paths.
+   */
+  public HeaderFileManager(Reader in, File file, List<String> iquote,
+                           List<String> I, List<String> sysdirs,    Runtime runtime,
+                           TokenCreator tokenCreator, StopWatch lexerTimer) {
+    this(in, file, iquote, I, sysdirs, runtime, tokenCreator, lexerTimer, null);
+  }
 
-    statisticsCollection = runtime.test("statisticsPreprocessor");
-    showErrors = runtime.test("showErrors");
+  /**
+   * Turn statistics collection on.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void collectStatistics(boolean b) {
+    statisticsCollection = b;
+  }
+
+  /**
+   * Show errors.  Default is on.
+   *
+   * @param b True is on.
+   */
+  public void showErrors(boolean b) {
+    showErrors = b;
+  }
+
+  /** Do timing. Default is off.
+   *
+   * @param b True is on.
+   */
+  public void doTiming(boolean b) {
+    timing = b;
   }
   
   /**
@@ -146,17 +187,22 @@ public class HeaderFileManager implements Stream {
    *
    * @return the next token.
    */
-  public Syntax scan() throws IOException {
+  public Syntax next() {
     if (include.isPFile()) {
       Syntax syntax;
       PFile pfile;
       
       pfile = (PFile) include;
       
-      syntax = pfile.scan();
+      syntax = pfile.next();
 
       if (syntax.kind() == Kind.EOF && (! includes.isEmpty())) {
-        pfile.close();
+        try {
+          pfile.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+          throw new RuntimeException();
+        }
 
         // Don't let the EOF go out, since this is just the end of the
         // included file.  Instead emit a line-marker of where we left
@@ -188,12 +234,10 @@ public class HeaderFileManager implements Stream {
       
       computed = (Computed) include;
       
-      if (! computed.done()) {
-        syntax = computed.scan();
-
+      if (computed.hasNext()) {
+        syntax = computed.next();
       } else {
         syntax = Preprocessor.EMPTY;
-
         include = includes.pop();
       }
       
@@ -201,7 +245,6 @@ public class HeaderFileManager implements Stream {
     }
 
     // Should never reach here.
-
     throw new RuntimeException("unchecked include file type");
   }
   
@@ -210,11 +253,10 @@ public class HeaderFileManager implements Stream {
    *
    * @return true if at end of stream.
    */
-  public boolean done() {
-    if (includes.isEmpty() && include.done()) {
+  public boolean hasNext() {
+    if (includes.isEmpty() && !include.hasNext()) {
       return true;
-    }
-    else {
+    } else {
       return false;
     }
   }
@@ -229,7 +271,7 @@ public class HeaderFileManager implements Stream {
   public Syntax includeHeader(String headerName, boolean sysHeader,
                                boolean includeNext,
                                PresenceConditionManager presenceConditionManager,
-                               MacroTable macroTable, Locatable where) throws IOException {
+                               MacroTable macroTable, Locatable where) {
     PFile header;
 
     header = findHeader(headerName, sysHeader, includeNext, presenceConditionManager, where);
@@ -288,8 +330,9 @@ public class HeaderFileManager implements Stream {
    * @param macroTable the macro symbol table.
    * @return false if the header was guarded.
    */
-  private boolean openHeader(PFile header, PresenceConditionManager presenceConditionManager,
-    MacroTable macroTable) throws IOException {
+  private boolean openHeader(PFile header,
+                             PresenceConditionManager presenceConditionManager,
+                             MacroTable macroTable) {
 
     // Whether the macro is guarded or not.
     boolean guarded;
@@ -358,6 +401,10 @@ public class HeaderFileManager implements Stream {
     } catch (FileNotFoundException e) {
       // This should never happen, since findHeader is supposed to
       // have already verified the header's existence.
+      e.printStackTrace();
+      throw new RuntimeException();
+    } catch (IOException e) {
+      e.printStackTrace();
       throw new RuntimeException();
     }
 
@@ -374,7 +421,7 @@ public class HeaderFileManager implements Stream {
       String guardMacro = null;
       boolean foundGuard = false;
       for(;;) {
-        syntax = header.stream.scan();
+        syntax = header.stream.next();
 
         boolean done;
         switch (state) {
@@ -506,8 +553,12 @@ public class HeaderFileManager implements Stream {
         header.guardMacro = guardMacro;
       }
 
-      header.close();
-
+      try {
+        header.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+        throw new RuntimeException();
+      }
 
       //If the header is guarded and we have not seen this macro
       //before.
@@ -525,7 +576,12 @@ public class HeaderFileManager implements Stream {
         unguarded.add(header.file.toString());
 //      }
 
-      header.open();
+      try {
+        header.open();
+      } catch (IOException e) {
+        e.printStackTrace();
+        throw new RuntimeException();
+      }
     }
     
     return false;
@@ -697,7 +753,7 @@ public class HeaderFileManager implements Stream {
      *
      * @return true when it's done.
      */
-    abstract public boolean done();
+    abstract public boolean hasNext();
 
     /**
      * Get the location of the last-scanned token.
@@ -736,7 +792,7 @@ public class HeaderFileManager implements Stream {
     public final boolean system;
 
     /** The stream of tokens from the header. */
-    private Stream stream;
+    private Iterator<Syntax> stream;
 
     /**
      * The macro that guards the header.  null if there is no guard
@@ -782,12 +838,44 @@ public class HeaderFileManager implements Stream {
     
     /** Open the file reader. */
     public void open() throws FileNotFoundException {
-      fileReader = new BufferedReader(new FileReader(file));
+      if (null != encoding) {
+        try {
+          fileReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), encoding));
+        } catch (java.io.UnsupportedEncodingException e) {
+          e.printStackTrace();
+          System.exit(1);
+        }
+      } else {
+        fileReader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+      }
 
-      Stream lexer = new CLexerStream(fileReader, getName());
+      final CLexer clexer = new CLexer(fileReader);
+      clexer.setFileName(getName());
 
-      if (runtime.test("time")) {
-        lexer = new StreamTimer(lexer, lexerTimer);
+      Iterator<Syntax> lexer = new Iterator<Syntax>() {
+          Syntax syntax;
+    
+          public Syntax next() {
+            try {
+              syntax = clexer.yylex();
+            } catch (IOException e) {
+              e.printStackTrace();
+              throw new RuntimeException();
+            }
+            return syntax;
+          }
+    
+          public boolean hasNext() {
+            return syntax.kind() != Kind.EOF;
+          }
+
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+
+      if (timing) {
+        lexer = new StreamTimer<Syntax>(lexer, lexerTimer);
       }
 
       stream = new DirectiveParser(lexer, getName());
@@ -799,10 +887,33 @@ public class HeaderFileManager implements Stream {
      * @param in an already open reader.
      */
     public void open(Reader in) {
-      Stream lexer = new CLexerStream(in, getName());
+      final CLexer clexer = new CLexer(in);
+      clexer.setFileName(getName());
 
-      if (runtime.test("time")) {
-        lexer = new StreamTimer(lexer, lexerTimer);
+      Iterator<Syntax> lexer = new Iterator<Syntax>() {
+          Syntax syntax;
+    
+          public Syntax next() {
+            try {
+              syntax = clexer.yylex();
+            } catch (IOException e) {
+              e.printStackTrace();
+              throw new RuntimeException();
+            }
+            return syntax;
+          }
+    
+          public boolean hasNext() {
+            return syntax.kind() != Kind.EOF;
+          }
+
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+
+      if (timing) {
+        lexer = new StreamTimer<Syntax>(lexer, lexerTimer);
       }
 
       stream = new DirectiveParser(lexer, getName());
@@ -824,7 +935,7 @@ public class HeaderFileManager implements Stream {
      *
      * @return the stream of tokens.
      */
-    public Stream stream() {
+    public Iterator<Syntax> stream() {
       return stream;
     }
     
@@ -833,11 +944,11 @@ public class HeaderFileManager implements Stream {
      *
      * @return the next token.
      */
-    public Syntax scan() throws IOException {
+    public Syntax next() {
       Syntax syntax;
 
       if (null == queue) {
-        syntax = stream.scan();
+        syntax = stream.next();
       }
       else {
         syntax = queue.poll();
@@ -870,8 +981,8 @@ public class HeaderFileManager implements Stream {
       return true;
     }
     
-    public boolean done() {
-      return stream.done();
+    public boolean hasNext() {
+      return stream.hasNext();
     }
 
     public Location getLocation() {
@@ -924,7 +1035,7 @@ public class HeaderFileManager implements Stream {
     private int nvalid;
     
     /** The current stream of tokens. */
-    public Stream stream;
+    public Iterator<Syntax> stream;
 
     /** The location of the last-scanned token. */
     public Location location = null;
@@ -952,7 +1063,7 @@ public class HeaderFileManager implements Stream {
      *
      * @return the next token.
      */
-    public Syntax scan() throws IOException {
+    public Syntax next() {
       if (null == pfile) {
         pfile = null;
         
@@ -1047,10 +1158,15 @@ public class HeaderFileManager implements Stream {
       } else {
         Syntax syntax;
       
-        syntax = pfile.scan();
+        syntax = pfile.next();
     
         if (syntax.kind() == Kind.EOF && (! includes.isEmpty())) {
-          pfile.close();
+          try {
+            pfile.close();
+          } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+          }
           // Make it null so we can move on in the next scan.
           pfile = null;
           
@@ -1067,8 +1183,8 @@ public class HeaderFileManager implements Stream {
       return true;
     }
     
-    public boolean done() {
-      return end;
+    public boolean hasNext() {
+      return !end;
     }
 
     public Location getLocation() {
@@ -1103,5 +1219,9 @@ public class HeaderFileManager implements Stream {
    */
   public long getSize() {
     return totalSize;
+  }
+
+  public void remove() {
+    throw new UnsupportedOperationException();
   }
 }

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import xtc.lang.cpp.Syntax.Kind;
 import xtc.lang.cpp.Syntax.LanguageTag;
@@ -42,17 +43,17 @@ import xtc.tree.Location;
  * Parses directives into compound tokens.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.15 $
+ * @version $Revision: 1.17 $
  */
-public class DirectiveParser implements Stream {
+public class DirectiveParser implements Iterator<Syntax> {
   /** The input stream of tokens. */
-  Stream stream;
+  Iterator<Syntax> stream;
     
   /** We are at the beginning of a newline. */
   protected boolean newline;
    
   /** Create a new directive parser stream. */
-  public DirectiveParser(Stream stream, String filename) {
+  public DirectiveParser(Iterator<Syntax> stream, String filename) {
     this.stream = stream;
     this.newline = true;
   }
@@ -70,8 +71,8 @@ public class DirectiveParser implements Stream {
    *
    * @return the next token or compound token.
    */
-  public Syntax scan() throws java.io.IOException {
-    Syntax syntax = stream.scan();
+  public Syntax next() {
+    Syntax syntax = stream.next();
       
     // Parse the directive.
     if (newline && syntax.kind() == Kind.LANGUAGE
@@ -85,7 +86,7 @@ public class DirectiveParser implements Stream {
       list = new ArrayList<Language<?>>();
         
       do { // Skip the whitespace after the #.
-        syntax = stream.scan();
+        syntax = stream.next();
 
         if (syntax.kind() == Kind.LAYOUT
             && ((Layout) syntax).hasNewline()) {
@@ -110,13 +111,16 @@ public class DirectiveParser implements Stream {
       if (tagMap.containsKey(directiveName)) {
         tag = tagMap.get(directiveName);
 
-      } else {
+      } else if (syntax.toLanguage().tag().ppTag() == PreprocessorTag.NUMBER) {
         tag = DirectiveTag.LINEMARKER;
+        list.add(syntax.toLanguage());
+      } else {
+        tag = DirectiveTag.INVALID;
         list.add(syntax.toLanguage());
       }
 
       do { // Skip the whitespace after the directive name.
-        syntax = stream.scan();
+        syntax = stream.next();
 
         if (syntax.kind() == Kind.LAYOUT
             && ((Layout) syntax).hasNewline()) {
@@ -142,7 +146,7 @@ public class DirectiveParser implements Stream {
       list.add(syntax.toLanguage());
 
       do { // Collect the tokens in the directive.
-        syntax = stream.scan();
+        syntax = stream.next();
 
         if (syntax.kind() == Kind.EOF) {
           // Don't swallow the EOF.
@@ -185,8 +189,8 @@ public class DirectiveParser implements Stream {
     }
   }
     
-  public boolean done() {
-    return stream.done();
+  public boolean hasNext() {
+    return stream.hasNext();
   }
 
   private static final HashMap<String, DirectiveTag> tagMap
@@ -207,5 +211,9 @@ public class DirectiveParser implements Stream {
     tagMap.put("error", DirectiveTag.ERROR);
     tagMap.put("warning", DirectiveTag.WARNING);
     tagMap.put("pragma", DirectiveTag.PRAGMA);
+  }
+
+  public void remove() {
+    throw new UnsupportedOperationException();
   }
 }

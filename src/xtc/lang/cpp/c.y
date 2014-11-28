@@ -42,19 +42,25 @@
 /**
  * Definition of C's complete syntactic unit syntax.
  *
- * @version $Revision: 1.51 $
+ * @version $Revision: 1.58 $
  */
 
 %expect 1
 
 /* keywords */
 %token AUTO            DOUBLE          INT             STRUCT
-%token BREAK           ELSE            LONG            SWITCH
+%token BREAK  /** layout **/
+%token ELSE            LONG            SWITCH
 %token CASE            ENUM            REGISTER        TYPEDEF
-%token CHAR            EXTERN          RETURN          UNION
+%token CHAR            EXTERN
+%token RETURN  /** layout **/
+%token UNION
 %token CONST           FLOAT           SHORT           UNSIGNED
-%token CONTINUE        FOR             SIGNED          VOID
-%token DEFAULT         GOTO            SIZEOF          VOLATILE
+%token CONTINUE  /** layout **/
+%token FOR             SIGNED          VOID
+%token DEFAULT
+%token GOTO  /** layout **/
+%token SIZEOF          VOLATILE
 %token DO              IF              STATIC          WHILE
 
 /* ANSI Grammar suggestions */
@@ -150,6 +156,9 @@
 //preprocessor number catch-all token
 %token PPNUM
 
+//backslash for assembly
+%token BACKSLASH
+
 //%token DOTSTAR
 //%token DCOLON
 
@@ -183,11 +192,21 @@ FunctionDefinitionExtension:  /** passthrough, complete **/  // ADDED
         ;
 
 FunctionDefinition:  /** complete **/ // added scoping
-         FunctionDeclarator ReenterScope LBRACE LocalLabelDeclarationListOpt DeclarationOrStatementList ExitScope RBRACE
-        | FunctionOldPrototype ReenterScope DeclarationList LBRACE LocalLabelDeclarationListOpt DeclarationOrStatementList ExitScope RBRACE
+         FunctionPrototype ReenterScope LBRACE FunctionCompoundStatement ExitScope RBRACE
+        | FunctionOldPrototype ReenterScope DeclarationList LBRACE FunctionCompoundStatement ExitScope RBRACE
         ;
 
-FunctionDeclarator:  /** complete **/
+/* Functions have their own compound statement because of the need for
+   reentering scope. */
+FunctionCompoundStatement:  /** complete, name(CompoundStatement) **/
+        LocalLabelDeclarationListOpt DeclarationOrStatementList
+        ;
+
+/* Having a function prototype node in the AST allows this to be a
+   complete AST.  So if something in the prototype is configurable,
+   the conditional will only be hoisted around the prototype, not the
+   entire function definition. */
+FunctionPrototype:  /** complete **/
                                      IdentifierDeclarator BindVar
         | DeclarationSpecifier      IdentifierDeclarator BindIdentifier
         | TypeSpecifier             IdentifierDeclarator BindIdentifier 
@@ -213,11 +232,11 @@ FunctionOldPrototype:  /** complete **/
    or it gets a conflict.  gcc seems to behave this way too since it
    yields a parsing error. */
 NestedFunctionDefinition:  /** complete **/ // added scoping
-         NestedFunctionDeclarator ReenterScope LBRACE LocalLabelDeclarationListOpt DeclarationOrStatementList ExitScope RBRACE
+         NestedFunctionPrototype ReenterScope LBRACE LocalLabelDeclarationListOpt DeclarationOrStatementList ExitScope RBRACE
         | NestedFunctionOldPrototype ReenterScope DeclarationList LBRACE LocalLabelDeclarationListOpt DeclarationOrStatementList ExitScope RBRACE
         ;
 
-NestedFunctionDeclarator:  /** complete **/
+NestedFunctionPrototype:  /** complete **/
           DeclarationSpecifier      IdentifierDeclarator BindIdentifier
         | TypeSpecifier             IdentifierDeclarator BindIdentifier 
         | DeclarationQualifierList IdentifierDeclarator BindIdentifier 
@@ -366,7 +385,7 @@ BasicDeclarationSpecifier: /** complete **/      /*StorageClass+Arithmetic or vo
         | BasicDeclarationSpecifier BasicTypeName
         ;
 
-BasicTypeSpecifier: /** complete **/
+BasicTypeSpecifier: /** passthrough, complete **/
         BasicTypeName            /* Arithmetic or void */
         | TypeQualifierList BasicTypeName
         | BasicTypeSpecifier TypeQualifier
@@ -441,7 +460,7 @@ VarArgTypeName:  // ADDED
         __BUILTIN_VA_LIST
         ;
 
-StorageClass: 
+StorageClass:  /** passthrough **/
         TYPEDEF
         | EXTERN
         | STATIC
@@ -449,7 +468,7 @@ StorageClass:
         | REGISTER
         ;
 
-BasicTypeName:
+BasicTypeName:  /** passthrough **/
         VOID
         | CHAR
         | SHORT
@@ -474,7 +493,7 @@ ComplexKeyword:
         | __COMPLEX__
         ;
 
-ElaboratedTypeName: /** complete **/
+ElaboratedTypeName: /** passthrough, complete **/
         StructOrUnionSpecifier
         | EnumSpecifier
         ;
@@ -752,10 +771,27 @@ UnaryIdentifierDeclarator: /** passthrough, complete **/
         | STAR TypeQualifierList IdentifierDeclarator
         ;
         
-PostfixIdentifierDeclarator: /** complete **/
-        ParenIdentifierDeclarator PostfixingAbstractDeclarator
-        | LPAREN UnaryIdentifierDeclarator RPAREN
+PostfixIdentifierDeclarator: /** passthrough, complete **/
+        FunctionDeclarator
+        | ArrayDeclarator
+        | AttributedDeclarator
         | LPAREN UnaryIdentifierDeclarator RPAREN PostfixingAbstractDeclarator
+        ;
+
+AttributedDeclarator: /** complete **/
+        LPAREN UnaryIdentifierDeclarator RPAREN
+        ;
+
+FunctionDeclarator:  /** complete **/
+        ParenIdentifierDeclarator PostfixingFunctionDeclarator
+        ;
+
+PostfixingFunctionDeclarator:  /** passthrough, complete **/
+        LPAREN EnterScope ParameterTypeListOpt ExitReentrantScope RPAREN
+        ;
+
+ArrayDeclarator:  /** complete **/
+        ParenIdentifierDeclarator ArrayAbstractDeclarator
         ;
 
 ParenIdentifierDeclarator:  /** passthrough, complete **/
@@ -785,7 +821,7 @@ AbstractDeclarator: /** complete **/
         | PostfixingAbstractDeclarator
         ;
 
-PostfixingAbstractDeclarator: /** complete **/
+PostfixingAbstractDeclarator: /** passthrough, complete **/
         ArrayAbstractDeclarator
         | LPAREN EnterScope ParameterTypeListOpt ExitReentrantScope RPAREN
         ;
@@ -901,18 +937,34 @@ IterationStatement:  /** complete **/
                 ExpressionOpt RPAREN Statement
         ;
 
-JumpStatement:  /** complete **/
+JumpStatement:  /** passthrough, complete **/
+        GotoStatement
+        | ContinueStatement
+        | BreakStatement
+        | ReturnStatement
+        ;
+
+GotoStatement:  /** complete **/
         GOTO IdentifierOrTypedefName SEMICOLON
         | GOTO STAR Expression SEMICOLON  // ADDED
-        | CONTINUE SEMICOLON
-        | BREAK SEMICOLON
-        | RETURN ExpressionOpt SEMICOLON
+        ;
+
+ContinueStatement:  /** complete **/
+        CONTINUE SEMICOLON
+        ;
+
+BreakStatement:  /** complete **/
+        BREAK SEMICOLON
+        ;
+
+ReturnStatement:  /** complete **/
+        RETURN ExpressionOpt SEMICOLON
         ;
 
 // --------------------------------------------------------------- Expressions
 
 /* CONSTANTS */
-Constant: /** complete **/
+Constant: /** passthrough, complete **/
         FLOATINGconstant
         | INTEGERconstant
         /* We are not including ENUMERATIONConstant here  because  we 
@@ -950,26 +1002,55 @@ VariableArgumentAccess:  /** complete **/  // ADDED
 
 StatementAsExpression:  /** complete **/  //ADDED
         LPAREN EnterScope CompoundStatement ExitScope RPAREN
+        ;
 
 PostfixExpression:  /** passthrough, complete **/
         PrimaryExpression
-        | PostfixExpression LBRACK Expression RBRACK
-        | PostfixExpression LPAREN RPAREN
-        | PostfixExpression LPAREN ArgumentExpressionList RPAREN
-        | PostfixExpression DOT IdentifierOrTypedefName
-        | PostfixExpression ARROW IdentifierOrTypedefName
-        | PostfixExpression ICR
-        | PostfixExpression DECR
+        | Subscript
+        | FunctionCall
+        | DirectSelection
+        | IndirectSelection
+        | Increment
+        | Decrement
         | CompoundLiteral  /* ADDED */
         ;
+
+Subscript:  /** complete **/
+        PostfixExpression LBRACK Expression RBRACK
+        ;
+
+FunctionCall:  /** complete **/
+        PostfixExpression LPAREN RPAREN
+        | PostfixExpression LPAREN ExpressionList RPAREN
+        ;
+
+DirectSelection:  /** complete **/
+        PostfixExpression DOT IdentifierOrTypedefName
+        ;
+
+IndirectSelection:  /** complete **/
+        PostfixExpression ARROW IdentifierOrTypedefName
+        ;
+
+Increment:  /** complete **/
+        PostfixExpression ICR
+        ;
+
+Decrement:  /** complete **/
+        PostfixExpression DECR
+        ;
+
+
+
+
 
 CompoundLiteral:  /** complete **/  /* ADDED */
         LPAREN TypeName RPAREN LBRACE InitializerList RBRACE
         ;
 
-ArgumentExpressionList:  /** list, complete **/
+ExpressionList:  /** list, complete **/
         AssignmentExpression
-        | ArgumentExpressionList COMMA AssignmentExpression
+        | ExpressionList COMMA AssignmentExpression
         ;
 
 UnaryExpression:  /** passthrough, complete **/
@@ -1157,7 +1238,7 @@ AttributeList:  /** list, complete **/  // ADDED
 AttributeExpressionOpt:   // ADDED
         /* empty */
         | LPAREN RPAREN
-        | LPAREN ArgumentExpressionList RPAREN
+        | LPAREN ExpressionList RPAREN
         ;
 
 Word:  // ADDED
@@ -1273,7 +1354,7 @@ Assemblyoperand:  /** complete **/  // ADDED
         | LBRACK Word RBRACK StringLiteralList LPAREN Expression RPAREN
         ;
 
-AssemblyclobbersOpt:  /** complete */ // ADDED
+AssemblyclobbersOpt:  /** complete **/ // ADDED
         /* empty */
         | Assemblyclobbers
         ;
@@ -1283,11 +1364,11 @@ Assemblyclobbers:  /** complete **/  // ADDED
         | Assemblyclobbers COMMA StringLiteralList
         ;
 
-AssemblyGotoargument:  /** complete */ // ADDED
+AssemblyGotoargument:  /** complete **/ // ADDED
         StringLiteralList COLON AssemblyoperandsOpt COLON AssemblyoperandsOpt COLON AssemblyclobbersOpt COLON AssemblyJumpLabels
         ;
 
-AssemblyJumpLabels:  /** complete */ // ADDED
+AssemblyJumpLabels:  /** complete **/ // ADDED
         Identifier
         | AssemblyJumpLabels COMMA Identifier
         ;

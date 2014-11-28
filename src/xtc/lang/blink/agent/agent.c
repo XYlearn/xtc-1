@@ -6,14 +6,19 @@
 #include "state.h"
 #include "options.h"
 #include "agent.h"
-#include "common.h"
+#include "util.h"
 #include "state.h"
 #include "agent_class.h"
 
-/* declaration. */
+/* agent java methods. */
+struct java_static_method {
+    jmethodID methodid;
+    const char *name;
+    const char *desc;
+};
+
 JNIEXPORT void JNICALL bda_j2c(JNIEnv *env, jclass clz);
 JNIEXPORT jint JNICALL bda_get_process_id(JNIEnv *env, jclass clz);
-JNIEXPORT jint JNICALL bda_dummy_native_jni(JNIEnv *env, jclass clz);
 
 /* agent classes*/
 static jclass agent_class = NULL;
@@ -24,14 +29,6 @@ static const JNINativeMethod agent_native_methods[] =
 {
   { "getProcessID", "()I", bda_get_process_id },
   { "j2c", "()V", bda_j2c },
-  { "dummyNative", "()I", bda_dummy_native_jni},
-};
-
-/* agent java methods. */
-struct java_static_method {
-    jmethodID methodid;
-    const char * name;
-    const char * desc;
 };
 
 static struct java_static_method agent_java_method_init = 
@@ -41,23 +38,23 @@ static struct java_static_method agent_java_method_jbp =
 static struct java_static_method agent_java_method_dummy_java =
 {NULL, "dummyJava", "()I"};
 
-static struct java_static_method agent_var_set_vj_boolean = 
-{NULL, "setVjFromJavaExpr", "(Z)I"};
-static struct java_static_method agent_var_set_vj_int = 
-{NULL, "setVjFromJavaExpr", "(I)I"};
-static struct java_static_method agent_var_set_vj_double = 
-{NULL, "setVjFromJavaExpr", "(D)I"};
-static struct java_static_method agent_var_set_vj_object = 
-{NULL, "setVjFromJavaExpr", "(Ljava/lang/Object;)I"};
+static struct java_static_method bda_meth_cv_set_boolean = 
+{NULL, "set", "(Z)I"};
+static struct java_static_method bda_meth_cv_set_int = 
+{NULL, "set", "(I)I"};
+static struct java_static_method bda_meth_cv_set_double = 
+{NULL, "set", "(D)I"};
+static struct java_static_method bda_meth_cv_set_object = 
+{NULL, "set", "(Ljava/lang/Object;)I"};
 
-static struct java_static_method agent_var_get_vj_boolean = 
-{NULL, "get_vj_jboolean", "(I)Z"};
-static struct java_static_method agent_var_get_vj_int = 
-{NULL, "get_vj_jint", "(I)I"};
-static struct java_static_method agent_var_get_vj_double =
-{NULL, "get_vj_jdouble", "(I)D"};
-static struct java_static_method agent_var_get_vj_object = 
-{NULL, "get_vj_jobject", "(I)Ljava/lang/Object;"};
+static struct java_static_method agent_var_set_j2c_boolean = 
+{NULL, "getAsBoolean", "(I)Z"};
+static struct java_static_method agent_var_set_j2c_int = 
+{NULL, "getAsInt", "(I)I"};
+static struct java_static_method agent_var_set_j2c_double =
+{NULL, "getAsDouble", "(I)D"};
+static struct java_static_method agent_var_set_j2c_object = 
+{NULL, "getAsObject", "(I)Ljava/lang/Object;"};
 
 /* Java and c transition breakpoint points */
 int bda_j2c_call_breakpoint = 0;
@@ -66,16 +63,26 @@ int bda_c2j_call_breakpoint = 0;
 int bda_c2j_return_breakpoint = 0;
 int bda_transition_count = 0;
 
-/* jdwp region. */
-void* bda_jdwp_region_begin = NULL;
-void* bda_jdwp_region_end = NULL;
-
-static void bda_cache_static_java_method_id(JNIEnv* env, jclass clazz, 
-                                            int is_static,
-                                            struct java_static_method *meth)
+/* get jnienv pointer value for the current thread. */
+static JNIEnv *bda_ensure_jnienv()
 {
-    const char * mname = meth->name;
-    const char * mdesc = meth->desc;
+  JNIEnv *env;
+  jint res;
+
+  assert(bda_jvm != NULL);
+  res = (*bda_jvm)->AttachCurrentThread(bda_jvm, (void **)&env, NULL);
+  assert(res >= 0 && env != NULL);
+
+  return env;
+}
+
+static void bda_cache_static_java_method_id(
+    JNIEnv *env, jclass clazz, 
+    int is_static,
+    struct java_static_method *meth)
+{
+    const char *mname = meth->name;
+    const char *mdesc = meth->desc;
     jmethodID mid;
     if (is_static) { 
         mid = bda_orig_jni_funcs->GetStaticMethodID(env, clazz, mname, mdesc);
@@ -86,7 +93,8 @@ static void bda_cache_static_java_method_id(JNIEnv* env, jclass clazz,
     meth->methodid = mid;
 }
 
-static jclass load_global_agent_class(JNIEnv* env, const char* cname, const jbyte *buf, jsize len)
+static jclass load_global_agent_class(
+    JNIEnv *env, const char *cname, const jbyte *buf, jsize len)
 {
   jclass jclass_ref_local, jclass_ref_global;
 
@@ -112,14 +120,14 @@ void bda_agent_init(JNIEnv *env)
     bda_cache_static_java_method_id(env, agent_class, 1, &agent_java_method_init);
     bda_cache_static_java_method_id(env, agent_class, 1, &agent_java_method_jbp);
     bda_cache_static_java_method_id(env, agent_class, 1, &agent_java_method_dummy_java);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_vj_boolean);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_vj_int);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_vj_double);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_vj_object);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_get_vj_boolean);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_get_vj_int);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_get_vj_double);
-    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_get_vj_object);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &bda_meth_cv_set_boolean);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &bda_meth_cv_set_int);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &bda_meth_cv_set_double);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &bda_meth_cv_set_object);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_j2c_boolean);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_j2c_int);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_j2c_double);
+    bda_cache_static_java_method_id(env, agent_variable_class, 1, &agent_var_set_j2c_object);
 
     /* register agent's native methods. */
     jni_result = bda_orig_jni_funcs->RegisterNatives(env, agent_class,
@@ -156,7 +164,7 @@ JNIEXPORT void JNICALL bda_j2c(JNIEnv *env, jclass clz)
     the JDWP agent's stack. Therefore, bda_j2c has special call frame
     stitching unlike the other j2c proxies. */
     struct bda_state_info*  s = bda_get_state_info(env);
-    struct bda_c2j_info const * c2j = s->head_c2j;
+    struct bda_jni_function_frame const * c2j = s->head_c2j;
     while(c2j != NULL && bda_is_in_jdwp_region(c2j->return_addr)) {
         c2j = c2j->prev;
     }
@@ -188,31 +196,6 @@ JNIEXPORT jint JNICALL bda_get_process_id(JNIEnv *env, jclass clz)
   return pid;
 }
 
-JNIEXPORT jint JNICALL bda_dummy_native_jni(JNIEnv *env, jclass clz)
-{
-    return bda_dummy_native();
-}
-
-int bda_dummy_native()
-{
-    int i = 0;
-    i = i + 1;
-    return i;
-}
-
-/* get jnienv pointer value for the current thread. */
-JNIEnv* bda_ensure_jnienv()
-{
-  JNIEnv *env;
-  jint res;
-
-  assert(bda_jvm != NULL);
-  res = (*bda_jvm)->AttachCurrentThread(bda_jvm, (void **)&env, NULL);
-  assert(res >= 0 && env != NULL);
-
-  return env;
-}
-
 
 extern int bda_dummy_java() 
 {
@@ -225,11 +208,14 @@ extern int bda_dummy_java()
 }
 
 /* Dummy function for the portable internal Blink break point. */
-void bda_cbp(breakpoint_type bptype, struct bda_state_info * state, struct bda_location * target)
+void bda_cbp(
+    breakpoint_type bptype, 
+    struct bda_state_info *state, 
+    struct bda_location *target)
 {
 }
 
-int bda_is_agent_native_method(void* address) 
+int bda_is_agent_native_method(void *address) 
 {
   int i;
   for(i=0; i < sizeof(agent_native_methods)/sizeof(JNINativeMethod);i++) {
@@ -240,73 +226,13 @@ int bda_is_agent_native_method(void* address)
   return 0;
 }
 
-
-void bda_get_c2j_target(struct bda_state_info * s, struct bda_c2j_info * c2j_info, struct java_source_location *jloc)
-{
-    enum bda_c2j_call_type c2j_type = c2j_info->call_type;
-    JNIEnv *env = s->env;
-    jclass clazz = c2j_info->class;
-    jobject obj = c2j_info->object;
-    jmethodID mid = c2j_info->mid;
-
-    switch(c2j_type) {
-    case JNI_CALL_STATIC: {
-        bda_set_java_location(bda_jvmti, mid, jloc);
-        break;
-    }
-    case JNI_CALL_INSTANCE: {
-        jvmtiError err;
-        jmethodID target_method;
-        jclass target_clazz;
-
-        assert(clazz == NULL);
-        clazz = bda_orig_jni_funcs->GetObjectClass(env, obj);
-        assert(clazz != NULL);
-
-        //search for the actual target virtual method.
-        target_method = NULL;
-        target_clazz = clazz;
-        while(target_clazz != NULL && (target_method == NULL)) {
-            jint method_count;
-            jmethodID* methods;
-            int i;
-
-            err = (*bda_jvmti)->GetClassMethods(bda_jvmti, target_clazz, 
-                                                &method_count, &methods);
-            assert(err == JVMTI_ERROR_NONE);
-            for(i=0;i < method_count;i++) {
-                if(bda_method_name_and_desc_match(bda_jvmti, mid, methods[i])) {
-                    target_method = methods[i];
-                    break;
-                }
-            }
-            (*bda_jvmti)->Deallocate(bda_jvmti, (unsigned char *)methods);
-
-            if (target_method == NULL) {
-                target_clazz = bda_orig_jni_funcs->GetSuperclass(env, target_clazz);
-            }
-        }
-        assert(target_method != NULL);
-        bda_set_java_location(bda_jvmti, target_method, jloc);
-        break;
-    }
-    case JNI_CALL_NONVIRTUAL: {
-        bda_set_java_location(bda_jvmti, mid, jloc);
-        break;
-    }
-    default:
-        assert(0); /* not reachable. */
-        break;
-    }
-}
-
 /* FIXME: perhaps just too bad implementation now. */
-const char* bda_cstr(jstring jstr) 
+const char *bda_cstr(jstring jstr) 
 {
     static char buf[256];
     int i;
 
-    JNIEnv* env = bda_ensure_jnienv();
+    JNIEnv *env = bda_ensure_jnienv();
     int strsize = bda_orig_jni_funcs->GetStringUTFLength(env, jstr);
     const char *str = bda_orig_jni_funcs->GetStringUTFChars(env, jstr, NULL);
 
@@ -323,58 +249,80 @@ const char* bda_cstr(jstring jstr)
     return buf;
 }
 
-int bda_set_vj_from_cexpr_jboolean(JNIEnv *env, jboolean exprValue)
+int bda_cv_set_jboolean(jboolean exprValue)
 {
-    return (*env)->CallStaticIntMethod(env, agent_variable_class, 
-                                       agent_var_set_vj_boolean.methodid, 
-                                       exprValue);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticIntMethod(
+        env, agent_variable_class, 
+        bda_meth_cv_set_boolean.methodid, 
+        exprValue);
 }
 
-int bda_set_vj_from_cexpr_jint(JNIEnv *env, jint exprValue)
+int bda_cv_set_jint(jint exprValue)
 {
-    return (*env)->CallStaticIntMethod(env, agent_variable_class, 
-                                       agent_var_set_vj_int.methodid, 
-                                       exprValue);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticIntMethod(
+        env, agent_variable_class, 
+        bda_meth_cv_set_int.methodid, 
+        exprValue);
 }
 
-int bda_set_vj_from_cexpr_jdouble(JNIEnv *env, jdouble exprValue)
+int bda_cv_set_jdouble(jdouble exprValue)
 {
-    return (*env)->CallStaticIntMethod(env, agent_variable_class, 
-                                       agent_var_set_vj_double.methodid,
-                                       exprValue);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticIntMethod(
+        env, agent_variable_class, 
+        bda_meth_cv_set_double.methodid,
+        exprValue);
 }
 
-int bda_set_vj_from_cexpr_jobject(JNIEnv *env, jobject exprValue)
+int bda_cv_set_jobject(jobject exprValue)
 {
-    return (*env)->CallStaticIntMethod(env, agent_variable_class, 
-                                       agent_var_set_vj_object.methodid,
-                                       exprValue);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticIntMethod(
+        env, agent_variable_class, 
+        bda_meth_cv_set_object.methodid,
+        exprValue);
 }
 
-jboolean bda_get_cvalue_from_vj_jboolean(JNIEnv *env, int vjid)
+jboolean bda_cv_get_jboolean(int vjid)
 {
-    return (*env)->CallStaticBooleanMethod(env, agent_variable_class,
-                                           agent_var_get_vj_boolean.methodid,
-                                           vjid);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticBooleanMethod(
+        env, agent_variable_class,
+        agent_var_set_j2c_boolean.methodid,
+        vjid);
 }
 
-jint bda_get_cvalue_from_vj_jint(JNIEnv *env, int vjid)
+jint bda_cv_get_jint(int vjid)
 {
-    return (*env)->CallStaticIntMethod(env, agent_variable_class,
-                                       agent_var_get_vj_int.methodid,
-                                       vjid);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticIntMethod(
+        env, agent_variable_class,
+        agent_var_set_j2c_int.methodid,
+        vjid);
 }
 
-jdouble bda_get_cvalue_from_vj_jdouble(JNIEnv *env, int vjid)
+jdouble bda_cv_get_jdouble(int vjid)
 {
-    return (*env)->CallStaticDoubleMethod(env, agent_variable_class,
-                                          agent_var_get_vj_double.methodid,
-                                          vjid);
+    JNIEnv *env = bda_ensure_jnienv();
+    return (*env)->CallStaticDoubleMethod(
+        env, agent_variable_class,
+        agent_var_set_j2c_double.methodid,
+        vjid);
 }
 
-jobject bda_get_cvalue_from_vj_jobject(JNIEnv *env, int vjid)
+jobject bda_cv_get_jobject(int vjid)
 {
-    return (*env)->CallStaticObjectMethod(env, agent_variable_class,
-                                          agent_var_get_vj_object.methodid,
-                                          vjid);
+    JNIEnv *env = bda_ensure_jnienv();
+    jobject lref, gref;
+
+    lref = (*env)->CallStaticObjectMethod(
+        env, 
+        agent_variable_class,
+        agent_var_set_j2c_object.methodid,
+        vjid);
+    gref = (*env)->NewGlobalRef(env, lref);
+    //TODO: Free global references at the end of expression evaluation.
+    return gref;
 }

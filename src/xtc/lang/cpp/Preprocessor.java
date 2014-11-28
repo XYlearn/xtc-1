@@ -19,7 +19,6 @@
 package xtc.lang.cpp;
 
 import java.io.StringReader;
-import java.io.IOException;
 
 import java.lang.StringBuilder;
 
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Iterator;
+import java.util.HashMap;
 
 import xtc.XtcMacroFilter;
 import xtc.util.Pair;
@@ -43,6 +43,8 @@ import xtc.lang.cpp.Syntax.Text;
 import xtc.lang.cpp.Syntax.Directive;
 import xtc.lang.cpp.Syntax.Conditional;
 import xtc.lang.cpp.Syntax.ConditionalBlock;
+import xtc.lang.cpp.Syntax.Error;
+import xtc.lang.cpp.Syntax.ErrorType;
 
 import xtc.lang.cpp.MacroTable;
 import xtc.lang.cpp.MacroTable.Macro;
@@ -60,9 +62,9 @@ import net.sf.javabdd.BDD;
  * This class expands macros and processes header files
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.171 $
+ * @version $Revision: 1.190 $
  */
-public class Preprocessor implements Stream {
+public class Preprocessor implements Iterator<Syntax> {
   /** Don't expand the macro. */
   public static int NO_EXPAND = 0;
 
@@ -143,12 +145,13 @@ public class Preprocessor implements Stream {
    * off for now.
    */
   final private static boolean JOIN_ORPHANS = false;
+    private final Runtime runtime;
 
-  /**
+    /**
    * The stream from which the Preprocessor gets tokens and
    * directives
    */
-  private Stream stream;
+  private Iterator<Syntax> stream;
   
   /** The file manager for main file and header streams. */
   private HeaderFileManager fileManager;
@@ -165,18 +168,28 @@ public class Preprocessor implements Stream {
   /** The token creator. */
   private TokenCreator tokenCreator;
 
-  /** The xtc runtime. */
-  private Runtime runtime;
-  
   /**
    * Whether to gather statistics.  These are output to standard
    * error, since statistics-gathering is permitting along with
    * preprocessor output.
    */
-  private final boolean preprocessorStatistics;
+  private boolean preprocessorStatistics = false;
+
+  /**
+   * Whether to show the presence condition of each static
+   * conditional.
+   */
+  private boolean showPresenceConditions = false;
+
+  /**
+   * Maps the presence condition's BDD hash code to the string
+   * representation's hash code.  This is used to compare presence
+   * conditions across compilation units.
+   */
+  HashMap<Integer, Integer> printedpc = new HashMap<Integer, Integer>();
 
   /** Whether to emit errors to stderr. */
-  private final boolean showErrors;
+  private boolean showErrors = false;
 
   /**
    * The stack of macro presenceConditions.  Used to keep track of
@@ -206,34 +219,65 @@ public class Preprocessor implements Stream {
    */
   LinkedList<Integer> nestedConditionals;
 
+  /** The "defined" keyword. */
+  private final Syntax DEFINED;
+
+  /** An EOF token. */
+  private final Syntax EOF;
+
   /** Create a new macro preprocessor */
   public Preprocessor(HeaderFileManager fileManager, MacroTable macroTable,
-                      PresenceConditionManager presenceConditionManager, TokenCreator tokenCreator,
-                      Runtime runtime) {
+                      PresenceConditionManager presenceConditionManager,
+                      ConditionEvaluator evaluator, TokenCreator tokenCreator, Runtime runtime) {
+      this.runtime=runtime;
     this.fileManager = fileManager;
     this.macroTable = macroTable;
     this.presenceConditionManager = presenceConditionManager;
     this.tokenCreator = tokenCreator;
-    this.runtime = runtime;
 
-    this.evaluator
-      = new ConditionEvaluator(presenceConditionManager, macroTable, runtime);
+    this.evaluator = evaluator;
     this.stackOfBuffers = new LinkedList<TokenBuffer>();
     this.prescanning = 0;
     if (EMPTY_INVALID_BRANCHES) {
       this.invalid = presenceConditionManager.new PresenceCondition(false);
     }
     this.nestedConditionals = new LinkedList<Integer>();
+    this.DEFINED = tokenCreator.createIdentifier("defined");
+    this.EOF = new Syntax.EOF();
+  }
 
-    preprocessorStatistics = runtime.test("statisticsPreprocessor");
-    showErrors = runtime.test("showErrors");
+  /**
+   * Turn preprocessor statistics collection on.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void collectStatistics(boolean b) {
+    preprocessorStatistics = b;
+  }
+
+  /**
+   * Show preprocessor conditions.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void showPresenceConditions(boolean b) {
+    showPresenceConditions = b;
+  }
+  
+  /**
+   * Show preprocessor errors.  Default is on.
+   *
+   * @param b True is on.
+   */
+  public void showErrors(boolean b) {
+    showErrors = b;
   }
   
   /**
    * This class scans the input tokens, expanding macros and
    * evaluating directives, and returns tokens.
    */
-  public Syntax scan() throws IOException {
+  public Syntax next() {
     // Get the next token from the source file or the token buffer.
     Syntax syntax = getNext();
 
@@ -361,8 +405,8 @@ public class Preprocessor implements Stream {
     }
   }
   
-  public boolean done() {
-    return stackOfBuffers.isEmpty() && fileManager.done();
+  public boolean hasNext() {
+    return !stackOfBuffers.isEmpty() || fileManager.hasNext();
   }
 
   /**
@@ -370,15 +414,15 @@ public class Preprocessor implements Stream {
    *
    * @return The next token.
    */
-  private Syntax getNext() throws IOException {
+  private Syntax getNext() {
     if (stackOfBuffers.isEmpty()) {
       // Pull the next token from the file.
-      Syntax next = fileManager.scan();
+      Syntax next = fileManager.next();
 
       location = next.getLocation();
       return next;
     } else {
-      if (stackOfBuffers.peek().done()) {
+      if (! stackOfBuffers.peek().hasNext()) {
         // Reached the end of a toke buffer.
         if (stackOfBuffers.peek().hasMacroName()) {
           // Re-enable the macro after expansion.
@@ -390,7 +434,7 @@ public class Preprocessor implements Stream {
         return EMPTY;
       }
 
-      Syntax syntax = stackOfBuffers.peek().scan();
+      Syntax syntax = stackOfBuffers.peek().next();
 
       // This handles a special case where __LINE__ arguments expand
       // to the incorrect line when there are in the arguments of a
@@ -414,19 +458,26 @@ public class Preprocessor implements Stream {
                || syntax.toConditional().tag() == ConditionalTag.NEXT)) {
         syntax.toConditional().presenceCondition().addRef();
       }
-          
+
       // Perform token-pasting.
       while (syntax.testFlag(PASTE_LEFT)) {
         // Get the right operand.  ## is not allowed at the end of a
         // definition.
         Syntax next;
         do {
-          next = stackOfBuffers.peek().scan();
+          next = stackOfBuffers.peek().next();
         } while (! (next.kind() == Kind.LANGUAGE
                     || next.kind() == Kind.CONDITIONAL_BLOCK
                     || next.testFlag(AVOID_PASTE)));
 
-        if (syntax.kind() == Kind.LANGUAGE && next.kind() == Kind.LANGUAGE) {
+        if (next.testFlag(AVOID_PASTE)) {
+          // The AVOID_PASTE flag was seen.  Don't paste this token.
+          syntax = syntax.copy();
+          syntax.clearFlag(PASTE_LEFT);
+          stackOfBuffers.push(new OneTokenBuffer(next));
+
+        } else if (syntax.kind() == Kind.LANGUAGE
+                   && next.kind() == Kind.LANGUAGE) {
           // Paste two language tokens with the TokenCreator instance.
           Syntax pasted
             = tokenCreator.pasteTokens(syntax.toLanguage(), next.toLanguage());
@@ -462,21 +513,27 @@ public class Preprocessor implements Stream {
           } else {
             // The paste was unsuccessful.  Add a space between
             // the tokens.
+
+            // Error location 1
+            String message = "pasting \"" + syntax.getTokenText() + "\" and \""
+              + next.getTokenText() + "\" does not give a valid preprocessing "
+              + "token";
+
             if (showErrors) {
-              runtime.error(presenceConditionManager.reference(), "pasting "
-                            + syntax.getTokenText() + " and "
-                            + next.getTokenText()
-                            + " does not give a valid preprocessing"
-                            + "token",syntax);
+                runtime.error(presenceConditionManager.reference(), message, syntax);
             }
 
             // Remove the paste_left flag from the token.
+            syntax = syntax.copy();
             syntax.clearFlag(PASTE_LEFT);
 
             // Push a new token buffer containing the space and the
             // right-side of the paste operation.  The left operand
             // will be returned by this call to scan().
             stackOfBuffers.push(new TwoTokenBuffer(SPACE, next));
+
+            // Push the error token.
+            stackOfBuffers.push(new OneTokenBuffer(new Error(message, false)));
           }
             
         } else if (syntax.kind() == Kind.CONDITIONAL_BLOCK
@@ -485,33 +542,10 @@ public class Preprocessor implements Stream {
           // conditional.  Hoist the conditionals around the
           // token-paste operation.
 
-          Syntax hoisted = pasteHoist(syntax, next);
-
-          if (null != hoisted) {
-            if (preprocessorStatistics) {
-              System.err.format("paste %s %s %s %d\n",
-                                syntax.kind() == Kind.CONDITIONAL_BLOCK
-                                ? "conditional" : "token",
-                                next.kind() == Kind.CONDITIONAL_BLOCK
-                                ? "conditional" : "token",
-                                getNestedLocation(),
-                                ((ConditionalBlock) hoisted).branches.size());
-            }
-
-            // Return the hoisted pasting via the syntax variable.
-            syntax = hoisted;
-          } else {
-            // The paste was unsuccessful.  Add a space between the
-            // operands of the token-pasting.
-            syntax = syntax.copy();
-            syntax.clearFlag(PASTE_LEFT);
-            stackOfBuffers.push(new TwoTokenBuffer(SPACE, next));
-          }
+          // Return the hoisted pasting via the syntax variable.
+          syntax = pasteHoist(syntax, next);
         } else {
-          // The AVOID_PASTE flag was seen.  Don't paste this token.
-          syntax = syntax.copy();
-          syntax.clearFlag(PASTE_LEFT);
-          stackOfBuffers.push(new OneTokenBuffer(next));
+          throw new RuntimeException("invalid tokens for paste");
         }
       } // while there is a token-paste operation
 
@@ -520,15 +554,19 @@ public class Preprocessor implements Stream {
   }
   
   /**
-   * Hoist conditionals around a token-pasting.
+   * Hoist conditionals around a token-pasting and perform any valid
+   * token-pastes.  The token-pastes are hoisted no matter what, so
+   * that the Error tokens get output and since the hoisting work has
+   * already been done.  The tradeoff is that the hoisted token-paste
+   * may have many more tokens than the original token-paste.
    *
    * @param left A regular or compound token for the left-hand-side of
-   * the token-paste operation.
+   * the token-paste.
    * @param right A regular or compound token for the right-hand-side
-   * of the token-paste operation.
-   * @return the pasted token or null if the paste was invalid.
+   * of the token-paste.
+   * @return the hoisted and valid token-pastes.
    */
-  private Syntax pasteHoist(Syntax left, Syntax right) throws IOException {
+  private Syntax pasteHoist(Syntax left, Syntax right) {
     List<List<Syntax>> leftBranches = null;
     List<PresenceCondition> leftPresenceConditions = null;
     List<List<Syntax>> rightBranches = null;
@@ -539,8 +577,7 @@ public class Preprocessor implements Stream {
       List<Syntax> list = new LinkedList<Syntax>();
       list.add(left);
       PresenceCondition current = presenceConditionManager.reference();
-      ConditionalBlock hoistedBlock
-        = hoistConditionals(list, current);
+      ConditionalBlock hoistedBlock = hoistConditionals(list, current);
       current.delRef();
 
       leftBranches = hoistedBlock.branches;
@@ -552,8 +589,7 @@ public class Preprocessor implements Stream {
       List<Syntax> list = new LinkedList<Syntax>();
       list.add((ConditionalBlock) right);
       PresenceCondition current = presenceConditionManager.reference();
-      ConditionalBlock hoistedBlock
-        = hoistConditionals(list, current);
+      ConditionalBlock hoistedBlock = hoistConditionals(list, current);
       current.delRef();
 
       rightBranches = hoistedBlock.branches;
@@ -562,7 +598,7 @@ public class Preprocessor implements Stream {
 
     // Hoist conditionals around the entire operation and perform
     // token pasting.
-    boolean didPaste = false;
+    int nvalid = 0;
     ConditionalBlock pastedBlock = null;
     if (left.kind() == Kind.LANGUAGE) {
       for (int i = 0; i < rightBranches.size(); i++) {
@@ -581,15 +617,23 @@ public class Preprocessor implements Stream {
             // token.
             pasted.setLocation(left.getLocation());
 
-            didPaste = true;
+            nvalid++;
 
           } else {
+            // Error location 2
+            String message = "pasting \"" + left.getTokenText() + "\" and \""
+              + first.getTokenText() + "\" does not give a valid preprocessing "
+              + "token";
+
             if (showErrors) {
-              runtime.error(presenceConditionManager.reference(),"pasting " + left.getTokenText()
-                                 + " and " + first.getTokenText()
-                                 + " does not give a valid preprocessing "
-                                 + "token",first);
+                runtime.error(presenceConditionManager.reference(),message,first);
             }
+
+            Syntax leftCopy = left.copy();
+            leftCopy.clearFlag(PASTE_LEFT);
+            branch.add(0, leftCopy);
+
+            branch.add(0, new Error(message, false));
           }
         }
       }
@@ -612,16 +656,23 @@ public class Preprocessor implements Stream {
 
             pasted.setLocation(last.getLocation());
 
-            didPaste = true;
+            nvalid++;
 
           } else {
-            // Don't expand tokens of the invalid paste.
+            // Error location 3
+            String message = "pasting \"" + last.getTokenText() + "\" and \""
+              + right.getTokenText() + "\" does not give a valid preprocessing "
+              + "token";
+
             if (showErrors) {
-              runtime.error(presenceConditionManager.reference(),"pasting " + last.getTokenText()
-                                 + " and " + left.getTokenText()
-                                 + " does not give a valid preprocessing "
-                                 + "token",left);
+                runtime.error(presenceConditionManager.reference(),message,left);
             }
+
+            Syntax rightCopy = right.copy();
+            rightCopy.clearFlag(PASTE_LEFT);
+            branch.add(rightCopy);
+
+            branch.add(0, new Error(message, false));
           }
         }
       }
@@ -651,45 +702,49 @@ public class Preprocessor implements Stream {
                   = tokenCreator.pasteTokens(last.toLanguage(),
                                              first.toLanguage());
 
-                if (null != pasted) {
-                  // A successful paste.  Create a new branch in the
-                  // block of pastes.
-                  List<Syntax> comboBranch = new LinkedList<Syntax>();
+                // Create a new branch in the block of pastes
+                List<Syntax> comboBranch = new LinkedList<Syntax>();
 
-                  // Copy all tokens except the last from the left
-                  // branch.
-                  for (int i = 0, size = leftBranch.size(); i < size - 1; i++) {
-                    comboBranch.add(leftBranch.get(i));
-                  }
+                // Copy all tokens except the last from the left
+                // branch.
+                for (int i = 0, size = leftBranch.size(); i < size - 1; i++) {
+                  comboBranch.add(leftBranch.get(i));
+                }
                   
+                if (null != pasted) {
                   // Add the pasted token.
                   comboBranch.add(pasted);
-
-                  // Copy all tokens except the last from the right
-                  // branch.
-                  for (int i = 1, size = rightBranch.size(); i < size; i++) {
-                    comboBranch.add(rightBranch.get(i));
-                  }
 
                   // Use left operand's location for the newly-pasted
                   // token.
                   pasted.setLocation(last.getLocation());
 
-                  // Add the new branch with its presence condition.
-                  comboBranches.add(comboBranch);
-                  comboPresenceConditions.add(comboPresenceCondition);
-
-                  didPaste = true;
-
+                  nvalid++;
                 } else {
-                  // Don't expand tokens of the invalid paste.
+                  // Error location 4
+                  String message = "pasting \"" + last.getTokenText()
+                    + "\" and \"" + first.getTokenText()
+                    + "\" does not give a valid preprocessing "
+                    + "token";
+
                   if (showErrors) {
-                    runtime.error(presenceConditionManager.reference(),"pasting " + left.getTokenText()
-                                  + " and " + first.getTokenText()
-                                  + " does not give a valid preprocessing "
-                                  + "token",first);
+                      runtime.error(presenceConditionManager.reference(),message,first);
                   }
+
+                  comboBranch.add(new Error(message, false));
+                  comboBranch.add(last);
+                  comboBranch.add(first);
                 }
+
+                // Copy all tokens except the last from the right
+                // branch.
+                for (int i = 1, size = rightBranch.size(); i < size; i++) {
+                  comboBranch.add(rightBranch.get(i));
+                }
+
+                // Add the new branch with its presence condition.
+                comboBranches.add(comboBranch);
+                comboPresenceConditions.add(comboPresenceCondition);
               } else {
                 comboPresenceCondition.delRef();
               } // if (! comboPresenceCondition.isFalse())
@@ -709,11 +764,18 @@ public class Preprocessor implements Stream {
       pastedBlock.clearFlag(PASTE_LEFT);
     }
 
-    if (didPaste) {
-      return pastedBlock;
-    } else {
-      return null;
+    if (preprocessorStatistics) {
+      System.err.format("paste %s %s %s %d %d\n",
+                        left.kind() == Kind.CONDITIONAL_BLOCK
+                        ? "conditional" : "token",
+                        right.kind() == Kind.CONDITIONAL_BLOCK
+                        ? "conditional" : "token",
+                        getNestedLocation(),
+                        pastedBlock.branches.size(),
+                        nvalid);
     }
+
+    return pastedBlock;
   }
   
   /**
@@ -722,7 +784,7 @@ public class Preprocessor implements Stream {
    * @param directive The directive to evaluate.
    * @return An empty token, marker, or conditional.
    */
-  private Syntax evaluateDirective(Directive directive) throws IOException {
+  private Syntax evaluateDirective(Directive directive) {
     // Get the name of the directive.
     int s = 1;
     while (s < directive.size()
@@ -769,12 +831,10 @@ public class Preprocessor implements Stream {
       return EMPTY;
 
     case ERROR:
-      errorDirective(directive, s);
-      return EMPTY;
+      return errorDirective(directive, s);
 
     case WARNING:
-      warningDirective(directive, s);
-      return EMPTY;
+      return warningDirective(directive, s);
 
     case PRAGMA:
       pragmaDirective(directive, s);
@@ -784,11 +844,17 @@ public class Preprocessor implements Stream {
       // Pass linemarkers through.  Better for debugging.
       return lineMarker(directive, s);
 
-    default:
+    case INVALID:
+      // Error location 5
+      String message = "invalid preprocessing directive #" + directive.get(s);
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"invalid preprocessor directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
-      return EMPTY;
+      return new Error(message, false);
+
+    default:
+      throw new UnsupportedOperationException("unsupported directive type");
     }
   }
   
@@ -801,8 +867,7 @@ public class Preprocessor implements Stream {
    * @param directive The tokens of the directive.
    * @param s The number of tokens after the directive name.
    */
-  private Syntax ifDirective(Directive directive, int s)
-    throws IOException {
+  private Syntax ifDirective(Directive directive, int s) {
 
     // Move past the whitespace after the directive name.
     while (s < directive.size()
@@ -810,10 +875,19 @@ public class Preprocessor implements Stream {
 
     // Evalute the directive.
     if (s >= directive.size()) {
+      // Error location 6
+      String message = "#if with no expression";
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty if directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
-      return EMPTY;
+
+      stackOfBuffers
+        .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                 presenceConditionManager.new
+                                                 PresenceCondition(false))));
+
+      return new Error(message, false);
 
     } else {
       List<Syntax> tokens = new LinkedList<Syntax>();
@@ -836,6 +910,10 @@ public class Preprocessor implements Stream {
       presenceConditionManager.push();
       presenceConditionManager.enter(bdd);
 
+      if (showPresenceConditions) {
+        printPresenceCondition(directive.getLocation(), "if");
+      }
+
       Conditional conditional = new Conditional(ConditionalTag.START,
                                                 presenceConditionManager.reference());
 
@@ -844,6 +922,24 @@ public class Preprocessor implements Stream {
       return conditional;
     }
   }
+
+  private void printPresenceCondition(Location loc, String type) {
+    PresenceCondition pc = presenceConditionManager.reference();
+    BDD bdd = pc.getBDD();
+
+    int hashCode;
+    if (! printedpc.containsKey(bdd.hashCode())) {
+      String pcstr = pc.toString();
+      hashCode = pcstr.hashCode();
+      printedpc.put(bdd.hashCode(), hashCode);
+      System.err.println("presence_condition," + hashCode + "," + pcstr);
+    } else {
+      hashCode = printedpc.get(bdd.hashCode());
+    }
+    pc.delRef();
+
+    System.err.println("static_conditional," + type + "," + loc + "," + hashCode);
+  }
   
   /**
    * Take expression tokens and return an expanded, completed, parsed,
@@ -851,8 +947,7 @@ public class Preprocessor implements Stream {
    *
    * @param tokens The tokens of the expression to evaluate.
    */
-  private BDD evaluateExpression(List<Syntax> tokens, String type)
-    throws IOException {
+  private BDD evaluateExpression(List<Syntax> tokens, String type) {
 
     // Add an end-of-expansion marker to the list of tokens to
     // preprocess it without reading any tokens after it.
@@ -870,7 +965,7 @@ public class Preprocessor implements Stream {
 
     List<Syntax> expanded = new LinkedList<Syntax>();
     while (true) {
-      Syntax syntax = scan();
+      Syntax syntax = next();
 
       if (syntax.testFlag(EOE)) {
         break;
@@ -886,7 +981,7 @@ public class Preprocessor implements Stream {
 
         Syntax s;  // Used after the loop.
         while (true) {
-          s = scan();
+          s = next();
 
           switch (s.kind()) {
           case CONDITIONAL:
@@ -983,20 +1078,14 @@ public class Preprocessor implements Stream {
     for (int i = 0; i < completed.size(); i++) {
       List<Syntax> tokenlist = completed.get(i);
       PresenceCondition presenceCondition = presenceConditions.get(i);
-      
+
       if (! presenceCondition.isFalse()) {
-        StringBuilder string = new StringBuilder();
         boolean unknown = false;
-        for (Syntax token : tokenlist) {
-          string.append(token.getTokenText());
-          string.append(" ");
-        }
 
-        Syntax firstToken = null;
-          if (!tokenlist.isEmpty())
-              firstToken=tokenlist.get(0);
+        tokenlist.add(EOF);
+        BDD bdd = evaluator.evaluate(tokenlist.iterator());
 
-        BDD bdd = evaluator.evaluate(string.toString(), firstToken);
+        // as a test compare new and old evaluators' outputs
 
         if (! bdd.isZero()) {
           terms.add(bdd.and(presenceCondition.getBDD()));
@@ -1045,10 +1134,19 @@ public class Preprocessor implements Stream {
            && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
     
     if (s >= directive.size()) {
+      // Error location 7
+      String message = "no macro name given in #ifdef directive";
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty ifdef directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
-      return EMPTY;
+
+      stackOfBuffers
+        .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                 presenceConditionManager.new
+                                                 PresenceCondition(false))));
+
+      return new Error(message, false);
 
     } else {
       if (((Syntax) directive.get(s)).kind() == Kind.LANGUAGE
@@ -1056,22 +1154,31 @@ public class Preprocessor implements Stream {
         // Valid macro name.
 
       } else {
+        // Error location 8
+        String message = "macro names must be identifiers";
 
         if (showErrors) {
-          runtime.error(presenceConditionManager.reference(),"invalid macro name in ifdef",directive);
+          runtime.error(presenceConditionManager.reference(),message,directive);
         }
 
-        return EMPTY;
+        stackOfBuffers
+          .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                   presenceConditionManager.new
+                                                   PresenceCondition(false))));
+        return new Error(message, false);
       }
-      
-      String str = presenceConditionManager.getVariableManager()
-        .createDefinedVariable(((Syntax) directive.get(s)).getTokenText());
-      
-      BDD bdd = evaluator.evaluate(str,directive);
-      
+
+      BDD bdd
+        = evaluator.evaluate(new ThreeTokenBuffer(DEFINED,
+              (Syntax) directive.get(s),
+              EOF));
       presenceConditionManager.push();
       presenceConditionManager.enter(bdd);
       
+      if (showPresenceConditions) {
+        printPresenceCondition(directive.getLocation(), "ifdef");
+      }
+
       if (preprocessorStatistics) {
         System.err.format("conditional %s %s %s %d %d\n",
                           "ifdef", getNestedLocation(),
@@ -1104,31 +1211,50 @@ public class Preprocessor implements Stream {
            && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
     
     if (s >= directive.size()) {
+      // Error location 9
+      String message = "no macro name given in #ifndef directive";
 
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty ifndef directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
 
-      return EMPTY;
+      stackOfBuffers
+        .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                 presenceConditionManager.new
+                                                 PresenceCondition(false))));
+      return new Error(message, false);
 
     } else {
       if (((Syntax) directive.get(s)).toLanguage().tag().hasName()) {
         // Valid macro name.
 
       } else {
+        // Error location 10
+        String message = "macro names must be identifiers";
+
         if (showErrors) {
-          runtime.error(presenceConditionManager.reference(),"invalid macro name in ifdef",directive);
+          runtime.error(presenceConditionManager.reference(),message,directive);
         }
-        return EMPTY;
+
+        stackOfBuffers
+          .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                   presenceConditionManager.new
+                                                   PresenceCondition(false))));
+        return new Error(message, false);
       }
 
-      String str = presenceConditionManager.getVariableManager()
-        .createNotDefinedVariable(((Syntax) directive.get(s)).getTokenText());
-      
-      BDD bdd = evaluator.evaluate(str, directive);
+      BDD bdd
+        = evaluator.evaluate(new ThreeTokenBuffer(DEFINED,
+                                                  (Syntax) directive.get(s),
+                                                  EOF));
 
       presenceConditionManager.push();
-      presenceConditionManager.enter(bdd);
+      presenceConditionManager.enter(bdd.not());
+      bdd.free();
+
+      if (showPresenceConditions) {
+        printPresenceCondition(directive.getLocation(), "ifndef");
+      }
 
       if (preprocessorStatistics) {
         System.err.format("conditional %s %s %s %d %d\n",
@@ -1154,8 +1280,7 @@ public class Preprocessor implements Stream {
    * @param directive The tokens of the directive.
    * @param s The number of tokens after the directive name.
    */
-  private Syntax elifDirective(Directive directive, int s)
-    throws IOException {
+  private Syntax elifDirective(Directive directive, int s) {
 
     // Move past the whitespace after the directive name.
 
@@ -1163,13 +1288,18 @@ public class Preprocessor implements Stream {
            && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
     
     if (s >= directive.size()) {
+      // Error location 11
+      String message = "#if with no expression";
 
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty if directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
 
-      return EMPTY;
-
+      stackOfBuffers
+        .push(new OneTokenBuffer(new Conditional(ConditionalTag.START,
+                                                 presenceConditionManager.new
+                                                 PresenceCondition(false))));
+      return new Error(message, false);
     } else {
       List<Syntax> tokens = new LinkedList<Syntax>();
 
@@ -1193,6 +1323,10 @@ public class Preprocessor implements Stream {
       
       presenceConditionManager.enterElif(bdd);
 
+      if (showPresenceConditions) {
+        printPresenceCondition(directive.getLocation(), "elif");
+      }
+
       Conditional conditional = new Conditional(ConditionalTag.NEXT,
                                                 presenceConditionManager.reference());
 
@@ -1212,6 +1346,10 @@ public class Preprocessor implements Stream {
   private Syntax elseDirective(Directive directive, int s) {
 
     presenceConditionManager.enterElse();
+
+    if (showPresenceConditions) {
+      printPresenceCondition(directive.getLocation(), "else");
+    }
 
     if (preprocessorStatistics) {
       System.err.format("conditional %s %s %s %d %d\n",
@@ -1274,7 +1412,7 @@ public class Preprocessor implements Stream {
    * #include_next directive.
    */
   private Syntax includeDirective(Directive directive, int s,
-                                  boolean includeNext) throws IOException {
+                                  boolean includeNext) {
     // Move past the whitespace after the directive name.
     while (s < directive.size()
 
@@ -1296,20 +1434,22 @@ public class Preprocessor implements Stream {
       tokens.add((Syntax) directive.get(s));
       s++;
     }
-    
-    while (tokens.getLast().kind() == Kind.LAYOUT) {
+
+    while (tokens.size() > 0 && tokens.getLast().kind() == Kind.LAYOUT) {
       tokens.removeLast();
     }
     
     String str = sb.toString();
 
     if (str.length() == 0) {
+      // Error location 12
+      String message = "#include expects \"FILENAME\" or <FILENAME>";
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty include directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
 
-      return EMPTY;
-
+      return new Error(message, false);
     } else {
       char first = str.charAt(0);
       char last = str.charAt(str.length() - 1);
@@ -1335,7 +1475,7 @@ public class Preprocessor implements Stream {
           
         List<Syntax> computed = new LinkedList<Syntax>();
         while (true) {
-          Syntax syntax = scan();
+          Syntax syntax = next();
             
           if (syntax.testFlag(EOE)) {
             break;
@@ -1391,7 +1531,7 @@ public class Preprocessor implements Stream {
           }
           else {
             if (showErrors) {
-              runtime.warning("computed header used unknown " +
+              warning("computed header used unknown " +
                                  "definition(s): " + string.toString());
             }
             completed.remove(i);
@@ -1435,15 +1575,24 @@ public class Preprocessor implements Stream {
            && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
 
     if (s >= directive.size()) {
+      // Error location 13
+      String message = "no macro name given in #define directive";
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"empty define directive",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
+      stackOfBuffers.push(new OneTokenBuffer(new Error(message, false)));
       return;
 
     } else if (! ((Syntax) directive.get(s)).toLanguage().tag().hasName()) {
+      // Error location 14
+      String message = "macro names must be identifiers";
+
       if (showErrors) {
-        runtime.error(presenceConditionManager.reference(),"defining a non-identifier token",directive);
+        runtime.error(presenceConditionManager.reference(),message,directive);
       }
+      stackOfBuffers.push(new OneTokenBuffer(new Error(message, false)));
+      return;
 
     } else {
       String name = ((Syntax) directive.get(s)).getTokenText();
@@ -1475,6 +1624,18 @@ public class Preprocessor implements Stream {
             while (s < directive.size()
                    && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
             
+            if (s >= directive.size()) {
+              // Error location 19
+              String message = "missing ')' in macro parameter list";
+
+              if (showErrors) {
+                error(message);
+              }
+              stackOfBuffers
+                .push(new OneTokenBuffer(new Error(message, false)));
+              return;
+            }
+
             if (((Syntax) directive.get(s)).kind() == Kind.LANGUAGE
                 && ((Syntax) directive.get(s)).toLanguage().tag().hasName()) {
               // We are on a formal argument name.
@@ -1482,17 +1643,33 @@ public class Preprocessor implements Stream {
               if (formals == null) {
                 formals = new LinkedList<String>();
               }
-              
+
+              if (null != variadic) {
+                // Error location 15
+                String message = "missing ')' in macro parameter list";
+
+                if (showErrors) {
+                  error(message);
+                }
+                stackOfBuffers
+                  .push(new OneTokenBuffer(new Error(message, false)));
+                return;
+              }
+
               // Check for named variadic.
               if (s < (directive.size() - 1)
                   && ((Syntax) directive.get(s + 1)).kind() == Kind.LANGUAGE
                   && ((Syntax) directive.get(s + 1)).toLanguage()
                   .tag().ppTag() == PreprocessorTag.ELLIPSIS) {
                 if (null != variadic) {
+                  // Error location 16
+                  String message = "missing ')' in macro parameter list";
+
                   if (showErrors) {
-                    runtime.error(presenceConditionManager.reference(),"no args allowed after " +
-                                       "variadic",directive);
+                    runtime.error(presenceConditionManager.reference(),message,directive);
                   }
+                  stackOfBuffers
+                    .push(new OneTokenBuffer(new Error(message, false)));
                   return;
                 }
                 variadic = ((Syntax) directive.get(s)).getTokenText();
@@ -1507,9 +1684,14 @@ public class Preprocessor implements Stream {
                        .tag().ppTag() == PreprocessorTag.ELLIPSIS) {
               // The formal argument is variadic.
               if (null != variadic) {
+                // Error location 17
+                String message = "missing ')' in macro parameter list";
+
                 if (showErrors) {
-                  runtime.error(presenceConditionManager.reference(),"no args allowed after variadic",directive);
+                  runtime.error(presenceConditionManager.reference(),message,directive);
                 }
+                stackOfBuffers
+                  .push(new OneTokenBuffer(new Error(message, false)));
                 return;
               }
 
@@ -1525,9 +1707,15 @@ public class Preprocessor implements Stream {
               s++;
               break;
             } else {
+              // Error location 18
+              String message = "missing ')' in macro parameter list";
+
               if (showErrors) {
-                runtime.error(presenceConditionManager.reference(),"parameter name missing",directive);
+                runtime.error(presenceConditionManager.reference(),message,directive);
               }
+
+              stackOfBuffers
+                .push(new OneTokenBuffer(new Error(message, false)));
               return;
             }
             
@@ -1538,9 +1726,14 @@ public class Preprocessor implements Stream {
                    && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
 
             if (s >= directive.size()) {
+              // Error location 20
+              String message = "missing ')' in macro parameter list";
+
               if (showErrors) {
-                runtime.error(presenceConditionManager.reference(),"missing end parenthesis",directive);
+                runtime.error(presenceConditionManager.reference(),message,directive);
               }
+              stackOfBuffers
+                .push(new OneTokenBuffer(new Error(message, false)));
               return;
             }
             
@@ -1559,7 +1752,7 @@ public class Preprocessor implements Stream {
 
             } else {
               if (showErrors) {
-                runtime.error(presenceConditionManager.reference(),"missing end parenthesis or comma",directive);
+                runtime.error(presenceConditionManager.reference(),"unsupported error case",directive);
               }
               return;
             }
@@ -1617,10 +1810,16 @@ public class Preprocessor implements Stream {
               }
               
               if (! valid) {
+                // Error location 21
+                String message = "'#' is not followed by a macro parameter";
+
                 if (showErrors) {
-                  runtime.error(presenceConditionManager.reference(),"'#' is not followed by a macro " +
-                                     "parameter",directive);
+                  runtime.error(presenceConditionManager.reference(),message,directive);
                 }
+
+                stackOfBuffers
+                  .push(new OneTokenBuffer(new Error(message, false)));
+                return;
               }
 
             } else if (syntax.kind() == Kind.LANGUAGE
@@ -1631,9 +1830,14 @@ public class Preprocessor implements Stream {
               // The token-paste operator is binary, so it can't
               // be the first token of the definition.
               if (null == definition) {
+                // Error location 22
+
                 if (showErrors) {
                   runtime.error(presenceConditionManager.reference(),pasteError,directive);
                 }
+
+                stackOfBuffers
+                  .push(new OneTokenBuffer(new Error(pasteError, false)));
                 return;
               }
 
@@ -1692,11 +1896,16 @@ public class Preprocessor implements Stream {
           } while (s < directive.size());
           
           if (followingPasteOp) {
+            // Error location 23
+
             // The token-pasting operator can't appear at the end of a
             // definition since it's a binary operator.
             if (showErrors) {
               runtime.error(presenceConditionManager.reference(),pasteError,directive);
             }
+
+            stackOfBuffers
+              .push(new OneTokenBuffer(new Error(pasteError, false)));
             return;
           }
         }
@@ -1740,13 +1949,20 @@ public class Preprocessor implements Stream {
            && ((Syntax) directive.get(s)).kind() == Kind.LAYOUT) s++;
     
     // Evaluate the undef directive as long as it's valid.
+      String message = "no macro name given in #undef directive";
     if (s >= directive.size()) {
-      if (showErrors) runtime.error(presenceConditionManager.reference(),"empty undef directive",directive);
+      if (showErrors) runtime.error(presenceConditionManager.reference(),message,directive);
 
+      if (showErrors) {
+        error(message);
+      }
+      stackOfBuffers
+        .push(new OneTokenBuffer(new Error(message, false)));
     } else {
       Syntax token = (Syntax) directive.get(s);
 
-      if (token.kind() == Kind.LANGUAGE && token.toLanguage().tag().hasName()) {
+      if (token.kind() == Kind.LANGUAGE
+          && token.toLanguage().tag().hasName()) {
         String name = token.getTokenText();
 
         macroTable.undefine(name, presenceConditionManager);
@@ -1757,7 +1973,14 @@ public class Preprocessor implements Stream {
                             macroTable.countDefinitions(name));
         }
       } else {
-        if (showErrors) runtime.error(presenceConditionManager.reference(),"macro names must be identifiers",directive);
+        // Error location 25
+        String message2 = "macro names must be identifiers";
+
+        if (showErrors) {
+            runtime.error(presenceConditionManager.reference(),message2,directive);
+        }
+        stackOfBuffers
+          .push(new OneTokenBuffer(new Error(message2, false)));
       }
     }
   }
@@ -1782,7 +2005,8 @@ public class Preprocessor implements Stream {
    * @param directive The tokens of the directive.
    * @param s The number of tokens after the directive name.
    */
-  private void errorDirective(Directive directive, int s) {
+  private Error errorDirective(Directive directive, int s) {
+    // Error location 26
     if (showErrors) {
       runtime.error(presenceConditionManager.reference(),directive.getTokenText(),directive);
     }
@@ -1798,6 +2022,8 @@ public class Preprocessor implements Stream {
     if (preprocessorStatistics) {
       System.err.format("error_directive %s", getNestedLocation());
     }
+
+    return new Error(directive.getTokenText(), true);
   }
   
   /**
@@ -1807,15 +2033,17 @@ public class Preprocessor implements Stream {
    * @param directive The tokens of the directive.
    * @param s The number of tokens after the directive name.
    */
-  private void warningDirective(Directive directive, int s) {
+  private Error warningDirective(Directive directive, int s) {
+    // Error location 27
     if (showErrors) {
-      runtime.warning(directive.getTokenText());
+      warning(directive.getTokenText());
     }
 
     if (preprocessorStatistics) {
       System.err.format("warning_directive %s", getNestedLocation());
     }
 
+    return new Error(directive.getTokenText(), ErrorType.WARNING);
   }
   
   /**
@@ -1860,6 +2088,8 @@ public class Preprocessor implements Stream {
     return EMPTY;
   }
   
+  // get around capture of ? to ? warning
+  @SuppressWarnings("unchecked")
   /**
    * Check a token to see if it's a defined macro and expand if necessary.
    * Multiply-defined macros are expanded to all definitions, but
@@ -1871,7 +2101,7 @@ public class Preprocessor implements Stream {
    * token.tag().hasName() is true.
    * @return A token.
    */
-  private Syntax processToken(Language<?> token) throws IOException {
+  private Syntax processToken(Language<?> token) {
     String name = token.getTokenText();
 
     // Process built-in macros.
@@ -2405,8 +2635,7 @@ public class Preprocessor implements Stream {
    * @return A line marker.
    */
   private Syntax expandFunction(String name, Syntax token,
-                                List<Entry> entries)
-    throws IOException {
+                                List<Entry> entries) {
     // Save the original tokens of the invocation to back out of an
     // invalid invocation and to preserve the arguments when there are
     // object-like definitions.  Uses LinkedList.addFirst().
@@ -2443,7 +2672,7 @@ public class Preprocessor implements Stream {
     prescanning++;
     while (true) {
       // Get the next token.
-      syntax = scan();
+      syntax = next();
 
       // Update the presence condition and evaluate define/undef
       // directives as permissible by the GNU C Preprocessor.
@@ -2628,8 +2857,7 @@ public class Preprocessor implements Stream {
    * @return A line marker or an empty layout token.
    */
   private Syntax expandAndHoistFunction(String name, Syntax token,
-                                        List<Entry> entries)
-    throws IOException {
+                                        List<Entry> entries) {
     // The algorithm works like this: First we collect the list of
     // presence conditions in which there are different function-like
     // macro invocations.
@@ -2667,7 +2895,7 @@ public class Preprocessor implements Stream {
     prescanning++;
     while (true) {
       // Get the next token.
-      syntax = scan();
+      syntax = next();
 
       // Only need to fork when the presence condition may have
       // changed due to a conditional.
@@ -2829,15 +3057,19 @@ public class Preprocessor implements Stream {
         break;
 
       case INCOMPLETE_ARGUMENTS:
+        // Error location 28
+        String message = "unterminated argument list invoking macro \""
+          + token.getTokenText() + "\"";
+
         if (showErrors) {
-          runtime.error(presenceConditionManager.reference(),"unterminated argument list " +
-                        "invoking macro " + token.getTokenText(), token);
+          runtime.error(presenceConditionManager.reference(),message, token);
         }
 
         // Don't emit the partial list of arguments.  Only emit the
         // original token name and, unless it's a conditional, the token
         // that interrupted the list.
         stackOfBuffers.push(new TwoTokenBuffer(token, buffer.getLast()));
+        stackOfBuffers.push(new OneTokenBuffer(new Error(message, false)));
         break;
 
       case NO_ARGUMENTS:
@@ -2995,6 +3227,7 @@ public class Preprocessor implements Stream {
                 // This complicated code puts tokens with the same
                 // presence condition inside the same conditional.
                 if (! and.is(currentPresenceCondition)) {
+
                   if (hasNestedConditional) {
                     hoisted.add(new Conditional(ConditionalTag.END, null));
                   }
@@ -3016,15 +3249,19 @@ public class Preprocessor implements Stream {
           break;
 
         case INCOMPLETE_ARGUMENTS:
+          // Error location 29
+          String message = "unterminated argument list invoking macro \""
+            + token.getTokenText() + "\"";
+
           if (showErrors) {
-            runtime.error(presenceConditionManager.reference(),"unterminated argument list " +
-                          "invoking macro " + token.getTokenText(), token);
+            runtime.error(presenceConditionManager.reference(),message, token);
           }
 
           // Don't emit the partial list of arguments.  Only emit the
           // original token.
           Language<?> noexpand = (Language<?>) token.copy();
           noexpand.setFlag(NO_EXPAND);
+          hoisted.add(new Error(message, false));
           hoisted.add(noexpand);
           break;
 
@@ -3343,7 +3580,7 @@ public class Preprocessor implements Stream {
                            LinkedList<LinkedList<Syntax>> args,
                            LinkedList<LinkedList<Syntax>> variadicArgs,
                            List<Entry> entries,
-                           LinkedList<Syntax> buffer) throws IOException {
+                           LinkedList<Syntax> buffer) {
     List<List<Syntax>> expanded = null;
     List<List<Syntax>> blockArgs = null;
     List<List<Syntax>> stringified = null;
@@ -3505,14 +3742,23 @@ public class Preprocessor implements Stream {
         // the definition.
         List<Syntax> replaced;
         if (! argsCheck) {
+          // Error location 30
+          int passed = null == args ? 0 : args.size();
+          int takes = null == f.formals ? 0 : f.formals.size();
+          String message;
+
+          if (passed > takes) {
+            message = "macro \"" + name + "\" passed " + passed
+              + " arguments, but takes just " + takes;
+          } else {
+            message = "macro \"" + name + "\" requires " + takes
+              + " arguments, but only " + passed + " given";
+          }
+
           // The number of arguments does not match the number of
           // formal arguments.
-
           if (showErrors) {
-            runtime.error(presenceConditionManager.reference().and(e.presenceCondition),"macro \"" + name + "\" passed "
-                               + (null == args ? "0" : args.size())
-                               + " arguments, but takes just "
-                               + (null == f.formals ? "0" : f.formals.size()), token);
+            runtime.error(presenceConditionManager.reference().and(e.presenceCondition),message, token);
           }
 
           // The GNU preprocessor does not expand the macro.  All it
@@ -3521,6 +3767,7 @@ public class Preprocessor implements Stream {
           Language<?> newToken = (Language<?>) token.copy();
           newToken.setFlag(NO_EXPAND);
           replaced = new LinkedList<Syntax>();
+          replaced.add(new Error(message, false));
           replaced.add(newToken);
           
         } else if (null == f.definition) {
@@ -3948,13 +4195,12 @@ public class Preprocessor implements Stream {
    * infeasible conditional branches.
    */
   private List<Syntax> buildBlocks(List<Syntax> list,
-                                   PresenceCondition global)
-    throws IOException {
+                                   PresenceCondition global) {
 
     List<Syntax> newList = new LinkedList<Syntax>();
     PlainTokenBuffer tpresenceCondition = new PlainTokenBuffer(list);
     
-    Syntax syntax = tpresenceCondition.scan();
+    Syntax syntax = tpresenceCondition.next();
     boolean hasConditional = false;
     while (null != syntax) {
       if (syntax.kind() == Kind.CONDITIONAL) {
@@ -3966,7 +4212,7 @@ public class Preprocessor implements Stream {
         newList.add(syntax);
       }
       
-      syntax = tpresenceCondition.scan();
+      syntax = tpresenceCondition.next();
     }
 
     if (hasConditional && newList.size() > 1) {
@@ -3991,9 +4237,8 @@ public class Preprocessor implements Stream {
    * @return The conditional block or EMPTY if it has no feasible
    * branches.
    */
-  private Syntax buildBlock(Conditional start, Stream streamin, PresenceCondition global)
-    throws IOException {
-    
+  private Syntax buildBlock(Conditional start, Iterator<Syntax> streamin,
+                            PresenceCondition global) {
     List<List<Syntax>> branches = new LinkedList<List<Syntax>>();
     List<PresenceCondition> presenceConditions = new LinkedList<PresenceCondition>();
 
@@ -4003,7 +4248,7 @@ public class Preprocessor implements Stream {
     presenceConditions.add(start.presenceCondition);
     start.presenceCondition.addRef();
     
-    Syntax syntax = streamin.scan();
+    Syntax syntax = streamin.next();
     while (null != syntax) {
       
       if (syntax.kind() == Kind.CONDITIONAL
@@ -4026,7 +4271,7 @@ public class Preprocessor implements Stream {
         branch.add(syntax);
       }
       
-      syntax = streamin.scan();
+      syntax = streamin.next();
     }
     
     // Trim infeasible branches.
@@ -4218,7 +4463,7 @@ public class Preprocessor implements Stream {
    * is not null, which means the argument is empty.
    * @return The expanded argument.
    */
-  private List<Syntax> expandArg(List<Syntax> arg) throws IOException {
+  private List<Syntax> expandArg(List<Syntax> arg) {
 
     // Add an end-of-expansion marker to the list.
     List<Syntax> argEOE = new LinkedList<Syntax>();
@@ -4239,7 +4484,7 @@ public class Preprocessor implements Stream {
     List<Syntax> expanded = new LinkedList<Syntax>();
     boolean done = false;
     while (true) {
-      Syntax syntax = scan();
+      Syntax syntax = next();
 
       syntax.clearFlag(NON_FUNCTION);
 
@@ -4253,8 +4498,11 @@ public class Preprocessor implements Stream {
         break;
 
       case EOF:
+        // Error location 31
+        String message = "real EOF in argument expansion";
+
         if (showErrors) {
-          runtime.error(presenceConditionManager.reference(),"real EOF in argument expansion", syntax);
+          runtime.error(presenceConditionManager.reference(),message, syntax);
         }
 
         done = true;
@@ -4334,7 +4582,7 @@ public class Preprocessor implements Stream {
    * expansion.  It is also used when the preprocessor needs to emit
    * more than one token at a time, e.g. after a failed token-pasting.
    */
-  private static abstract class TokenBuffer implements Stream {
+  private static abstract class TokenBuffer implements Iterator<Syntax> {
     /**
      * Whether or not this buffer holds a macro expansion.
      *
@@ -4400,7 +4648,7 @@ public class Preprocessor implements Stream {
       this(list, false);
     }
 
-    public Syntax scan() {
+    public Syntax next() {
       if (null == iterator) {
         return null;
       }
@@ -4412,8 +4660,12 @@ public class Preprocessor implements Stream {
       }
     }
     
-    public boolean done() {
-      return ! iterator.hasNext();
+    public boolean hasNext() {
+      return iterator.hasNext();
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
     }
 
     public boolean hasMacroName() {
@@ -4426,6 +4678,72 @@ public class Preprocessor implements Stream {
 
     public boolean isMacroArgument() {
       return isMacroArgument;
+    }
+  }
+
+  /** A token buffer containing three tokens that avoids using a list. */
+  private static class ThreeTokenBuffer extends TokenBuffer {
+    /** The first token. */
+    private Syntax a;
+
+    /** The second token. */
+    private Syntax b;
+
+    /** The third token. */
+    private Syntax c;
+
+    /** The count of tokens emitted. */
+    private int count;
+
+    /**
+     * Create a new token buffer of just two tokens.
+     *
+     * @param The first token.
+     * @param The second token.
+     * @param The third token.
+     */
+    public ThreeTokenBuffer(Syntax a, Syntax b, Syntax c) {
+      this.a = a;
+      this.b = b;
+      this.c = c;
+      count = 0;
+    }
+
+    public Syntax next() {
+      switch (count) {
+      case 0:
+        count++;
+        return a;
+
+      case 1:
+        count++;
+        return b;
+
+      case 2:
+        count++;
+        return c;
+
+      case 3:
+        // Fall through
+      default:
+        return null;
+      }
+    }
+    
+    public boolean hasNext() {
+      return count < 3;
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+
+    public boolean hasMacroName() {
+      return false;
+    }
+
+    public String getMacroName() {
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -4452,7 +4770,7 @@ public class Preprocessor implements Stream {
       count = 0;
     }
 
-    public Syntax scan() {
+    public Syntax next() {
       switch (count) {
       case 0:
         count++;
@@ -4469,8 +4787,12 @@ public class Preprocessor implements Stream {
       }
     }
     
-    public boolean done() {
-      return count >= 2;
+    public boolean hasNext() {
+      return count < 2;
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
     }
 
     public boolean hasMacroName() {
@@ -4501,7 +4823,7 @@ public class Preprocessor implements Stream {
       this.done = false;
     }
 
-    public Syntax scan() {
+    public Syntax next() {
       if (! done) {
         done = true;
         return a;
@@ -4510,8 +4832,12 @@ public class Preprocessor implements Stream {
       }
     }
     
-    public boolean done() {
-      return done;
+    public boolean hasNext() {
+      return !done;
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
     }
 
     public boolean hasMacroName() {
@@ -4525,13 +4851,10 @@ public class Preprocessor implements Stream {
 
   /** A token buffer for a singly-defined macro expansion. */
   private static class SingleExpansionBuffer extends TokenBuffer {
-
     /** The name of the macro being expanded. */
     private String name;
 
-    /**
-     * An iterator over the list of tokens in the macro expansion.
-     */
+    /** An iterator over the list of tokens in the macro expansion. */
     private Iterator<Syntax> iterator;
 
     /**
@@ -4540,19 +4863,17 @@ public class Preprocessor implements Stream {
      * @param name The name of the macro being expanded.
      * @param expansion The tokens of the macro expansion.
      */
-    public SingleExpansionBuffer(String name,
-                                 List<Syntax> expansion) {
+    public SingleExpansionBuffer(String name, List<Syntax> expansion) {
       this.name = name;
 
       if (null == expansion) {
         this.iterator = null;
-
       } else {
         this.iterator = expansion.iterator();
       }
     }
     
-    public Syntax scan() {
+    public Syntax next() {
       if (null == iterator) {
         return null;
       }
@@ -4565,8 +4886,12 @@ public class Preprocessor implements Stream {
       }
     }
     
-    public boolean done() {
-      return iterator == null || ! iterator.hasNext();
+    public boolean hasNext() {
+      return iterator != null && iterator.hasNext();
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
     }
 
     public boolean hasMacroName() {
@@ -4615,7 +4940,7 @@ public class Preprocessor implements Stream {
       this.i = 0;
     }
 
-    public Syntax scan() {
+    public Syntax next() {
       if (-1 == list) {
         list = 0;
         i = 0;
@@ -4647,10 +4972,14 @@ public class Preprocessor implements Stream {
       }
     }
 
-    public boolean done() {
-      return list >= lists.size();
+    public boolean hasNext() {
+      return list < lists.size();
     }
     
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+
     public boolean hasMacroName() {
       return true;
     }
@@ -4678,5 +5007,17 @@ public class Preprocessor implements Stream {
    */
   private static boolean isAppleGCC() {
     return xtc.Limits.COMPILER_VERSION.indexOf("Apple") >= 0;
+  }
+
+  private void error(String msg) {
+    System.err.println("error: " + msg);
+  }
+
+  private void warning(String msg) {
+    System.err.println("warning: " + msg);
+  }
+
+  public void remove() {
+    throw new UnsupportedOperationException();
   }
 }

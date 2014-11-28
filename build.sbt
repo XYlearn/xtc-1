@@ -1,6 +1,6 @@
 name := "xtc"
 
-version := "2.3.1"
+version := "2.4.0"
 
 javaSource in Compile <<= baseDirectory(_ / "src")
 

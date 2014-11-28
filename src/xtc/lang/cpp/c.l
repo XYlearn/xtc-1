@@ -17,9 +17,54 @@
  * USA.
  */
 
-#include "token.h"
+#ifndef LANGUAGE_TAGS
 
-#ifdef LEXER // Generate the lexer specification.
+/**
+ * Create a C Language Syntax object.  The "text" parameter must have
+ * quotes, since it will be used as a Java string constant.
+ */
+# define LANGUAGE(token, text)                                        \
+  text {                                                              \
+    Language<CTag> syntax = new Language<CTag>(CTag.token);           \
+                                                                      \
+    syntax.setLocation(new Location(fileName, yyline+1, yycolumn+1)); \
+                                                                      \
+    return syntax;                                                    \
+  }
+
+/**
+ * Create a C Text Syntax object.
+ */
+# define TEXT(token, regex, hasName)                                \
+  regex {                                                           \
+    Text<CTag> syntax = new Text<CTag>(CTag.token, yytext());       \
+                                                                    \
+    syntax.setLocation(new Location(fileName, yyline+1, yycolumn)); \
+                                                                    \
+    return syntax;                                                  \
+  }
+
+/**
+ * Create a preprocessor language token.
+ */
+# define PREPROCESSOR(token, pptag, text) LANGUAGE(token, text)
+
+/**
+ * Create a preprocessor text language token.
+ */
+# define PREPROCESSOR_TEXT(token, pptag, regex, hasname) TEXT(token, regex, false)
+
+#else
+# define LANGUAGE(token, text) token(getID(#token), text),
+# define TEXT(token, regex, hasName) token(getID(#token), null, hasName),
+# define PREPROCESSOR(token, pptag, text) \
+  token(getID(#token), text, PreprocessorTag.pptag),
+# define PREPROCESSOR_TEXT(token, pptag, regex, hasName) \
+  token(getID(#token), null, hasName, PreprocessorTag.pptag),
+#endif
+
+
+#ifndef LANGUAGE_TAGS // Generate the lexer specification.
 package xtc.lang.cpp;
 
 import xtc.tree.Location;
@@ -134,7 +179,7 @@ whitespace=({horizontal_white})+|({v_tab}|{c_return})+|{continuation}
 { return new Layout(yytext(), true); }
 
 
-#elif defined TAG // Generate the CTag enumeration.
+#else // Generate the CTag enumeration.
 package xtc.lang.cpp;
 
 import xtc.lang.cpp.Syntax.Layout;
@@ -215,11 +260,18 @@ LANGUAGE(__VOLATILE,"__volatile")
 LANGUAGE(__VOLATILE__,"__volatile__")
 
 TEXT(IDENTIFIER,{identifier},true)
+PREPROCESSOR_TEXT(INTEGERconstant,NUMBER,{integer_constant},false)
+PREPROCESSOR_TEXT(OCTALconstant,NUMBER,{octal_constant},false)
+PREPROCESSOR_TEXT(HEXconstant,NUMBER,{hex_constant},false)
+PREPROCESSOR_TEXT(FLOATINGconstant,NUMBER,{floating_constant},false)
+PREPROCESSOR_TEXT(PPNUM,NUMBER,{preprocessing_number},false)
+/*
 TEXT(INTEGERconstant,{integer_constant},false)
 TEXT(OCTALconstant,{octal_constant},false)
 TEXT(HEXconstant,{hex_constant},false)
 TEXT(FLOATINGconstant,{floating_constant},false)
 TEXT(PPNUM,{preprocessing_number},false)
+*/
 
 /* The \' doesn't mesh with the function-like invocation.  Returns an
 error that there is an unmatched ' in the parameter-list.  Circumvent
@@ -284,13 +336,14 @@ LANGUAGE(ASSIGN,"=")
 
 LANGUAGE(AT,"@")
 LANGUAGE(USD,"$")
+LANGUAGE(BACKSLASH, "\\")
 
 // For c++
 //LANGUAGE(DOTSTAR,".*")
 //LANGUAGE(DCOLON,"::")
 //LANGUAGE(ARROWSTAR,"->*")
 
-#ifdef LEXER
+#ifndef LANGUAGE_TAGS
 
 "/*" {
 yybegin(COMMENT);
@@ -310,7 +363,7 @@ return new Layout(comment.toString(), false);
 \n {comment.append(yytext()); commentnl = true;}
 }
 
-#elif defined TAG
+#else
 TYPEDEFname(getID("TYPEDEFname"), null, true);
 
   private final int id;
@@ -360,8 +413,8 @@ TYPEDEFname(getID("TYPEDEFname"), null, true);
   }
 
   static int getID(String token) {
-    for (int id = 0; id < ForkMergeParserTables.YYNTOKENS; id++) {
-      if (ForkMergeParserTables.yytname.table[id].equals(token)) {
+    for (int id = 0; id < CParseTables.getInstance().YYNTOKENS; id++) {
+      if (CParseTables.getInstance().yytname[id].equals(token)) {
         return id;
       }
     }

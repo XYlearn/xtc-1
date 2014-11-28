@@ -50,32 +50,41 @@ PACKAGE_LOC = xtc/lang/cpp
 SOURCE = \
 	BuiltinsGenerator.java \
 	Builtins.java \
-	ForkMergeParserTables.java \
 	PresenceConditionManager.java \
 	Syntax.java \
-	CTag.java \
-	CLexer.java \
-	ConditionParser.java \
-	Stream.java \
-	CLexerStream.java \
+	ParseTables.java \
+	SemanticValues.java \
+	SemanticActions.java \
+	ParsingContext.java \
+	GenerateValuesClass.java \
+	GenerateActionsClass.java \
 	DirectiveParser.java \
 	HeaderFileManager.java \
 	MacroTable.java \
-	ConditionEvaluator.java \
-	CTokenCreator.java \
 	Preprocessor.java \
-	Actions.java \
-	ActionGenerator.java \
-	CActionsBase.java \
-	CActions.java \
-	CParsingContext.java \
 	ForkMergeParser.java \
 	TokenFilter.java \
 	FilenameService.java \
 	StreamTimer.java \
 	StopWatch.java \
-	cdiff.java \
+	ExpressionParseTables.java \
+	ExpressionSemanticValues.java \
+	ExpressionActionsInterface.java \
+	ExpressionActions.java \
+	ExpressionRats.java \
+	TreeComparator.java \
+	ExpressionParser.java \
+	ConditionEvaluator.java \
+	CTag.java \
+	CLexer.java \
+	CParseTables.java \
+	CTokenCreator.java \
+	CSemanticValues.java \
+	CActionsInterface.java \
+	CSemanticActions.java \
+	CParsingContext.java \
 	GCCShunt.java \
+	cdiff.java \
 	SuperC.java
 
 
@@ -115,35 +124,54 @@ Builtins.java:
 	$(RM) builtins
 
 parsers:
-	@# parsing tables
+	@# c parse tables
 	bison -o c.tab.c c.y
-	$(CC) $(CFLAGS) -DYYDEBUG -DYYPRINT\(a,b,c\) -o gen_tables gen_tables.c
-	./gen_tables > ForkMergeParserTables.java
-	$(RM) gen_tables
-	$(MAKE) ForkMergeParserTables.class
+	$(CC) $(CFLAGS) -DBISON_PARSER_FILE=c.tab.c -DCLASS_NAME=CParseTables -o gen_c_tables gen_tables.c
+	./gen_c_tables > CParseTables.java
+	$(RM) gen_c_tables
+	$(MAKE) CParseTables.class
+	@#
 	@# C lexer and token tags
-	$(CPP) $(CPPFLAGS) -DTAG - < c.l | grep -v "^#" > CTag.java
+	$(CPP) $(CPPFLAGS) -DLANGUAGE_TAGS - < c.l | grep -v "^#" > CTag.java
 	$(MAKE) CTag.class
+	@#
 	@# lexer
 	@#   filter out line directives for java compilation
-	$(CPP) $(CPPFLAGS) -DLEXER - < c.l | grep -v "^#" > c.l.lexer
+	$(CPP) $(CPPFLAGS) - < c.l | grep -v "^#" > c.l.lexer
 	$(JAVA) -jar $(JAVA_DEV_ROOT)/bin/JFlex.jar c.l.lexer
 	$(RM) c.l.lexer
 	$(MAKE) CLexer.class
-	@# semantic actions
-	$(MAKE) ActionGenerator.class
-	./gen_actions.pl < c.y | $(JAVA) xtc.lang.cpp.ActionGenerator CActionsBase > CActionsBase.java
-	$(MAKE) CActionsBase.class
-	$(RATS) -option 'parser(xtc.lang.cpp.ConditionParser)' Condition.rats
-	$(MAKE) ConditionParser.class
+	@#
+	@# C semantic actions
+	$(MAKE) GenerateValuesClass.class
+	./extract_annotations.pl < c.y | $(JAVA) xtc.lang.cpp.GenerateValuesClass CSemanticValues xtc.lang.cpp.CParseTables > CSemanticValues.java
+	$(MAKE) GenerateActionsClass.class
+	./extract_annotations.pl < c.y | $(JAVA) xtc.lang.cpp.GenerateActionsClass CActionsInterface xtc.lang.cpp.CParseTables > CActionsInterface.java
+	$(MAKE) CSemanticValues.class
+	$(MAKE) CActionsInterface.class
+	@#
+	@# expression parser
+	bison -o expression.tab.c expression.y
+	$(CC) $(CFLAGS) -DBISON_PARSER_FILE=expression.tab.c -DCLASS_NAME=ExpressionParseTables -o gen_expression_tables gen_tables.c
+	./gen_expression_tables > ExpressionParseTables.java
+	$(RM) gen_expression_tables
+	$(MAKE) ExpressionParseTables.class
+	@#
+	./extract_annotations.pl < expression.y | $(JAVA) xtc.lang.cpp.GenerateValuesClass ExpressionSemanticValues xtc.lang.cpp.ExpressionParseTables > ExpressionSemanticValues.java
+	./extract_annotations.pl < expression.y | $(JAVA) xtc.lang.cpp.GenerateActionsClass ExpressionActionsInterface xtc.lang.cpp.ExpressionParseTables > ExpressionActionsInterface.java
+	$(MAKE) ExpressionSemanticValues.class
+	$(MAKE) ExpressionActionsInterface.class
+	@#
+	@# expression parser (rats)
+	$(RATS) -option 'parser(xtc.lang.cpp.ExpressionRats)' Condition.rats
+	$(MAKE) ExpressionRats.class
 	$(RM) ${JAVA_DEV_ROOT}/classes/xtc/lang/cpp/ForkMergeParser.class
 	$(MAKE) ForkMergeParser.class
 
 clobber-parsers :
 	$(RM) CLexer.java
 	$(RM) c.tab.c
-	$(RM) ForkMergeParserTables.java
 	$(RM) CActionsBase.java
-	$(RM) ConditionParser.java
+	$(RM) ExpressionRats.java
 
 endif

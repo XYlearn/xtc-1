@@ -22,15 +22,21 @@ import java.lang.StringBuilder;
 
 import java.io.File;
 import java.io.Reader;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.StringReader;
 import java.io.OutputStreamWriter;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Map;
 import java.util.IdentityHashMap;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import xtc.lang.cpp.Syntax.Kind;
 import xtc.lang.cpp.Syntax.LanguageTag;
@@ -41,30 +47,32 @@ import xtc.lang.cpp.Syntax.Language;
 import xtc.lang.cpp.Syntax.Text;
 import xtc.lang.cpp.Syntax.Directive;
 import xtc.lang.cpp.Syntax.Conditional;
+import xtc.lang.cpp.Syntax.Error;
+import xtc.lang.cpp.Syntax.ErrorType;
 
 import xtc.lang.cpp.PresenceConditionManager.PresenceCondition;
 
 import xtc.tree.Node;
 import xtc.tree.GNode;
+import xtc.tree.Location;
 
 import xtc.Constants;
-
-import xtc.lang.CAnalyzer;
-import xtc.lang.CPrinter;
-import xtc.lang.CReader;
-import xtc.lang.CParser;
 
 import xtc.util.Tool;
 import xtc.util.Pair;
 
+import xtc.lang.CParser;
+
 import xtc.parser.Result;
 import xtc.parser.ParseException;
+
+import net.sf.javabdd.BDD;
 
 /**
  * The SuperC configuration-preserving preprocessor and parsing.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.78 $
+ * @version $Revision: 1.108 $
  */
 public class SuperC extends Tool {
   /** The user defined include paths */
@@ -123,13 +131,13 @@ public class SuperC extends Tool {
     runtime.
       // Regular preprocessor arguments.
       word("I", "I", true,
-           "Add a directory to the header file search path.").
+              "Add a directory to the header file search path.").
       word("isystem", "isystem", true,
            "Add a system directory to the header file search path.").
       word("iquote", "iquote", true,
-           "Add a quote directory to the header file search path.").
+              "Add a quote directory to the header file search path.").
       bool("nostdinc", "nostdinc", true,
-           "Don't use the standard include paths.").
+              "Don't use the standard include paths.").
       word("D", "D", true, "Define a macro.").
       word("U", "U", true, "Undefine a macro.  Occurs after all -D arguments "
            + "which is a departure from gnu cpp.").
@@ -137,30 +145,30 @@ public class SuperC extends Tool {
       
       // Extra preprocessor arguments.
       bool("nobuiltins", "nobuiltins", true,
-           "Disable gcc built-in macros.").
+              "Disable gcc built-in macros.").
       bool("nocommandline", "nocommandline", false,
-           "Do not process command-line defines (-D), undefines (-U), or " +
-           "includes (-include).  Useful for testing the preprocessor.").
+              "Do not process command-line defines (-D), undefines (-U), or " +
+                      "includes (-include).  Useful for testing the preprocessor.").
       word("mandatory", "mandatory", false,
-           "Include the given header file even if nocommandline is on.").
+              "Include the given header file even if nocommandline is on.").
       bool("cppmode", "cppmode", false,
-           "Preprocess without preserving configurations.").
+              "Preprocess without preserving configurations.").
 //      word("TypeChef-x", "TypeChef-x", false,
 //           "Restricts free macros to those that have the given prefix").   .//replaced my MacroFilter in MacroTable
 
       // SuperC component selection.
       bool("E", "E", false,
-           "Just do configuration-preserving preprocessing.").
+        "Just do configuration-preserving preprocessing.").
       bool("lexer", "lexer", false,
            "Just do lexing and print out the tokens.").
       bool("lexerNoPrint", "lexerNoPrint", false,
-           "Lex but don't print.").
+              "Lex but don't print.").
       bool("directiveParser", "directiveParser", false,
-           "Just do lexing and directive parsing and print out the tokens.").
+              "Just do lexing and directive parsing and print out the tokens.").
       bool("preprocessor", "preprocessor", false,
-           "Preprocess but don't print.").
+              "Preprocess but don't print.").
       bool("follow-set", "follow-set", false,
-           "Compute the FOLLOW sets of each token in the preprocessed input.").
+              "Compute the FOLLOW sets of each token in the preprocessed input.").
 
       // Preprocessor optimizations.
       /*bool("Odedup", "optimizeDedup", false,
@@ -169,41 +177,45 @@ public class SuperC extends Tool {
 
       // FMLR algorithm optimizations.
       bool("Onone", "doNotOptimize", false,
-           "Turn off all optimizations, but still use the follow-set.").
+              "Turn off all optimizations, but still use the follow-set.").
       bool("Oshared", "optimizeSharedReductions", true,
-           "Turn on the \"shared reductions\" optimization.").
+              "Turn on the \"shared reductions\" optimization.").
       bool("Olazy", "optimizeLazyForking", true,
            "Turn on the \"lazy forking\" optimization.").
       bool("Oearly", "optimizeEarlyReduce", true,
-           "Turn on the \"early reduce\" optimization.").
+              "Turn on the \"early reduce\" optimization.").
 
       // Platoff ordering has no effect with the other optimizations.
       bool("platoffOrdering", "platoffOrdering", false,
-           "Turn on the Platoff ordering optimization.  Off by default.").
+              "Turn on the Platoff ordering optimization.  Off by default.").
 
       // Deoptimize with early shifts.
       bool("earlyShift", "earlyShift", false,
-           "Deoptimize FMLR by putting shifts first.  Incompatible with " +
-           "early reduce.").
+              "Deoptimize FMLR by putting shifts first.  Incompatible with " +
+                      "early reduce.").
 
       // Other optimizations.
       bool("noFollowCaching", "noFollowCaching", false,
-           "Turn off follow-set caching.  On by default.").
+              "Turn off follow-set caching.  On by default.").
+
+      // New error handling.
+      bool("newErrorHandling", "newErrorHandling", false,
+              "Use new error handling that puts errors in the AST.").
 
       // Naive FMLR.
       bool("naiveFMLR", "naiveFMLR", false,
-           "Naive FMLR Turn off all optimizations and don't "
-           + "use the follow-set.").
+              "Naive FMLR Turn off all optimizations and don't "
+                      + "use the follow-set.").
 
       // Subparser explosion kill switch.
       word("killswitch", "killswitch", false,
-           "Stop parsing if subparser set reaches or exceeds the given size. "
-           + "This protects against subparser exponential explosion.  An "
-           + "error message will be reported.").
+              "Stop parsing if subparser set reaches or exceeds the given size. "
+                      + "This protects against subparser exponential explosion.  An "
+                      + "error message will be reported.").
 
       // Statistics, analyses, and timing.
       bool("preprocessorStatistics", "statisticsPreprocessor", false,
-           "Dynamic analysis of the preprocessor.").
+              "Dynamic analysis of the preprocessor.").
       bool("languageStatistics", "statisticsLanguage", false,
            "Dynamic analysis of the language usage.").
       bool("parserStatistics", "statisticsParser", false,
@@ -213,33 +225,54 @@ public class SuperC extends Tool {
            "variable is a macro used in a conditional expression before or " +
            "without being defined").
       bool("headerGuards", "headerGuards", true,
-           "Report a list of all header guard macros.  Header guards are " +
-           "found with gcc's idiom: #ifndef MACRO\\n#define MACRO\\n...\\n" +
-           "#endif.").
+              "Report a list of all header guard macros.  Header guards are " +
+                      "found with gcc's idiom: #ifndef MACRO\\n#define MACRO\\n...\\n" +
+                      "#endif.").
       bool("size", "size", false,
-           "Report the size, in bytes, of the compilation unit.  This is " +
-           "the size of the main file plus the size of all headers " +
-           "for every time each header is included.").
+              "Report the size, in bytes, of the compilation unit.  This is " +
+                      "the size of the main file plus the size of all headers " +
+                      "for every time each header is included.").
       bool("time", "time", false,
-           "Running time in milliseconds broken down: " +
-           "(1) lexer, (2) preprocessor and lexer, and " +
-           "(3) parser, preprocessor and lexer.").
+              "Running time in milliseconds broken down: " +
+                      "(1) lexer, (2) preprocessor and lexer, and " +
+                      "(3) parser, preprocessor and lexer.").
+      bool("presenceConditions", "presenceConditions", false,
+              "Show presence conditions for each static conditional.").
+
+      // Validation
+      bool("checkExpressionParser", "checkExpressionParser", false,
+              "Check SuperC's expression parser against Rats!'").
+      bool("checkAST", "checkAST", false,
+              "Check SuperC's C AST against Rats!'").
 
       // Output and debugging
       bool("printAST", "printAST", false,
-           "Print the parsed AST.").
+              "Print the parsed AST.").
       bool("printSource", "printSource", false,
            "Print the parsed AST in C source form.").
+      bool("configureAllYes", "configureAllYes", false,
+           "Print all tokens of the all yes configuration of the AST.").
+      bool("configureAllNo", "configureAllNo", false,
+           "Print all tokens of the all no configuration of the AST.").
+      word("configureExceptions", "configureExceptions", false,
+              "Add exceptions to the all yes or no configuration.").
+      word("configFile", "configFile", false,
+              "Add exceptions to the all yes configuration via a linux .config file.").
       /*bool("showCPresenceCondition", "showCPresenceCondition", false,
         "Show scope changes and identifier bindings.").*/
       /*bool("traceIncludes", "traceInclude", false,
         "Show every header entrance and exit.").*/
       bool("showErrors", "showErrors", true,
-           "Emit preprocessing and parsing errors to standard err.").
+              "Emit preprocessing and parsing errors to standard err.").
       bool("showAccepts", "showAccepts", false,
            "Emit ACCEPT messages when a subparser accepts input.").
       bool("showActions", "showActions", false,
-           "Show all parsing actions.").
+              "Show all parsing actions.").
+      bool("showFM", "showFM", false,
+           "Show all forks and merges.").
+      bool("showLookaheads", "showLookaheads", false,
+           "Show lookaheads on each parse loop (warning: very voluminous "
+           + "output!)").
       bool("macroTable", "macroTable", false,
            "Show the macro symbol table.")
       ;
@@ -250,9 +283,7 @@ public class SuperC extends Tool {
    * Include command-line headers. Process command-line and built-in macros.
    */
   public void prepare() {
-
     // Configure optimizations options.
-
     boolean explicitOptimizations = runtime.hasPrefixValue("optimize");
     boolean doNotOptimize
       = runtime.hasValue("doNotOptimize")
@@ -272,6 +303,12 @@ public class SuperC extends Tool {
                     + "with Onone because it does not use the follow set.");
     }
 
+    // Check configure options
+    if (runtime.hasValue("configureAllYes") && runtime.test("configureAllYes") &&
+        runtime.hasValue("configureAllNo") && runtime.test("configureAllNo")) {
+      runtime.error("pick either configureAllYes or configureAllNo, but not " +
+                    "both");
+    }
 
     // Now, fill in the defaults.
     if (explicitOptimizations || doNotOptimize || naiveFMLR) {
@@ -287,16 +324,11 @@ public class SuperC extends Tool {
     }
 
 
-
-
     // Use the Java implementation of JavaBDD. Setting it here means
     // the user doesn't have to set it on the commandline.
-
     System.setProperty("bdd", "java");
-    
 
     // Get preprocessor settings.
-
     iquote = new LinkedList<String>();
     I = new LinkedList<String>();
     sysdirs = new LinkedList<String>();
@@ -310,7 +342,6 @@ public class SuperC extends Tool {
     // ""                     ""     ""   ""     ""
     //                               <>   <>     <>
     //                                    marked system headers 
-    
     if (!runtime.test("nostdinc")) {
       for (int i = 0; i < Builtins.sysdirs.length; i++) {
         sysdirs.add(Builtins.sysdirs[i]);
@@ -429,7 +460,9 @@ public class SuperC extends Tool {
     HeaderFileManager fileManager;
     MacroTable macroTable;
     PresenceConditionManager presenceConditionManager;
-    Stream preprocessor;
+    ExpressionParser expressionParser;
+    ConditionEvaluator conditionEvaluator;
+    Iterator<Syntax> preprocessor;
     Node result = null;
     StopWatch parserTimer = null, preprocessorTimer = null, lexerTimer = null;
 
@@ -444,37 +477,69 @@ public class SuperC extends Tool {
     if (runtime.test("lexer")
         || runtime.test("lexerNoPrint")
         || runtime.test("directiveParser")) {
-
       // Just do lexing and/or directive parsing, print the tokens and
       // quit if these options are selected.
+      final CLexer clexer = new CLexer(in);
+      clexer.setFileName(file.getName());
 
-      Stream stream;
-      Syntax syntax;
+      Iterator<Syntax> stream = new Iterator<Syntax>() {
+          Syntax syntax;
+    
+          public Syntax next() {
+            try {
+              syntax = clexer.yylex();
+            } catch (IOException e) {
+              e.printStackTrace();
+              throw new RuntimeException();
+            }
+            return syntax;
+          }
+    
+          public boolean hasNext() {
+            return syntax.kind() != Kind.EOF;
+          }
 
-      stream = new CLexerStream(in, file.getName());
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
 
       if (runtime.test("directiveParser")) {
         stream = new DirectiveParser(stream, file.getName());
       }
 
-      syntax = stream.scan();
+      Syntax syntax = stream.next();
 
       while (syntax.kind() != Kind.EOF) {
         if (! runtime.test("lexerNoPrint")) {
           System.out.print(syntax.toString());
         }
-        syntax = stream.scan();
+        syntax = stream.next();
       }
 
       return null;
     }
 
-
     // Initialize the preprocessor with built-ins and command-line
     // macros and includes.
     
     macroTable = new MacroTable(runtime, tokenCreator, null);
+      macroTable
+              .getConfigurationVariables(runtime.test("configurationVariables"));
+      macroTable.getHeaderGuards(runtime.test("headerGuards"));
+      if (null != runtime.getString("TypeChef-x")) {
+          macroTable.restrictPrefix(runtime.getString("TypeChef-x"));
+      }
     presenceConditionManager = new PresenceConditionManager();
+    if (runtime.test("checkExpressionParser")) {
+      expressionParser = ExpressionParser.comparator(presenceConditionManager);
+    } else {
+      // expressionParser = ExpressionParser.fromSuperC(presenceConditionManager);
+      expressionParser = ExpressionParser.fromRats();
+    }
+    conditionEvaluator = new ConditionEvaluator(expressionParser,
+                                                presenceConditionManager,
+                                                macroTable);
 
     if (null != commandline) {
       Syntax syntax;
@@ -488,90 +553,105 @@ public class SuperC extends Tool {
 
       fileManager = new HeaderFileManager(commandline,
                                           new File("<command-line>"),
-                                          iquote, I, sysdirs, runtime,
-                                          tokenCreator, lexerTimer);
-      preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+                                          iquote, I, sysdirs, runtime, tokenCreator,
+                                          lexerTimer);
+      fileManager.collectStatistics(runtime.test("statisticsPreprocessor"));
+      fileManager.showErrors(runtime.test("showErrors"));
+      fileManager.doTiming(runtime.test("time"));
+
+      preprocessor = new Preprocessor(fileManager,
+                                      macroTable,
+                                      presenceConditionManager,
+                                      conditionEvaluator,
                                       tokenCreator, runtime);
+      ((Preprocessor) preprocessor)
+        .collectStatistics(runtime.test("statisticsPreprocessor"));
+      ((Preprocessor) preprocessor)
+        .showErrors(runtime.test("showErrors"));
 
       if (runtime.test("time")) {
-        preprocessor = new StreamTimer(preprocessor, preprocessorTimer);
+        preprocessor = new StreamTimer<Syntax>(preprocessor, preprocessorTimer);
       }
       
       do {
-        syntax = preprocessor.scan();
+        syntax = preprocessor.next();
       } while (syntax.kind() != Kind.EOF);
 
       commandline = null;
     }
     
-    fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
-                                        tokenCreator, lexerTimer);
+    fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs,     runtime,
+                                        tokenCreator, lexerTimer,
+                                        runtime.getString(xtc.util.Runtime.INPUT_ENCODING));
+    fileManager.collectStatistics(runtime.test("statisticsPreprocessor"));
+    fileManager.showErrors(runtime.test("showErrors"));
+    fileManager.doTiming(runtime.test("time"));
 
-    preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,
+    preprocessor = new Preprocessor(fileManager,
+                                    macroTable,
+                                    presenceConditionManager,
+                                    conditionEvaluator,
                                     tokenCreator, runtime);
     
+    ((Preprocessor) preprocessor)
+      .collectStatistics(runtime.test("statisticsPreprocessor"));
+    ((Preprocessor) preprocessor)
+      .showErrors(runtime.test("showErrors"));
+    ((Preprocessor) preprocessor)
+      .showPresenceConditions(runtime.test("presenceConditions"));
+
     if (runtime.test("time")) {
-      preprocessor = new StreamTimer(preprocessor, preprocessorTimer);
+      preprocessor = new StreamTimer<Syntax>(preprocessor, preprocessorTimer);
     }
       
     // Run SuperC.
-
     if (runtime.test("follow-set")) {
-
       // Compute the follow-set of each token of the preprocessed
       // input.
-      
 
       // Initialize a parser to use it's follow-set method and ordered
       // syntax class.
-
-      ForkMergeParser parser;
-      parser = new ForkMergeParser(preprocessor, presenceConditionManager,
-                                   new CActions(runtime), runtime);
-
+      CParsingContext initialParsingContext = new CParsingContext();
+      initialParsingContext
+        .collectStatistics(runtime.test("statisticsLanguage"));
+      CSemanticActions actions = CSemanticActions.getInstance();
+      actions.collectStatistics(runtime.test("statisticsLanguage"));
+      ForkMergeParser parser
+        = new ForkMergeParser(CParseTables.getInstance(),
+                              CSemanticValues.getInstance(), actions,
+                              initialParsingContext, preprocessor,
+                              presenceConditionManager);
+      initialParsingContext.free();
 
       // Initialize the the token stream.  Only pass ordinary tokens
       // and conditionals to the follow-set.
-
       preprocessor = new TokenFilter(preprocessor);
 
       ForkMergeParser.OrderedSyntax ordered
         = parser.new OrderedSyntax(preprocessor);
 
-
       // A stack of presence conditions.  Used to store the presence
       // conditions of nested conditionals.
-
       LinkedList<PresenceCondition> presenceConditions = new LinkedList<PresenceCondition>();
 
       presenceConditions.addLast(presenceConditionManager.new PresenceCondition(true));
 
-
       // Read each token from the token stream until EOF.
-      
       while (true) {
-
         ordered = ordered.getNext();
         Syntax syntax = ordered.syntax;
-
 
         // The presence condition of the current token.  For
         // conditionals, it the presence condition of their parent
         // conditional branch (or true if they are at the top-level of
         // the source code.
-
         PresenceCondition presenceCondition;
 
-
         // Print the token.
-
         System.out.print("SYNTAX " + syntax.toString().trim());
 
-
         if (syntax.kind() == Kind.CONDITIONAL) {
-
           // Update the presence condition.
-
           Conditional conditional = syntax.toConditional();
 
           switch (conditional.tag()) {
@@ -595,18 +675,13 @@ public class SuperC extends Tool {
             throw new UnsupportedOperationException();
           }
         } else {
-
           // Print the presence condition.
-
           presenceCondition = presenceConditions.getLast();
           System.out.print(" ::: " + presenceConditions.getLast().toString());
         }
-
         System.out.print("\n");
 
-
         // Print the follow set.
-
         if (syntax.kind() == Kind.LANGUAGE
             || syntax.kind() == Kind.EOF
             || syntax.kind() == Kind.CONDITIONAL
@@ -621,28 +696,26 @@ public class SuperC extends Tool {
           for (Integer i : follow.keySet()) {
             ForkMergeParser.Lookahead l = follow.get(i);
 
-            System.out.println("  " + l.token.syntax.toString() + " ::: " + l.presenceCondition);
+            System.out.println("  " + l.token.syntax.toString() + " ::: "
+                               + l.presenceCondition);
           }
           System.out.print("]\n\n");
         } else {
           System.out.print("\n");
         }
 
-
         if (syntax.kind() == Kind.EOF) break;
       }
-
-
     } else if (runtime.test("E") || runtime.test("preprocessor")) {
-
       // Run the SuperC preprocessor only.
-
       Syntax syntax;
       boolean seenNewline = true;
       
-      syntax = preprocessor.scan();
+      syntax = preprocessor.next();
 
-      LinkedList<PresenceCondition> parents = new LinkedList<PresenceCondition>();
+      LinkedList<PresenceCondition> parents
+        = new LinkedList<PresenceCondition>();
+
       parents.push(presenceConditionManager.new PresenceCondition(true));
       while (syntax.kind() != Kind.EOF) {
         if (! runtime.test("statisticsPreprocessor")
@@ -651,13 +724,15 @@ public class SuperC extends Tool {
               || syntax.kind() == Kind.LAYOUT
               || syntax.kind() == Kind.CONDITIONAL
               || (syntax.kind() == Kind.DIRECTIVE
-                  && syntax.toDirective().tag() == DirectiveTag.LINEMARKER)) {
+                  && syntax.toDirective().tag() == DirectiveTag.LINEMARKER)
+              || syntax.kind() == Kind.ERROR) {
 
             // Add a newline before a conditional directive or a
             // linemarker to mimic correct preprocessor directive
             // usage.
             if ((syntax.kind() == Kind.CONDITIONAL
-                 || syntax.kind() == Kind.DIRECTIVE)
+                 || syntax.kind() == Kind.DIRECTIVE
+                 || syntax.kind() == Kind.ERROR)
                 && ! seenNewline) {
               System.out.print("\n");
               seenNewline = true;
@@ -673,18 +748,20 @@ public class SuperC extends Tool {
                 && syntax.kind() == Kind.CONDITIONAL) {
               switch (syntax.toConditional().tag()) {
               case START:
-                PresenceCondition restrict1
-                  = syntax.toConditional().presenceCondition.simplify(parents.peek());
+                PresenceCondition restrict1 = syntax.toConditional()
+                  .presenceCondition.simplify(parents.peek());
                 parents.push(syntax.toConditional().presenceCondition.addRef());
-                System.out.print(new Conditional(ConditionalTag.START, restrict1));
+                System.out.print(new Conditional(ConditionalTag.START,
+                                                 restrict1));
                 break;
 
               case NEXT:
                 parents.pop().delRef();
-                PresenceCondition restrict2
-                  = syntax.toConditional().presenceCondition.simplify(parents.peek());
+                PresenceCondition restrict2 = syntax.toConditional()
+                  .presenceCondition.simplify(parents.peek());
                 parents.push(syntax.toConditional().presenceCondition.addRef());
-                System.out.print(new Conditional(ConditionalTag.NEXT, restrict2));
+                System.out.print(new Conditional(ConditionalTag.NEXT,
+                                                 restrict2));
                 break;
 
               case END:
@@ -700,12 +777,10 @@ public class SuperC extends Tool {
             if (syntax.kind() == Kind.LAYOUT && ((Layout) syntax).hasNewline()
                 && syntax.getTokenText().endsWith("\n")) {
               seenNewline = true;
-
             } else if (syntax.kind() == Kind.CONDITIONAL
                        || syntax.kind() == Kind.DIRECTIVE) {
               System.out.print("\n");
               seenNewline = true;
-
             } else {
               seenNewline = false;
             }
@@ -718,7 +793,7 @@ public class SuperC extends Tool {
           syntax.toConditional().presenceCondition.delRef();
         }
 
-        syntax = preprocessor.scan();
+        syntax = preprocessor.next();
       }
     } else {
       // Run the SuperC preprocessor and parser.
@@ -728,13 +803,119 @@ public class SuperC extends Tool {
       // Only pass ordinary tokens and conditionals to the parser.
       preprocessor = new TokenFilter(preprocessor);
 
-      parser = new ForkMergeParser(preprocessor, presenceConditionManager,
-                                   new CActions(runtime), runtime);
+      // Create a new semantic values class for C.
+      SemanticValues semanticValues;
+      if (runtime.test("statisticsLanguage")) {
+        // Modify the semantic values class to collect statistics on C
+        // statements and declarations.
+        final HashSet<String> trackedProductions = new HashSet<String>();
+
+        // Statement and ExternalDeclaration are marked passthrough,
+        // so we won't see them.  Instead look for their children.
+        trackedProductions.add("Declaration");
+        trackedProductions.add("LabeledStatement");    // Statements
+        trackedProductions.add("CompoundStatement");
+        trackedProductions.add("ExpressionStatement");
+        trackedProductions.add("SelectionStatement");
+        trackedProductions.add("IterationStatement");
+        trackedProductions.add("JumpStatement");
+        trackedProductions.add("AssemblyStatement");
+        trackedProductions.add("FunctionDefinition");  // ExternalDeclarations
+        trackedProductions.add("AssemblyDefinition");
+        trackedProductions.add("EmptyDefinition");
+
+        semanticValues = new CSemanticValues() {
+            public Object getValue(int id, String name, Pair<Object> values) {
+              Object value = super.getValue(id, name, values);
+
+              if (trackedProductions.contains(name)) {
+                // Get the location of the production.
+                Location location = getProductionLocation(value);
+
+                // Emit the marker.
+                runtime.errConsole().pln(String.format("c_construct %s %s",
+                                                       name, location)).flush();
+              }
+
+              return value;
+            }
+          };
+      } else {
+        semanticValues = CSemanticValues.getInstance();
+      }
+      
+      CSemanticActions actions = CSemanticActions.getInstance();
+      actions.collectStatistics(runtime.test("statisticsLanguage"));
+
+      CParsingContext initialParsingContext = new CParsingContext();
+      initialParsingContext
+        .collectStatistics(runtime.test("statisticsLanguage"));
+
+      parser = new ForkMergeParser(CParseTables.getInstance(), semanticValues,
+                                   actions, initialParsingContext,
+                                   preprocessor, presenceConditionManager);
+      parser.saveLayoutTokens(runtime.test("printSource") 
+                              || runtime.test("configureAllYes")
+                              || runtime.test("configureAllNo")
+                              || runtime.getString("configFile") != null);
+      parser.setLazyForking(runtime.test("optimizeLazyForking"));
+      parser.setSharedReductions(runtime.test("optimizeSharedReductions"));
+      parser.setEarlyReduce(runtime.test("optimizeEarlyReduce"));
+      parser.setLongestStack(runtime.test("platoffOrdering"));
+      parser.setEarlyShift(runtime.test("earlyShift"));
+      parser.setFollowSetCaching(! runtime.test("noFollowCaching"));
+      parser.collectStatistics(runtime.test("statisticsParser"));
+      parser.showActions(runtime.test("showActions"));
+      parser.showErrors(runtime.test("showErrors"));
+      parser.showAccepts(runtime.test("showAccepts"));
+      parser.showFM(runtime.test("showFM"));
+      parser.showLookaheads(runtime.test("showLookaheads"));
+
+      if (runtime.hasValue("killswitch")
+          && null != runtime.getString("killswitch")) {
+        try {
+          int cutoff = Integer.parseInt(runtime.getString("killswitch"));
+
+          if (cutoff <= 0) {
+            throw new NumberFormatException("the -killswitch flag takes a "
+                                            + "positive, non-zero integer");
+          }
+          parser.setKillSwitch(cutoff);
+        } catch (NumberFormatException e) {
+          throw new NumberFormatException("the -killswitch flag takes a "
+                                          + "positive, non-zero integer");
+        }
+      }
 
       if (runtime.test("naiveFMLR")) {
         translationUnit = parser.parseNaively();
       } else {
         translationUnit = parser.parse();
+      }
+
+      if (null != translationUnit
+          && ! ((Node) translationUnit).getName().equals("TranslationUnit")) {
+        GNode tu = GNode.create("TranslationUnit");
+        tu.add(translationUnit);
+        translationUnit = tu;
+      }
+
+      initialParsingContext.free();
+
+      if (runtime.test("checkAST")) {
+        FileReader ratsReader = new FileReader(file);
+        CParser ratsParser
+          = new CParser(ratsReader, file.toString(), (int)file.length());
+        Result  ratsResult = ratsParser.pTranslationUnit(0);
+        Node rats = (Node) ratsParser.value(ratsResult);
+        Node superc = (Node) translationUnit;
+
+        if (! TreeComparator.getInstance().traverse(superc, rats)) {
+          System.err.println("superc: " + superc);
+          System.err.println("rats:   " + rats);
+
+          throw new RuntimeException("C asts are different");
+        }
       }
 
       if (runtime.test("printAST")) {
@@ -753,12 +934,256 @@ public class SuperC extends Tool {
         writer.flush();
       }
 
+      if (runtime.test("configureAllYes") || runtime.test("configureAllNo")) {
+        OutputStreamWriter writer = new OutputStreamWriter(System.out);
+        boolean defaultSetting = runtime.test("configureAllYes") ? true : false;
+        List<String> clExceptions = null != runtime.getString("configureExceptions") ?
+          Arrays.asList(runtime.getString("configureExceptions").split(",")) :
+          null;
+      
+        List<String> exceptions = new LinkedList<String>();
+        Map<String, String> nonbooleans = new HashMap<String, String>();
+        ConditionEvaluator evaluator = null;
+        BDD configuration;
+
+        if (null != clExceptions) {
+          exceptions.addAll(clExceptions);
+        }
+
+        if (null != runtime.getString("configFile")) {
+          BufferedReader configFile =
+            new BufferedReader(new FileReader(runtime.getString("configFile")));
+          String line;
+
+          // Turn on the configuration variables from a linux .config
+          // file
+          while (null != (line = configFile.readLine())) {
+            if (line.length() == 0) continue;
+            if (line.startsWith("#")) continue;
+            if (line.endsWith("=y")) {  // boolean and tristate
+              String exception =
+                "(defined " + line.substring(0,line.length() - 2) + ")";
+              exceptions.add(exception);
+            } else { // non-boolean
+              String[] def = line.split("=");
+              String exception = "(defined " + def[0] + ")";
+              exceptions.add(exception);
+              nonbooleans.put(def[0], def[1]);
+            }
+          }
+        }
+
+        // PresenceCondition t = presenceConditionManager.new PresenceCondition(true);
+        // macroTable._define("CONFIG_64BIT", new MacroTable.Macro.Object(null), t);
+
+        // StringBuilder sb;
+        // String name = "BITS_PER_LONG";
+        // // String name = "CONFIG_64BIT";
+    
+        // sb = new StringBuilder();
+        
+        // sb.append(name);
+        // sb.append("\n");
+        // sb.append("-------------------------------------------");
+        // sb.append("\n");
+        // for (MacroTable.Entry e : macroTable.table.get(name)) {
+        //   sb.append(e);
+        //   sb.append("\n");
+        // }
+        // sb.append("\n");
+
+        // System.err.println(sb.toString());
+
+        if (null != nonbooleans) {
+          evaluator = new ConditionEvaluator(ExpressionParser.fromRats(),
+                                             presenceConditionManager,
+                                             macroTable);
+        }
+
+        configuration = presenceConditionManager.
+          createConfiguration(defaultSetting, exceptions);
+        System.err.println("Configure AST");
+
+        configureAST((Node) translationUnit, configuration, nonbooleans, writer);
+        configuration.free();
+
+        writer.flush();
+      } else if (null != runtime.getString("configFile")) {
+        OutputStreamWriter writer = new OutputStreamWriter(System.out);
+        Map<String, String> nonbooleans = new HashMap<String, String>();
+        BufferedReader configFile =
+          new BufferedReader(new FileReader(runtime.getString("configFile")));
+        List<String> clExceptions = null != runtime.getString("configureExceptions") ?
+          Arrays.asList(runtime.getString("configureExceptions").split(",")) :
+          null;
+        PresenceCondition t =
+          presenceConditionManager.new PresenceCondition(true);
+        Iterator<String> clIterator = null != clExceptions ? clExceptions.iterator()
+          : null;
+        String line;
+        HashSet<String> configuredVars = new HashSet<String>();
+
+        // Put the config file definitions into the macro symbol table
+        while (null != (line = configFile.readLine()) ||
+               clIterator != null &&
+               clIterator.hasNext() &&
+               null != (line = clIterator.next())) {
+          if (line.length() == 0) {
+            continue;
+          } else if (line.startsWith("# ") && line.endsWith(" is not set")) {
+            String var_name = line.substring(2,line.length() - " is not set".length());
+            macroTable._define(var_name,
+                               MacroTable.Macro.undefined,
+                               t);
+            configuredVars.add(var_name);
+          } else if (line.startsWith("#")) { // ignore comments other than undefined config vars
+            continue;
+          } else if (line.endsWith("=y")) {  // store boolean and tristate config vars
+            String var_name = line.substring(0,line.length() - 2);
+            // if (var_name.equals("__KERNEL__")) System.err.println("before define " + macroTable.contains("__KERNEL__"));
+            macroTable._define(var_name,
+                               new MacroTable.Macro.Object(null),
+                               t);
+            configuredVars.add(var_name);
+            // if (var_name.equals("__KERNEL__")) System.err.println("after define " + macroTable.contains("__KERNEL__"));
+          } else { // store non-boolean config var defs
+            String[] def = line.split("=");
+            List<Syntax> def_list = new LinkedList<Syntax>();
+            final CLexer clexer;
+            Syntax syntax = null;
+
+            if (def.length > 1) {
+              clexer = new CLexer(new StringReader(def[1]));
+              clexer.setFileName("config file");
+
+              while (true) {
+                try {
+                  syntax = clexer.yylex();
+                } catch (IOException e) {
+                  e.printStackTrace();
+                  throw new RuntimeException();
+                }
+                if (syntax.kind() == Kind.EOF) break;
+                def_list.add(syntax);
+              }
+              macroTable._define(def[0],
+                                 new MacroTable.Macro.Object(def_list),
+                                 t);
+              nonbooleans.put(def[0], def[1]);
+              configuredVars.add(def[0]);
+            } else {
+              // System.err.println("wrong " + line);
+            }
+          }
+        }
+
+        // Pull any other macros not defined in the config file to false
+        for (String var_name : macroTable.table.keySet()) {
+          if (! configuredVars.contains(var_name)) {
+            macroTable._define(var_name,
+                               MacroTable.Macro.undefined,
+                               t);
+          }
+        }
+
+        // StringBuilder sb;
+        // // String name = "__KERNEL__";
+        // // String name = "BITS_PER_LONG";
+        // // String name = "CONFIG_64BIT";
+        // // String name = "__CHECKER__";
+        // String name = "__section";
+    
+        // sb = new StringBuilder();
+        
+        // sb.append(name);
+        // sb.append("\n");
+        // sb.append("-------------------------------------------");
+        // sb.append("\n");
+        // for (MacroTable.Entry e : macroTable.table.get(name)) {
+        //   sb.append(e);
+        //   sb.append("\n");
+        // }
+        // sb.append("\n");
+
+        // System.err.println(sb.toString());
+
+        // Evaluate each BDD variable according to the Linux .config
+        // file settings.
+        BDD configuration = presenceConditionManager.new PresenceCondition(true).getBDD();
+        int var_idx = 0;
+        String var_name = null;
+
+        // conditionEvaluator.setPullUndefinedFalse(true);
+        while (null != (var_name = presenceConditionManager.getVariableManager().getName(var_idx++))) {
+          String var_cond = "#if " + var_name + "\n#else\n#endif\n";
+          // System.err.println(var_cond);
+          HeaderFileManager var_filemanager =
+            new HeaderFileManager(new StringReader(var_cond),
+                                  new File(var_name),
+                                  null, null, null, runtime, null, null);
+          // System.err.println("current: " + presenceConditionManager.reference().isTrue())
+            ;
+          Preprocessor var_evaluator =
+            new Preprocessor(var_filemanager,
+                             macroTable,
+                             presenceConditionManager,
+                             conditionEvaluator,
+                             tokenCreator, runtime);
+
+          Syntax syntax = var_evaluator.next();
+
+          if (syntax.kind() == Kind.CONDITIONAL) {
+            PresenceCondition presult = ((Conditional) syntax).presenceCondition();
+            // if (var_name.equals("(defined __KERNEL__)")) {
+            //   System.err.println("after configure " + var_name);
+            //   System.err.println("after configure " + var_cond);
+            //   System.err.println("after configure " + presult.toString());
+            // }
+            if (presult.isTrue()) {
+              configuration.andWith(presenceConditionManager.getVariableManager().getVariable(var_name));
+              // System.err.println("FJDSKL");
+            } else // if (presult.isFalse())
+              {
+              BDD ith = presenceConditionManager.getVariableManager().getVariable(var_name);
+              BDD not = ith.not();
+              ith.free();
+              configuration.andWith(not);
+              // System.err.println("noonononon");
+            } // else {
+            //   System.err.println("unresolved expression");
+            //   System.err.println(var_name + " " + presult.toString());
+            //   System.exit(1);
+            // }
+          } else {
+            System.err.println("handle incorrect evaluation");
+            System.exit(1);
+          }
+
+          while (syntax.kind() != Kind.EOF) syntax = var_evaluator.next();
+        }
+
+        // Evaluate each macro in the macro table until each is
+        // unconditionally defined.
+
+        // After parsing, replace identifiers, recursively evaluate if
+        // necessary
+
+        // // Evaluate each BDD it using the above evaluator
+        // BDD configuration = presenceConditionManager.evaluateBDDs(visitor);
+
+        System.err.println("Configure AST");
+        configureAST((Node) translationUnit, configuration, nonbooleans, writer);
+        configuration.free();
+
+        writer.flush();
+      }
+
       if (runtime.test("statisticsParser")) {
         IdentityHashMap<Object, Integer> seen
           = new IdentityHashMap<Object, Integer>();
-        runtime.errConsole()
-          .pln(String.format("dag_nodes %d",
-                             dagNodeCount((Node) translationUnit, seen)));
+        int count = dagNodeCount((Node) translationUnit, seen);
+        runtime.errConsole().pln(String.format("dag_nodes %d", count));
+
         int shared = 0;
         for (Integer i : seen.values()) {
           if (i > 1) {
@@ -772,9 +1197,7 @@ public class SuperC extends Tool {
       result = (Node) translationUnit;
     }
     
-
     // Print optional statistics and debugging information.
-
     if (runtime.test("macroTable")) {
       System.err.println("Macro Table");
       System.err.println(macroTable);
@@ -808,6 +1231,28 @@ public class SuperC extends Tool {
     }
 
     return result;
+  }
+
+  /**
+   * Get location of a production given its value.
+   *
+   * @param value The value of the production.
+   * @return The location.
+   */
+  static Location getProductionLocation(Object value) {
+    if (value instanceof Node) {
+      for (Object o : (Node) value) {
+        Location location = getProductionLocation(o);
+
+        if (null != location) {
+          return location;
+        }
+      }
+
+      return ((Node) value).getLocation();
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -856,6 +1301,66 @@ public class SuperC extends Tool {
       } else {
         for (Object o : n) {
           printSource((Node) o, presenceCondition, writer);
+        }
+      }
+
+    } else {
+      throw new UnsupportedOperationException("unexpected type");
+    } 
+  }
+
+  /**
+   * Print one configuration of an AST (or a subtree of it) as C
+   * source code.
+   *
+   * @param n An AST or a subtree.
+   * @param configuration A BDD containing the configuration settings.
+   * @param writer The writer.
+   * @throws IOException Because it writes to output. 
+   */
+  private static void configureAST(Node n,
+                                   BDD configuration,
+                                   Map<String,String> nonbooleans,
+                                   OutputStreamWriter writer)
+    throws IOException {
+    if (n.isToken()) {
+      if (nonbooleans.containsKey(n.getTokenText())) {
+        writer.write(nonbooleans.get(n.getTokenText()));
+      } else {
+        writer.write(n.getTokenText());
+      }
+      writer.write(" ");
+
+    } else if (n instanceof Node) {
+
+      if (n instanceof GNode
+          && ((GNode) n).hasName(ForkMergeParser.CHOICE_NODE_NAME)) {
+
+        // Pick the first choice that satistifies the configuration
+
+        boolean printNextNode = false;
+        PresenceCondition branchCondition = null;
+
+        for (Object bo : n) {
+          if (bo instanceof PresenceCondition) {
+            BDD restricted;
+            boolean satisfies;
+
+            branchCondition = (PresenceCondition) bo;
+
+            restricted = branchCondition.getBDD().restrict(configuration.id());
+            printNextNode = !restricted.isZero();
+            restricted.free();
+          } else if (bo instanceof Node) {
+              if (printNextNode) {
+              configureAST((Node) bo, configuration, nonbooleans, writer);
+            }
+          }
+        }
+        writer.write("\n");
+      } else {
+        for (Object o : n) {
+          configureAST((Node) o, configuration, nonbooleans, writer);
         }
       }
 

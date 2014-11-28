@@ -1,6 +1,5 @@
 package xtc.lang.blink;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -88,82 +87,79 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * Start a JDB process.
    * @param args The JDB extra argument.
    */
-  public void startListening(final String args) throws IOException {
-    final String jdbCommand = "jdb -listenany " + args;
-    if (dbg.options.getVerboseLevel() >= 1) {
-      dbg.out("executing: " + jdbCommand + "\n");
+  public void startListening(final String[] args) {
+    final List<String> cmd = new LinkedList<String>();
+    for(String a: new String[] {"jdb", "-listenany",}) {
+      cmd.add(a);
     }
-    begin(jdbCommand.split("\\s+"));;
+    for(String a:args) {
+      cmd.add(a);
+    }
+    begin(cmd.toArray(new String[0]));
   }
 
-  public boolean initAgent() throws IOException {
-    //install internal breakpoint.
-    raeJDB("stop in " + BDA_AGENT_NAME + "." + BDA_JBP + "\n");
-    return true;
-  }
-  
-  public int getJVMProcessID() throws IOException {
-    String pidString = evalAgentMethod(BDA_GETPROCESSID);
-    int pid= Integer.parseInt(pidString);
-    return pid;  
-  }
-
-  public void j2c() throws IOException {
+  public void j2c()  {
     sendMessage("eval " + BDA_AGENT_NAME + "." + BDA_J2C + "()\n");
     j2c_pending = true;
   }
 
-  public void run() throws IOException {
+  public void run()  {
     sendMessage("run\n");
   }
 
   /** Let the Debugee continue.*/
-  public void cont() throws IOException {
+  public void cont()  {
     sendMessage("cont\n");
   }
   
-  public void step() throws IOException {
+  public void step()  {
     sendMessage("step\n");
   }
 
-  public void next() throws IOException {
+  public void next()  {
     sendMessage("next\n");
   }
 
-  public void stepi() throws IOException {
+  public void stepi()  {
     raeJDB("stepi\n");
   }
 
-  public void exit() throws IOException {
+  public void exit()  {
     sendMessage("exit\n");
   }
 
-  public void setLoadLibraryEvent() throws IOException {
+  public void setLoadLibraryEvent()  {
     raeJDB("stop in java.lang.System.loadLibrary\n");
   }
 
-  public void resetLoadLibraryEvent() throws IOException {
+  public void resetLoadLibraryEvent()  {
     raeJDB("clear java.lang.System.loadLibrary\n");
   }
 
-  public void prepareLoadLibrary() throws IOException {
+  public void prepareLoadLibrary()  {
     raeJDB("step up\n");
   }
 
-  public void setBreakPoint(String className, int line) throws IOException {
+  public void setBreakPoint(String className, int line)  {
     raeJDB("stop at " + className + ":" + line + "\n");
   }
 
-  public void clearBreakPoint(String classNameAndMethod, int line) throws IOException {
+  public void clearBreakPoint(String classNameAndMethod, int line)  {
     raeJDB("clear " + classNameAndMethod + ":" + line + "\n");  
   }
 
-  public void setBreakPoint(String classNameAndMethod) throws IOException {
+  public void setBreakPoint(String classNameAndMethod)  {
     raeJDB("stop in " + classNameAndMethod + "\n");
   }
 
-  public void clearBreakPoint(String classNameAndMethod) throws IOException {
+  public void clearBreakPoint(String classNameAndMethod)  {
     raeJDB("clear " + classNameAndMethod + "\n");  
+  }
+
+  public String eval(String jexpr)  {
+    String cmd = String.format("eval %s\n", jexpr);
+    String value =raeJDB(cmd, ".+ = (.+)\\n" + "(?:.*\\n)*\\S+\\[\\d+\\] ").group(1);
+    return value;
   }
 
   /**
@@ -172,7 +168,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * 
    * @return The list of java stack frames.
    */
-  public List<JavaCallFrame> getFrames() throws IOException {
+  public List<JavaCallFrame> getFrames()  {
     // run the jdb command.
     String output = raeJDB("where\n");
 
@@ -182,7 +178,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
         + "\\[([0-9]+)\\]" + "\\s+"       // frame id -- > g1
         + "((\\S+)\\.([^\\.]+))" + "\\s+" // class(g3) and method(g4)
         + "("                             // g5
-          + "\\(([^:]+):([0-9]+)\\)"      // sourceName(g6) and Line(g7) 
+          + "\\(([^:]+):([0-9,]+)\\)"      // sourceName(g6) and Line(g7) 
           + "|"                           // or
           + "(\\(native method\\))"       // "(native frame)"(g8)
         +")" 
@@ -198,7 +194,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
       String className = m.group(3);
       String methodName = m.group(4);
       String srcFile= m.group(6);
-      int lineno = m.group(7) == null ? -1: Integer.parseInt(m.group(7));
+      int lineno = m.group(7) == null ? -1: Integer.parseInt(m.group(7).replace(",", ""));
       boolean isTransition = m.group(8) != null;
 
       if (srcFile != null && srcFile.equals(BDA_AGENT_SOURCE_FILE)) {
@@ -218,7 +214,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
   }
 
   /** Get current location. */
-  public SourceFileAndLine getCurrentLocation() throws IOException {
+  public SourceFileAndLine getCurrentLocation()  {
     List<JavaCallFrame> list = getFrames();
     SourceFileAndLine loc = null; 
     if (list.size() > 0 ) {
@@ -241,7 +237,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * @param jframe The frame.
    * @return The source line.
    */
-  String getSourceLine(JavaCallFrame jframe) throws IOException {
+  String getSourceLine(JavaCallFrame jframe)  {
     selectFrame(jframe);
     String lines = raeJDB("list\n");
     String line = "";
@@ -263,7 +259,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * @param dbg The debugger.
    * @param jframe The Java frame.
    */
-  private void selectFrame(JavaCallFrame jframe) throws IOException {
+  private void selectFrame(JavaCallFrame jframe)  {
     DebugerControlStatus dbgControl = dbg.getDebugControlStatus(); 
     assert dbgControl == DebugerControlStatus.JDB
         || dbgControl == DebugerControlStatus.JDB_IN_GDB;
@@ -294,13 +290,13 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
     assert after == target;
   }
 
-  public String list(JavaCallFrame f) throws IOException {
+  public String list(JavaCallFrame f)  {
     assert f != null;
     selectFrame(f);
     return raeJDB("list\n");
   }
 
-  public List <LocalVariable> getLocals(JavaCallFrame f) throws IOException {
+  public List <LocalVariable> getLocals(JavaCallFrame f)  {
     LinkedList<LocalVariable> list = new LinkedList<LocalVariable>();
     assert f != null;
     selectFrame(f);
@@ -324,34 +320,30 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
     return list;
   }
 
-  public String newConvenienceVariable(JavaCallFrame f, String jexpr) 
-    throws IOException {
+  public String set_j(JavaCallFrame f, String jexpr) 
+     {
     if (f != null) {
       selectFrame(f);
     }
-    
-    String actualExpr = BDA_AGENT_VARIABLE_NAME + "." + BDA_SETVJFROMJAVAEXPR + "(" + jexpr + ")";  
+
+    String actualExpr = BDA_AGENT_VARIABLE_NAME + "." + BDA_CV_SET + "(" + jexpr + ")";  
     String vjid = raeJDB(
         "eval " + actualExpr + "\n",
         ".+ = (.+)\\n" + "(?:.*\\n)*" + "\\S+\\[\\d+\\] "
     ).group(1);
-    
+
     return vjid;
   }
 
-  public String getConvenienceVariableJNIType(String vjid) throws IOException {
-    return evalAgentVariableMethod(BDA_GETVJJNITYPE, vjid);
-  }
-  
-  public String getConvenienceVariableJavaType(String vjid) throws IOException {
-    return evalAgentVariableMethod(BDA_GETJAVATYPE, vjid);
-  }
- 
-  public String getConvenienceVariableRValueExpression(String vjid) throws IOException {
-    return evalAgentVariableMethod(BDA_getVJExpr, vjid);
+  public String getConvenienceVariableTypeName(String vjid)  {
+    return evalAgentVariableMethod(BDA_CV_GET_TYPE_NAME, vjid);
   }
 
-  public String print(JavaCallFrame f, String expr) throws IOException {
+  public String getConvenienceVariableExpression(String vjid)  {
+    return evalAgentVariableMethod(BDA_CV_GET_EXPR, vjid);
+  }
+
+  public String print(JavaCallFrame f, String expr)  {
     if (f != null) {
       selectFrame(f);
     }
@@ -362,30 +354,17 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
     return rst;
   }
 
-  public String runCommand(String cmd) throws IOException {
+  public String runCommand(String cmd)  {
     return raeJDB(cmd+ "\n");
   }
 
-  public void resetConvenienceVariables() throws IOException {
+  public void resetConvenienceVariables()  {
     raeJDB("eval " + BDA_AGENT_VARIABLE_NAME + "." + BDA_CLEANTEMPVARS + "()\n");
   }
 
   public void dispatch(Event e) {}
 
-
-  /**
-   * Execute agent's method, and return the returned value.
-   *
-   * @param mname The method name.
-   */
-  private String evalAgentMethod(String mname) throws IOException {
-    return raeJDB("eval " + BDA_AGENT_NAME + "." + mname + "()\n",
-        BDA_AGENT_NAME + "." + mname + "\\(\\) = (.+)\\n"
-        + "(?:.*\\n)*\\S+\\[\\d+\\] "
-    ).group(1);
-  }
-
-  private String evalAgentVariableMethod(String mname, String vjid) throws IOException {
+  private String evalAgentVariableMethod(String mname, String vjid)  {
     String actualExpr = BDA_AGENT_VARIABLE_NAME + "." + mname + "(" + vjid + ")";  
     String result = raeJDB(
         "eval " + actualExpr + "\n",
@@ -406,9 +385,9 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * @param expect The message to be expected from the gdb.
    * @return The matched string for the regular expression.
    */
-  private Matcher raeJDB(final String msg, String expect) throws IOException {
+  private Matcher raeJDB(final String msg, String expect)  {
     sendMessage(msg);
-    return (Matcher)EventLoop.subLoop(dbg,new RegExpReplyHandler(this, expect));
+    return (Matcher)EventLoop.subLoop(dbg, new RegExpReplyHandler(this, expect));
   }
 
   /**
@@ -417,7 +396,7 @@ public class JavaDebugger extends StdIOProcess implements AgentJavaDeclaration {
    * @param cmd The command.
    * @return The result messgage.
    */
-  private String raeJDB(final String cmd) throws IOException {
+  private String raeJDB(final String cmd) {
     return raeJDB(cmd, "((?:.+\\n)*)\\S+\\[\\d+\\] ").group(1);
   }
 

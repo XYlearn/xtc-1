@@ -228,7 +228,7 @@ for i in `find languageStatistics/ -name "*.c"`; do dynamic_analysis.sh $i; done
 datatable.sh preprocessor_statistics.txt language_statistics.txt > datatable.txt
 
 # Extract sizes and config_vars
-find preprocessorStatistics/ -type f | egrep "^Processing |^size |^config_var " > sizes_and_configs.txt
+find preprocessorStatistics/ -type f | xargs egrep "^Processing |^size |^config_var " > sizes_and_configs.txt
 
 
 #############################################################################

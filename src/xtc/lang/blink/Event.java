@@ -276,6 +276,18 @@ public abstract class Event {
     public String getMessage() {return message;}
     public String getName() {return "NativeBreakPointHit";}
   }
+  
+  static class NativeSignalEvent extends SubDebuggerEvent {
+    final String signal;
+    NativeSignalEvent(BlinkEventSource s, String signal) {
+      super(s);
+      this.signal = signal;
+    }
+    public String getName() {
+      return "SignalEvent";
+    }
+  }
+
 
   static class NativeJNIWarningEvent extends SubDebuggerEvent {
     private final String message;

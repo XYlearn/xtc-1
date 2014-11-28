@@ -28,7 +28,7 @@ public interface AgentJavaDeclaration {
   public static final String BDA_J2C = "j2c";
 
   /** Getting the process id of the target JVM.*/
-  public static final String BDA_GETPROCESSID = "getProcessID";
+  public static final String BDA_GETPROCESSID = BDA_AGENT_NAME + "." + "getProcessID" + "()";
 
   /** The native entry name to call dummy Java code. */
   public static final String BDA_DUMMY_JAVA = "dummyJava";
@@ -40,15 +40,12 @@ public interface AgentJavaDeclaration {
   public static final String BDA_CLEANTEMPVARS = "cleanTempVars";
 
   /** Creating a Java convenience variable. */
-  public static final String BDA_SETVJFROMJAVAEXPR = "setVjFromJavaExpr";
+  public static final String BDA_CV_SET = "set";
 
   /** Getting JNI type name for a Java convenience variable. */
-  public static final String BDA_GETVJJNITYPE = "get_vj_jni_type";
-
-  /** Getting Java type name for a Java convenience variable. */
-  public static final String BDA_GETJAVATYPE = "get_java_type";
+  public static final String BDA_CV_GET_TYPE_NAME = "getTypeName";
 
   /** Getting Java expression to read a Java convenience variable.*/
-  public static final String BDA_getVJExpr = "getVJExpr";
+  public static final String BDA_CV_GET_EXPR = "getJavaExpression";
 
 }

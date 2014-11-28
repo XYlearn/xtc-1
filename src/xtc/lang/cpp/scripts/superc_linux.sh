@@ -21,6 +21,7 @@
 # Run SuperC on linux files.  Gets the configuration settings from
 # kbuild by running make.
 
+# set -x
 
 ################################################################################
 ##################### Gather command-line parameters ###########################
@@ -31,7 +32,8 @@ if [[ $1 == "-?" ]]; then
 fi
 
 allArgs=
-while getopts :l:h:p:S:J:G:cPgDekL:wm:h:irvts:bTo:d: opt; do
+timeout=
+while getopts :l:h:p:S:J:G:cPgDekL:wm:h:irvts:bTK:o:d:C opt; do
     case $opt in
         l)
             fileList=$OPTARG
@@ -122,6 +124,10 @@ while getopts :l:h:p:S:J:G:cPgDekL:wm:h:irvts:bTo:d: opt; do
             testSlaves=true
             allArgs="$allArgs -T"
             ;;
+        K)
+            timeout="timeout $OPTARG"
+            allArgs="$allArgs -K \"$OPTARG\""
+            ;;
         o)
             outFile=$OPTARG
             allArgs="$allArgs -o \"$OPTARG\""
@@ -129,6 +135,10 @@ while getopts :l:h:p:S:J:G:cPgDekL:wm:h:irvts:bTo:d: opt; do
         d)
             outDir=$OPTARG
             allArgs="$allArgs -d \"$OPTARG\""
+            ;;
+        C)
+            compress=true
+            allArgs="$allArgs -C"
             ;;
         \?)
             echo "(`basename $0`)" "Invalid argument: -$OPTARG"
@@ -180,15 +190,17 @@ if [[ ! -z $help || (-z $file && -z $fileList && -z $host && -z $port && -z $ser
     echo "    -L dir           Get (L)inux configuration from dir."
     echo "    -w               (w)rite configuration to -L dir."
     echo "    -m file          (m)asquerade as file to use its configuration."
-    echo "    -i               Save (i)ntermediate files."
-    echo "    -r               Show per-file (r)untimes."
+    echo "    -r               Show per-file (r)untimes.  Depends on \"bc\"."
     echo "    -s servers.txt   Run on slave (s)ervers, not locally."
     echo "    -b               Run as slave, so ignore -s."
     echo "    -T               (T)est slave servers' SuperC installations."
+    echo "    -K seconds       (K)ill after a timeout.  Depends on \"timeout\"."
     echo ""
     echo "  OUTPUT"
     echo "    -o out           Write to out."
     echo "    -d dir           Write per-file output to dir/file."
+    echo "    -C               Compress output with bzip2."
+    echo "    -i               Save (i)ntermediate files."
     # echo "    -v               (v)erbose output."
     echo ""
 
@@ -322,6 +334,18 @@ if [[ ! -z $test ]]; then
     exit
 fi
 
+if [[ ! -z $timeout ]]; then
+    which timeout > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "The timeout utility was not found.  Can't use -K."
+        exit
+    fi
+fi
+
+if [[ ! -z $compress && -z $outDir ]]; then
+    echo "-C can only be used with -d"
+    exit
+fi
 
 ################################################################################
 ############################## Setup Files #####################################
@@ -445,16 +469,27 @@ if [ -z "$servers" ]; then
                 echo "excluded $file already written"
                 getConfigResult=0;
             elif [[ -z "$configDir" || ! -z "$writeConfigDir" ]]; then
+                # Can't override CC since it is used to emit compiler
+                # information
                 make CHECK="java xtc.lang.cpp.GCCShunt --shunt-filename $config_file --shunt-superc $header_args --shunt-kbuild --shunt-config $config_args" C=2 $obj_file
                 getConfigResult=$?
-                if [ $getConfigResult -ne 0 ]; then
-                # Try overriding CC instead of CHECK, since the file
-                # may not be compiling.
-                    make CC="java xtc.lang.cpp.GCCShunt --shunt-filename $config_file --shunt-superc $header_args --shunt-kbuild --shunt-config $config_args" C=2 $obj_file
-                    getConfigResult=$?
-                fi
-                if [ $getConfigResult -ne 0 ]; then
+                # if [ $getConfigResult -ne 0 ]; then
+                # # Try overriding CC instead of CHECK, since the file
+                # # may not be compiling.
+                #     make CC="java xtc.lang.cpp.GCCShunt --shunt-filename $config_file --shunt-superc $header_args --shunt-kbuild --shunt-config $config_args" C=2 $obj_file
+                #     getConfigResult=$?
+                # fi
+                # make -i -f $JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/Makefile.kcu ARCH=x86 \
+                #     CC="java xtc.lang.cpp.GCCShunt --shunt-filename $config_file --shunt-superc $header_args --shunt-kbuild --shunt-config $config_args" \
+                #     LD="echo ld" ar="echo ar" $obj_file
+                # getConfigResult=$?
+                cat $config_args
+                cat $header_args
+                echo $getConfigResult
+                if [[ ! -e $config_args && ! -e $header_args ]]; then
                     echo "excluded $file no configuration from make"
+                else
+                    getConfigResult=0
                 fi
             fi
 
@@ -471,7 +506,7 @@ if [ -z "$servers" ]; then
                     echo "configs_all $file`cat $config_args`"
                 elif [ ! -z "$checkParser" ]; then
                     gcc -E `cat $config_args` $gccArgs $file > $gcc_E 2>/dev/null
-                    java -ea $JAVA_ARGS $jvmFlags xtc.lang.cpp.SuperC -silent -showAccepts $supercArgs $gcc_E 2>&1 | tee $superc_out
+                    java -ea $JAVA_ARGS $jvmFlags xtc.lang.cpp.SuperC -enc-in UTF-8 -silent -showAccepts $supercArgs $gcc_E 2>&1 | tee $superc_out
                     cat $superc_out | grep ACCEPT
                     if [ $? -ne 0 ]; then
                         echo "grammar_failed $file"
@@ -488,11 +523,35 @@ if [ -z "$servers" ]; then
                 elif [ ! -z "$gccParse" ]; then
                     gcc -ftime-report -fsyntax-only `cat $config_args` $file
                 else
-                    cmd="java -ea $JAVA_ARGS $jvmFlags xtc.lang.cpp.SuperC -silent $supercArgs `cat $header_args` -include $JAVA_DEV_ROOT/data/cpp/nonbooleans.h $file"
+                    # bash is simply a terrible programming language.
+                    # that's why this mess below is needed.  it
+                    # handles quoted command-line arguments,
+                    # preventing bash from separating them into
+                    # tokens.
+                    cmd=(java -ea $JAVA_ARGS $jvmFlags xtc.lang.cpp.SuperC -enc-in UTF-8 -silent)
+                    saveifs=$IFS
+                    IFS='
+'
+                    for cmd_i in $(grep -Eo '"[^"]*"|[^" ]*' <<< "$supercArgs"); do
+                      cmd_i="${cmd_i%\"}"
+                      cmd_i="${cmd_i#\"}"
+                      cmd+=("$cmd_i")
+                    done
+                    IFS=$saveifs
+                    cmd+=(`cat $header_args` -include $JAVA_DEV_ROOT/data/cpp/nonbooleans.h $file)
+                    # # debugging output
+                    # for (( cmd_i=0; cmd_i<${#cmd[@]}; cmd_i++ )); do
+                    #   echo ${cmd[cmd_i]}
+                    # done
+                    # exit
+                    # cmd="java -ea $JAVA_ARGS $jvmFlags xtc.lang.cpp.SuperC -enc-in UTF-8 -silent $supercArgs `cat $header_args` -include $JAVA_DEV_ROOT/data/cpp/nonbooleans.h $file"
                     if [ -z $compare ]; then
                         if [ -z $outDir ]; then
                             before=`date +%s.%N`
-                            $cmd
+                            $timeout "${cmd[@]}"
+                            if [ $? -eq 124 ]; then
+                                echo "killed $file"
+                            fi
                             after=`date +%s.%N`
 
                             if [ ! -z "$runtimes" ]; then
@@ -508,10 +567,21 @@ if [ -z "$servers" ]; then
                         else
                             outDirCombined=$outDir/`dirname $file`
                             mkdir -p $outDirCombined
-                            $cmd > $outDir/$file 2>&1
+                            outFile=$outDir/$file
+                            $timeout "${cmd[@]}" > $outFile.part 2>&1
+                            if [ $? -eq 124 ]; then
+                                echo "killed $file" | tee -a $outFile.part
+                            fi
+                            mv $outFile.part $outFile
+                            if [ ! -z $compress ]; then
+                                bzip2 $outFile
+                            fi
                         fi
                     else
-                        $cmd > $superc_out
+                        $timeout "${cmd[@]}" > $superc_out
+                        if [ $? -eq 124 ]; then
+                            echo "killed $file" | tee -a $superc_out
+                        fi
                         gcc -E `cat $config_args` $gccArgs $superc_out > $superc_out_E
                         gcc -E `cat $config_args` $gccArgs $file > $gcc_E 2>/dev/null
                         java xtc.lang.cpp.cdiff -s $superc_out_E $gcc_E > $superc_diff 2>&1
@@ -543,6 +613,6 @@ else
     # Run SuperC on remote servers, not locally.
     for server in $servers; do
         echo "Starting slave $server:$remoteDir"
-        ssh $server "source $JAVA_DEV_ROOT/src/xtc/lang/cpp/scripts/env.sh; cd $remoteDir; superc_linux.sh -b $allArgs" &
+        ssh $server "source .profile; cd $remoteDir; superc_linux.sh -b $allArgs" &
     done
 fi

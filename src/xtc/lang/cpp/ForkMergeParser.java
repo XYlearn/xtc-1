@@ -19,7 +19,6 @@
 package xtc.lang.cpp;
 
 import java.lang.StringBuilder;
-import java.io.IOException;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -36,7 +35,6 @@ import xtc.tree.Node;
 import xtc.tree.GNode;
 
 import xtc.util.Pair;
-import xtc.util.Runtime;
 
 import xtc.lang.cpp.Syntax.Kind;
 import xtc.lang.cpp.Syntax.LanguageTag;
@@ -47,6 +45,8 @@ import xtc.lang.cpp.Syntax.Language;
 import xtc.lang.cpp.Syntax.Text;
 import xtc.lang.cpp.Syntax.Directive;
 import xtc.lang.cpp.Syntax.Conditional;
+import xtc.lang.cpp.Syntax.Error;
+import xtc.lang.cpp.Syntax.ErrorType;
 
 import xtc.lang.cpp.PresenceConditionManager.PresenceCondition;
 
@@ -54,20 +54,30 @@ import xtc.lang.cpp.PresenceConditionManager.PresenceCondition;
  * This class expands macros and processes header files
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.235 $
+ * @version $Revision: 1.263 $
  */
 public class ForkMergeParser {
   /** The name of the AST conditional node. */
   public static String CHOICE_NODE_NAME = "Conditional";
 
+  /** A different way to merge choice nodes is to flatten them instead
+   * of creating a hierarchy. */
+  public static boolean FLATTEN_MERGED_CHOICE_NODES = false;
+
   /** Parsing actions. */
-  private static enum ParsingAction { NONE, SHIFT, REDUCE, ACCEPT, ERROR }
+  private static enum ParsingAction {
+    NONE,
+    SHIFT,
+    REDUCE,
+    ACCEPT,
+    ERROR
+  }
 
   /** Array of error messages. */
   final private static String[] ERRMSG = {
     "no default action",
     "invalid table entry",
-    "error directive"};
+    "fatal preprocessing error"};
 
   /** Error code for no default action.  */
   final private static int NODEFAULT = 0;
@@ -78,32 +88,38 @@ public class ForkMergeParser {
   /** Error code for seen an error directive. */
   final private static int ERRDIRECTIVE = 2;
   
+  /** Error code for seen an error directive. */
+  final private static int NONFATAL = 3;
+  
   /** The state number of the the starting state. */
   final private static int STARTSTATE = 0;
 
-  /**
-   * Whether the merge subparsers on all tokens or only the subparsers
-   * on the earliest token.
-   */
-  final private static boolean MERGE_ALL = true;
+  /** Turn new error handling on. */
+  final private static boolean NEW_ERROR_HANDLING = false;
 
-  /**
-   * Whether to optimize FMLR to finish up subparsers as soon as they
-   * reach EOF.
-   */
-  final private static boolean FAST_FINISH_EOF = false;
+  /** The parse tables. */
+  private ParseTables tables;
+
+  /** The semantic values plugin. */
+  private SemanticValues semanticValues;
+
+  /** The semantic actions plugin. */
+  private SemanticActions semanticActions;
+
+  /** True when the grammar has a semantic actions plugin. */
+  private boolean hasSemanticActions = false;
+
+  /** The intitial parsing context. */
+  private ParsingContext initialParsingContext;
+
+  /** True when the language has a parsing context. */
+  private boolean hasParsingContext = false;
 
   /** The stream from which the parser gets syntactic units */
-  private Stream stream;
+  private Iterator<Syntax> stream;
   
   /** The presenceCondition manager. */
   private PresenceConditionManager presenceConditionManager;
-
-  /** The actions object for AST-building and parsing presenceCondition. */
-  private Actions actions;
-
-  /** The xtc runtime.  Used for output and flags. */
-  private Runtime runtime;
 
   /** The accepted subparsers. */
   List<Subparser> accepted;
@@ -115,23 +131,26 @@ public class ForkMergeParser {
    */
   private LinkedList<Integer> nestedConditionals;
 
+  /** Whether to save layout tokens or not. */
+  private boolean saveLayoutTokens = false;
+
   /** Whether shared reductions is on or not. */
-  private final boolean optimizeSharedReductions;
+  private boolean optimizeSharedReductions = true;
 
   /** Whether lazy forking is on or not. */
-  private final boolean optimizeLazyForking;
+  private boolean optimizeLazyForking = true;
 
   /** Whether early reduction is on or not. */
-  private final boolean optimizeEarlyReduce;
+  private boolean optimizeEarlyReduce = true;
 
   /** Whether Platoff ordering is on or not. */
-  private final boolean optimizePlatoffOrdering;
+  private boolean optimizePlatoffOrdering = false;
 
   /** Whether follow-set caching is on. */
-  private final boolean optimizeFollowSetCaching;
+  private boolean optimizeFollowSetCaching = true;
 
   /** Whether deoptimize early shift is on or not. */
-  private final boolean deoptimizeEarlyShift;
+  private boolean deoptimizeEarlyShift = false;
 
   /** The follow-set cache. */
   private Map<Integer, Collection<Lookahead>> followCache;
@@ -149,25 +168,28 @@ public class ForkMergeParser {
   private Comparator<Subparser> subparserComparator;
 
   /** Show all parsing actions. */
-  private final boolean showActions;
+  private boolean showActions = false;
 
   /** Show errors. */
-  private final boolean showErrors;
+  private boolean showErrors = true;
 
-  /** Show errors. */
-  private final boolean showAccepts;
+  /** Show accepts. */
+  private boolean showAccepts = false;
 
-  /** Turn language statistics collection on. */
-  private final boolean languageStatistics;
+  /** Show all fork and merge actions. */
+  private boolean showFM = false;
+
+  /** Show lookaheads on each parse loop. */
+  private boolean showLookaheads = false;
 
   /** Turn parser statistics collection on. */
-  private final boolean parserStatistics;
+  private boolean parserStatistics = false;
 
   /** Turn the subparser kill-switch on. */
-  private final boolean killswitch;
+  private boolean killswitch = false;
 
   /** The kill-switch cutoff for number of subparsers. */
-  private final int killswitchCutoff;
+  private int killswitchCutoff;
 
   /** Count the number of parser loop iterations. */
   private int iterations;
@@ -188,71 +210,197 @@ public class ForkMergeParser {
   private int nfollow;
 
   /** Create a new parser. */
-  public ForkMergeParser(Stream stream, PresenceConditionManager presenceConditionManager,
-                         Actions actions, Runtime runtime) {
+  public ForkMergeParser(ParseTables tables, SemanticValues semanticValues,
+                         Iterator<Syntax> stream,
+                         PresenceConditionManager presenceConditionManager) {
+    this(tables, semanticValues, null, null, stream, presenceConditionManager);
+  }
+
+  /** Create a new parser. */
+  public ForkMergeParser(ParseTables tables, SemanticValues semanticValues,
+                         SemanticActions semanticActions,
+                         ParsingContext parsingContext,
+                         Iterator<Syntax> stream,
+                         PresenceConditionManager presenceConditionManager) {
+    this.tables = tables;
+    this.semanticValues = semanticValues;
+    this.setSemanticActions(semanticActions);
+    this.setInitialContext(parsingContext);
     this.stream = stream;
     this.presenceConditionManager = presenceConditionManager;
-    this.actions = actions;
-    this.runtime = runtime;
 
     this.accepted = new ArrayList<Subparser>();
-
     this.nestedConditionals = new LinkedList<Integer>();
 
-    optimizeSharedReductions = runtime.test("optimizeSharedReductions");
-    optimizeLazyForking = runtime.test("optimizeLazyForking");
-    optimizeEarlyReduce = runtime.test("optimizeEarlyReduce");
+    skipConditionalCache = new HashMap<Integer, OrderedSyntax>();
+  }
 
-    // It has no effect.  Off by default.
-    optimizePlatoffOrdering = runtime.test("platoffOrdering");
+  /**
+   * Save layout tokens or not.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void saveLayoutTokens(boolean b) {
+    saveLayoutTokens = b;
+  }
 
-    deoptimizeEarlyShift = runtime.test("earlyShift");
+  /**
+   * Set lazy forking on or off.  The default is on.
+   *
+   * @param b True is on.
+   */
+  public void setLazyForking(boolean b) {
+    optimizeLazyForking = b;
+  }
 
-    // Always leave it on.  No effect on subparser size.  Minimal
-    // effect on time.
-    optimizeFollowSetCaching = ! runtime.test("noFollowCaching");
+  /**
+   * Set shared reductions on or off.  The default is on.
+   *
+   * @param b True is on.
+   */
+  public void setSharedReductions(boolean b) {
+    optimizeSharedReductions = b;
+    setComparator();
+  }
 
-    if (optimizeFollowSetCaching) {
-      followCache = new HashMap<Integer, Collection<Lookahead>>();
-    }
+  /**
+   * Set early reduces on or off.  The default is on.
+   *
+   * @param b True is on.
+   */
+  public void setEarlyReduce(boolean b) {
+    optimizeEarlyReduce = b;
+    setComparator();
+  }
 
-    // Early reductions and Platoff ordering affect the subparser
-    // ordering policy.  See the comparator definitions for details.
+  /**
+   * Set longest stack ordering on or off.  The default is off.
+   *
+   * @param b True is on.
+   */
+  public void setLongestStack(boolean b) {
+    optimizePlatoffOrdering = b;
+  }
+
+  /**
+   * Set early shifts on or off.  The default is off.
+   *
+   * @param b True is on.
+   */
+  public void setEarlyShift(boolean b) {
+    deoptimizeEarlyShift = b;
+  }
+
+  /**
+   * Switch between the optimized or configurable subparser comparator
+   * based on the current optimization settings.
+   */
+  private void setComparator() {
     if (optimizeEarlyReduce && ! optimizePlatoffOrdering
         && ! deoptimizeEarlyShift) {
       subparserComparator = subparserComparatorOptimized;
     } else {
       subparserComparator = subparserComparatorConfigurable;
     }
+  }
 
-    skipConditionalCache = new HashMap<Integer, OrderedSyntax>();
-
-    languageStatistics = runtime.test("statisticsLanguage");
-    parserStatistics = runtime.test("statisticsParser");
-
-    showActions = runtime.test("showActions");
-    showErrors = runtime.test("showErrors");
-    showAccepts = runtime.test("showAccepts");
-
-    if (! runtime.hasValue("killswitch")
-        || null == runtime.getString("killswitch")) {
-      killswitch = false;
-      killswitchCutoff = 0;
-
-    } else {
-      try {
-        killswitch = true;
-        killswitchCutoff = Integer.parseInt(runtime.getString("killswitch"));
-
-        if (killswitchCutoff <= 0) {
-          throw new NumberFormatException("the -killswitch flag takes a "
-                                          + "positive, non-zero integer");
-        }
-      } catch (NumberFormatException e) {
-        throw new NumberFormatException("the -killswitch flag takes a "
-                                        + "positive, non-zero integer");
-      }
+  /**
+   * Set follow-set caching on or off.  The default is on.
+   *
+   * @param b True is on.
+   */
+  public void setFollowSetCaching(boolean b) {
+    optimizeFollowSetCaching = b;
+    if (optimizeFollowSetCaching && null == followCache) {
+      followCache = new HashMap<Integer, Collection<Lookahead>>();
     }
+  }
+
+  /**
+   * Turn parser statistics collection on.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void collectStatistics(boolean b) {
+    parserStatistics = b;
+  }
+
+  /**
+   * Show parsing actions taken.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void showActions(boolean b) {
+    showActions = b;
+  }
+
+  /**
+   * Show parsing errors.  Default is on.
+   *
+   * @param b True is on.
+   */
+  public void showErrors(boolean b) {
+    showErrors = b;
+  }
+
+  /**
+   * Show accept actions.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void showAccepts(boolean b) {
+    showAccepts = b;
+  }
+
+  /**
+   * Show forks and merges.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void showFM(boolean b) {
+    showFM = b;
+  }
+
+  /**
+   * Show lookaheads on each parse loop.  Default is off.
+   *
+   * @param b True is on.
+   */
+  public void showLookaheads(boolean b) {
+    showLookaheads = b;
+  }
+
+  /**
+   * Set a kill-switch.  The parser will stop after the given number
+   * of seconds.
+   *
+   * @param cutoff The number of seconds to stop after.
+   */
+  public void setKillSwitch(int cutoff) {
+    assert cutoff > 0;
+    killswitch = true;
+    killswitchCutoff = cutoff;
+  }
+
+  /**
+   * Set the plugin for the semantic actions of the language.
+   *
+   * @param semanticActions The semantic actions implementation.
+   */
+  private void setSemanticActions(SemanticActions semanticActions) {
+    this.semanticActions = semanticActions;
+    this.hasSemanticActions = semanticActions != null ? true : false;
+  }
+
+  /**
+   * Set the initial parsing context, if the language to be parsed is
+   * context-sensitive.
+   *
+   * @param parsingContext The initial parsing context.
+   */
+  private void setInitialContext(ParsingContext parsingContext) {
+    this.initialParsingContext = parsingContext;
+    this.hasParsingContext = parsingContext != null ? true : false;
   }
 
   /**
@@ -266,35 +414,22 @@ public class ForkMergeParser {
 
       if (0 == result) {
         if (optimizeEarlyReduce) {
-          // The early reduce optimization puts reductions first to
-          // maximize merge opportunities.
-
+          // Put reduces first.
           if (ParsingAction.SHIFT == o1.lookahead.getAction()) {
             return 1;
-
           } else if (ParsingAction.SHIFT == o2.lookahead.getAction()) {
             return -1;
-
           } else if (optimizePlatoffOrdering) {
-            // Both subparsers must be REDUCEs since accept and error
-            // parsers arer removed instead of rescheduled.
-
-            // Platoff ordering says longer stacks go first to
-            // maximimize merge opportunities.
-
+            // Reduce with longer stack goes first.
             return o1.stack.getHeight() >= o2.stack.getHeight() ? -1 : 1;
           }
-
         } else if (optimizePlatoffOrdering) {
           if (ParsingAction.REDUCE == o1.lookahead.getAction()
               && ParsingAction.REDUCE == o2.lookahead.getAction()) {
-
             return o1.stack.getHeight() >= o2.stack.getHeight() ? -1 : 1;
           }
         } else if (deoptimizeEarlyShift) {
-          // The early shift deoptimization puts shifts first to
-          // minimize merge opportunities.
-
+          // Put shifts first.
           if (ParsingAction.SHIFT == o1.lookahead.getAction()) {
             return -1;
           } else if (ParsingAction.SHIFT == o2.lookahead.getAction()) {
@@ -321,12 +456,9 @@ public class ForkMergeParser {
       int result = o1.lookahead.token.order - o2.lookahead.token.order;
 
       if (0 == result) {
-        // The early reduce optimization puts reductions first to
-        // maximize merge opportunities.
-
+        // Do early reduces by default.
         if (ParsingAction.SHIFT == o1.lookahead.action) {
           return 1;
-
         } else if (ParsingAction.SHIFT == o2.lookahead.action) {
           return -1;
         }
@@ -345,33 +477,25 @@ public class ForkMergeParser {
    *
    * @return The AST.
    */
-  public Object parse() throws IOException {
-
-    // Initialize the first subparser.
-
+  public Object parse() {
+    // Create initial subparser.
     OrderedSyntax startOfFile = new OrderedSyntax(stream);
-
-    Subparser firstSubparser =
-      new Subparser(new Lookahead(startOfFile,
-                                  presenceConditionManager.new PresenceCondition(true)), 
-                    new StackFrame(STARTSTATE, 0, null, null),
-                    presenceConditionManager.new PresenceCondition(true),
-                    actions.getInitialContext());
-
+    Subparser firstSubparser
+      = new Subparser(new Lookahead(startOfFile,
+                                    presenceConditionManager
+                                    .new PresenceCondition(true)), 
+                      new StackFrame(STARTSTATE, 0, null, null),
+                      presenceConditionManager.new PresenceCondition(true),
+                      initialParsingContext);
     firstSubparser.lookahead.token = firstSubparser.lookahead.token.getNext();
 
-
-    // Initialize the set of subparsers.  Use the default initial
-    // capacity.
+    // Initialize subparser set.
     PriorityQueue<Subparser> subparsers
       = new PriorityQueue<Subparser>(11, subparserComparator);
-
     subparsers.add(firstSubparser);
 
     if (parserStatistics) {
-
       // Initialize statistics collection.
-
       iterations = 0;
       nsubparsers = new HashMap<Integer, Integer>();
       nfollow = 0;
@@ -380,330 +504,227 @@ public class ForkMergeParser {
       emptyConditionals = new HashMap<Integer, Boolean>();
     }
 
-
-    // Prepare a list of processed subparsers to add to the set of
-    // subparsers after the parsing iteration is done
+    // Initialize the list of processed subparsers, added back to the
+    // subparser set after each iteration of the parsing loop.
     LinkedList<Subparser> processedParsers = new LinkedList<Subparser>();
 
-    // Instantiate the followSet list.
+    // Instantiate the followSet collection.
     Collection<Lookahead> followSet = new LinkedList<Lookahead>();
 
-    // The main parsing loop.
-    while (true) {
-      // Get the earliest token.  The list of subparsers is ordered,
-      // so we can get the earliest token from the first subparser in
-      // the list.  Each subparser should be on an ordinary token or a
-      // start conditional.
+    // Last subparser count
+    int lastSubparserCount = 0;
 
+    // Main parsing loop.
+    while (true) {
+      // Get earliest token.  Since subparsers is ordered, we just get
+      // the first subparser in the list's token.
       OrderedSyntax earliestToken = subparsers.peek().lookahead.token;
 
-      // System.err.println("earliest: " + earliestToken);
-
+      // The subparser should always be on a token or conditional.
       assert earliestToken.syntax.kind() == Kind.CONDITIONAL
         && earliestToken.syntax.toConditional().tag()
         == ConditionalTag.START
         || earliestToken.syntax.kind() == Kind.LANGUAGE
         || earliestToken.syntax.kind() == Kind.EOF;
 
-
-      // This flag tells us that one or more parsers in this iteration
-      // performed a reduction.  It is used to implement the
-      // earlyReduce optimization, since we can't do any shifts until
-      // all the reduces are done.
-
+      // True when at least one subparser reduced in this iteration.
+      // Used to delay shifts when the earlyReduce optimization is on.
       boolean seenReduce = false;
 
-
-      // This flag tells us that there is a conditional that needed
-      // its follow-set computed.  This is used to make lazy forks
-      // wait until all subparsers on that conditional are ready to
-      // fork.  Otherwise, the forked subparsers will get ahead of
-      // other subparsers and miss merge opportunities.  Note that
-      // without Oearly, this flag won't really do much, since Oearly
-      // ensures that subparsers that want to shift come after other
-      // subparsers.
-
+      // True when a subparser is on a conditional but hasn't yet had
+      // its follow-set computed.  Used to delay forking until all
+      // subparsers are ready when the lazyFork optimization is on.
+      // earlyReduce makes this unnecessary.
       boolean waitToFork = false;
 
+      if (showFM & lastSubparserCount != subparsers.size()) {
+        System.err.println("subparsers " + subparsers.size());
+        lastSubparserCount = subparsers.size();
+      }
 
-      // For all subparsers on the earliest token.  Pull each
-      // subparser off of the priority queue, process it, and add it
-      // to the processedParsers list.  This list is then added back
-      // to the priority queue after processing.
+      if (showLookaheads) {
+        System.err.println("subparser lookaheads");
+        for (Subparser s : subparsers) {
+          System.err.println(s.lookahead);
+        }
+      }
 
-      while (subparsers.size() > 0
-             && (subparsers.peek().lookahead.token.order - earliestToken.order) == 0) {
-
-        // When the earlyReduce optimization is on, give reductions
-        // their own parser iteration and then merge.  Don't do any
-        // shifting until after a merge attempt.
-
-        if (optimizeEarlyReduce && seenReduce
-            && subparsers.peek().lookahead.getAction() == ParsingAction.SHIFT) {
+      // Process each subparser on that is at earliestToken.
+      while (subparsers.size() > 0 && (subparsers.peek().lookahead.token.order
+                                       - earliestToken.order) == 0) {
+        if (optimizeEarlyReduce && seenReduce && subparsers.peek().lookahead
+            .getAction() == ParsingAction.SHIFT) {
+          // Do reduces first.
           break;
         }
 
-
-        // Pull off the earliest subparser.
-
+        // Process one subparser.
         Subparser subparser = subparsers.poll();
 
-        // System.err.println("\n" + subparser + ":" + subparser.lookahead.token.syntax);
-
-
-        // Carry out one parsing iteration for one subparser.
-
-        if (subparser.lookahead.isSet()) {
-
+        if (ParsingAction.ERROR == subparser.lookahead.action) {
+          if (handleError(subparser)) {
+            processedParsers.add(subparser);
+          }
+        } else if (subparser.lookahead.isSet()) {
+          // Process a multi-headed subparser.
           switch (subparser.lookahead.getAction()) {
           case REDUCE:
-
-            // Perform a shared reduction.
-
+            // Shared reduce.
             reduce(subparser);
             seenReduce = true;
             waitToFork = true;
 
-            // Repartition the follow-set if necessary.  It is
-            // necessary if the any parsing actions are non-reduce or
-            // reducing a different production.
-
+            // Recompute subparser heads if parsing actions changed.
             boolean repartition = false;
             int lastProduction = -1;
-
             for (Lookahead n : ((LookaheadSet) subparser.lookahead).set) {
               getAction(n, subparser.stack);
-
               if (ParsingAction.REDUCE != n.getAction()
                   || -1 != lastProduction
                   && n.getActionData() != lastProduction) {
                 repartition = true;
                 break;
               }
-
               lastProduction = n.getActionData();
             }
 
             if (repartition) {
-
-              // Repartition the follow-set and fork subparsers.
-
               LookaheadSet lookaheadSet = (LookaheadSet) subparser.lookahead;
-
               Collection<Lookahead> tokenSet
                 = partition(lookaheadSet.set, subparser);
 
               processedParsers.addAll(fork(subparser, tokenSet));
 
-
-              // Clean up subparser scope and presenceCondition.  It is already
-              // removed from the set of subparsers.
-              
+              // Free the subparser's presence condition.
               subparser.lookahead.presenceCondition.delRef();
-              // No need to free LookaheadSet.  They are forked into
-              // new subparsers.
+
+              // Don't free presence conditions from the follow-set,
+              // since all are part of new subparser heads.
               subparser.presenceCondition.delRef();
-              subparser.scope.free();
-
+              if (hasParsingContext) {
+                subparser.scope.free();
+              }
             } else {
-              // All parsing actions still reduce the same production.
-              // Leave the subparser alone, but update the token set's
-              // parsing action.
-
-              subparser.lookahead.copyAction(((LookaheadSet) subparser.lookahead).set.get(0));
-
+              // Update the subparser's parsing action.
+              subparser.lookahead
+                .copyAction(((LookaheadSet) subparser.lookahead).set.get(0));
               processedParsers.add(subparser);
             }
-
             break;
 
           case SHIFT:
-
             if (waitToFork) {
-
-              // Don't fork until all subparsers on this conditional
-              // are ready to fork.
-
-              // Reschedule this subparser.
-
               processedParsers.add(subparser);
-
             } else {
-
-              // Fork the current conditional's next tokens only.  Put
-              // all the rest in a single subparser.
-
+              // Lazy fork.
               Collection<Lookahead> set;
 
-              if (subparser.lookahead.token.syntax.kind() == Kind.CONDITIONAL) {
+              if (subparser.lookahead.token.syntax.kind()
+                  == Kind.CONDITIONAL) {
                 set = lazyFork((LookaheadSet) subparser.lookahead);
-
               } else {
-
-                // No need for lazy forking.  This is not a
-                // conditional but an implicit conditional caused by a
-                // parsing presenceCondition ambiguity, e.g. C's typedef/var
-                // name ambiguity.  Just fork a subparser for each
-                // token.
-
+                // Can't lazy fork Implicit conditionals.
                 set = ((LookaheadSet) subparser.lookahead).set;
               }
-
               processedParsers.addAll(fork(subparser, set));
 
-
-              // Clean up subparser scope and presenceCondition.  It is already
-              // removed from the set of subparsers.
-              
+              // Free the subparser's presence condition.
               subparser.lookahead.presenceCondition.delRef();
-              // No need to free LookaheadSet.  They are forked into
-              // new subparsers.
+              // Don't free presence conditions from the follow-set,
+              // since all are part of new subparser heads.
               subparser.presenceCondition.delRef();
-              subparser.scope.free();
+              if (hasParsingContext) {
+                subparser.scope.free();
+              }
             }
-
             break;
 
           default:
-
-            // Sets of next tokens only apply to shared reductions and
-            // lazy forking.
-
-            throw new RuntimeException();
+            throw new RuntimeException("fatal error: invalid parsing action "
+                                       + "on multi-headed subparser");
           }
-
-        } else {
-
-          // Get the follow set, i.e. all the possible next ordinary
-          // tokens.
-
-          // If the token is an ordinary language token, no need to
-          // calculate the follow set.  It is simply the set
-          // containing the single language token.
-
+        } else {  // Process a single-headed subparser.
+          // Compute the follow-set.
           switch (subparser.lookahead.token.syntax.kind()) {
           case EOF:
+            // Fall through
+          case ERROR:
             // Fall through
           case LANGUAGE:
             followSet.clear();
             followSet
-              .add(new Lookahead(subparser.lookahead.token,subparser.presenceCondition.addRef()));
-
+              .add(new Lookahead(subparser.lookahead.token,
+                                 subparser.presenceCondition.addRef()));
             break;
 
           case CONDITIONAL:
-
             if (optimizeFollowSetCaching) {
               Collection<Lookahead> cachedFollowSet;
 
               if (hasCachedSet(subparser.lookahead.token)) {
-
-                // Use the cached follow-set.
-
                 cachedFollowSet = getCachedSet(subparser.lookahead.token);
-
               } else {
+                PresenceCondition T
+                  = presenceConditionManager.new PresenceCondition(true);
 
-                // This token's follow-set is not yet cached, so compute
-                // it.
-
-                PresenceCondition T = presenceConditionManager.new PresenceCondition(true);
-
-                cachedFollowSet = follow(subparser.lookahead.token, T).values();
-
+                cachedFollowSet
+                  = follow(subparser.lookahead.token, T).values();
                 T.delRef();
-
-                // Cache the follow-set.
-
                 setCachedSet(subparser.lookahead.token, cachedFollowSet);
-
-                //Remove elements from LRU cache to make room.  Don't
-                //forget to clean up BDDs!
               }
 
-              // Conjoin the subparser's presence condition with the
-              // follow-set tokens' presence conditions, omitting tokens
-              // with a FALSE presence condition, i.e. trimming
-              // infeasible paths.
-
+              // Combine follow-set presence conditions with the
+              // subparser's.
               followSet.clear();
-
               for (Lookahead n : cachedFollowSet) {
-                PresenceCondition and = subparser.presenceCondition.and(n.presenceCondition);
+                PresenceCondition and
+                  = subparser.presenceCondition.and(n.presenceCondition);
 
                 if (and.isFalse()) {
-                  // Omit infeasible paths.
-
+                  // Trim infeasible tokens.
                   and.delRef();
                 } else {
                   followSet.add(new Lookahead(n.token, and));
                 }
               }
-
             } else {
-              // Compute the follow set every time.
-              followSet = follow(subparser.lookahead.token, subparser.presenceCondition).values();
+              // No follow-set caching.
+              followSet = follow(subparser.lookahead.token,
+                                 subparser.presenceCondition).values();
             }
-
             break;
 
           default:
-            // The parser cannot use tokens other than language,
-            // conditional, and eof tokens.
             throw new UnsupportedOperationException();
           }
 
-          // Apply the parsing presenceCondition to tokens in the follow set
-          // only if there is a parsing presenceCondition implementation and the
-          // parsing presenceCondition indicates the parser shouldReclassify.
-          // If so, this will reclassify tokens' lexeme types and
-          // handle implicit conditionals, e.g. due to C typedef
-          // ambiguities.
-
-          if (actions.hasContext()
+          // Reclassify tokens with parsing context.
+          if (hasParsingContext
               && subparser.scope.shouldReclassify(followSet)) {
-
             Collection<Lookahead> newTokens
               = subparser.scope.reclassify(followSet);
-
-            // Only create a new list when their are new tokens.
-
             if (null != newTokens) {
               Collection<Lookahead> newSet = new LinkedList<Lookahead>();
-
               newSet.addAll(followSet);
               newSet.addAll(newTokens);
-
               followSet = newSet;
             }
           }
 
-
-          if (followSet.size() == 1) {
-
-            // Replace subparser's token with the token that has had
-            // parsing presenceCondition applied to it.
-
+          if (followSet.size() == 1) {  // Regular LR
+            // Update subparser with reclassified token.
             subparser.lookahead.presenceCondition.delRef();
             subparser.lookahead = followSet.iterator().next();
 
-
-            // Regular LR.
-
             getAction(subparser.lookahead, subparser.stack);
-
             switch (subparser.lookahead.getAction()) {
             case SHIFT:
               shift(subparser);
 
-              // Move to the next ordinary token or start conditional
-              // (#if).  If the next token ends a branch (#elif or
-              // #endif), move to the next ordinary token or start
-              // conditional after the conditional.
-
+              // Move to next token or start conditional.
               subparser.lookahead.token = subparser.lookahead.token.getNext();
-
-              while (subparser.lookahead.token.syntax.kind() == Kind.CONDITIONAL
+              while (subparser.lookahead.token.syntax.kind()
+                     == Kind.CONDITIONAL
                      && subparser.lookahead.token.syntax.toConditional().tag
                      != ConditionalTag.START) {
                 Conditional conditional
@@ -711,177 +732,93 @@ public class ForkMergeParser {
 
                 switch (conditional.tag()) {
                 case START:
-                  // No need to move.
+                  // Done
                   break;
-
                 case NEXT:
                   subparser.lookahead.token
                     = skipConditional(subparser.lookahead.token);
                   break;
-
                 case END:
                   subparser.lookahead.token
                     = subparser.lookahead.token.getNext();
                   break;
-
                 default:
-                  // No such conditional tag.
                   throw new UnsupportedOperationException();
                 }
               }
 
-
-              if (subparser.lookahead.token.syntax.kind() == Kind.LANGUAGE
-                  || subparser.lookahead.token.syntax.kind() == Kind.EOF) {
+              if (hasParsingContext
+                  && subparser.scope.shouldReclassify(followSet)) {
+                subparser.lookahead.clearAction();
+              } else if (subparser.lookahead.token.syntax.kind()
+                         == Kind.LANGUAGE
+                         || subparser.lookahead.token.syntax.kind()
+                         == Kind.EOF) {
                 getAction(subparser.lookahead, subparser.stack);
               } else {
                 subparser.lookahead.clearAction();
               }
-
-              // We no longer know what the next parsing action is.
-              // The next token could be either an ordinary token or a
-              // conditional.  The action can be used for subparser
-              // ordering, so not clearing it can lead to incorrect
-              // results.
-              
-              // subparser.lookahead.clearAction();
-
-              if (FAST_FINISH_EOF
-                  && Kind.EOF == subparser.lookahead.token.syntax.kind()) {
-                fastFinish(subparser);
-              } else {
-                // Re-add the subparser to the ordered set to update its
-                // position in the set.
-
-                processedParsers.add(subparser);
-              }
-
+              processedParsers.add(subparser);
               break;
 
             case REDUCE:
-
               reduce(subparser);
               seenReduce = true;
-
               getAction(subparser.lookahead, subparser.stack);
-
-              // We no longer know what the next parsing action is.
-              // The next token could be either an ordinary token or a
-              // conditional.  The action can be used for subparser
-              // ordering, so not clearing it can lead to incorrect
-              // results.
-              
-              // subparser.lookahead.clearAction();
-
-
-              // Re-add the subparser to the ordered set to update its
-              // position in the set.
-
               processedParsers.add(subparser);
-
               break;
 
             case ACCEPT:
-
               accepted.add(subparser);
-
               if (showAccepts) {
-                runtime.errConsole().pln("ACCEPT").flush();
+                System.err.println("ACCEPT");
               }
-
               break;
 
             case ERROR:
-
-              // Clean up subparser scope and presenceCondition.  We will not add
-              // it back to the main set of subparsers.
-
-              subparser.lookahead.presenceCondition.delRef();
-              subparser.presenceCondition.delRef();
-              subparser.scope.free();
-
-              if (showErrors) {
-                runtime.error("parse error on "
-                              + (subparser.lookahead.token.syntax.kind() == Kind.EOF ?
-                                 "EOF" : "\"" + subparser.lookahead.token.syntax + "\"")
-                              + " at " + subparser.lookahead.token.syntax.getLocation());
+              if (handleError(subparser)) {
+                processedParsers.add(subparser);
               }
-
               break;
             }
-
-          } else if (followSet.size() > 1) {
-
-            // A follow set with more than one token implies an
-            // explicit or implicit conditional.
-
-            // Fork subparsers on the conditional.
-
+          } else if (followSet.size() > 1) {  // Fork subparsers.
             assert subparser.lookahead.token.syntax.kind() == Kind.LANGUAGE
               || subparser.lookahead.token.syntax.toConditional().tag()
               == ConditionalTag.START;
 
-
-            // Partition the follow-set.  Naive FMLR will not group
-            // any lookaheads, but the shared reductions and lazy
-            // forking optimizations will.
-
             Collection<Lookahead> tokenSet = partition(followSet, subparser);
 
-
-            // Fork and replace the subparser with newly-forked
-            // subparsers, one for each token in the follow set.
-
             processedParsers.addAll(fork(subparser, tokenSet));
-
-
-            // Clean up subparser scope and presenceCondition.  It is removed
-            // from the set of subparsers.
-
-            subparser.lookahead.presenceCondition.delRef();
-            subparser.presenceCondition.delRef();
-            subparser.scope.free();
-
-
-            // Hold off on lazy forking until all subparsers are ready
-            // to fork.
-
             waitToFork = true;
 
+            // Free old subparser's presence condition.
+            subparser.lookahead.presenceCondition.delRef();
+            subparser.presenceCondition.delRef();
+            if (hasParsingContext) {
+              subparser.scope.free();
+            }
           } else {
-            // The follow set should never be less than one.
-
-            throw new RuntimeException();
+            throw new RuntimeException("fatal error: follow-set was 0");
           }
         }
       }
-
-
-      // Add the updated subparsers into the priority queue of
-      // subparsers.
 
       for (Subparser subparser : processedParsers) {
         subparsers.add(subparser);
       }
       processedParsers.clear();
 
-
       if (subparsers.size() == 0) {
-        // Done
+        // Done.
         break;
       }
 
-
-      // Merge subparsers.  We only need check the earliest subparsers for
-      // a merge.
-
+      // Merge subparsers.
       if (subparsers.size() > 1) {
         stagedMerge(subparsers);
       }
 
       if (parserStatistics && ! waitToFork) {
-
-        // Collect statistics on the number of subparsers.
         iterations++;
         if (! nsubparsers.containsKey(subparsers.size())) {
           nsubparsers.put(subparsers.size(), 0);
@@ -891,48 +828,40 @@ public class ForkMergeParser {
       }
     }
 
-
     if (parserStatistics) {
       int max = 0;
-      runtime.errConsole().pln(String.format("iterations %d", iterations));
+      System.err.println(String.format("iterations %d", iterations));
       for (Integer size : nsubparsers.keySet()) {
         if (size > max) max = size;
 
-        runtime.errConsole().pln(String.format("subparsers %d %d",
-                                               size, nsubparsers.get(size)));
+        System.err.println(String.format("subparsers %d %d", size, nsubparsers.get(size)));
       }
-      runtime.errConsole().pln(String.format("max_subparsers %d", max)); 
-      runtime.errConsole().pln(String.format("follow %d", nfollow)); 
-      runtime.errConsole().pln(String.format("lazy_forks %d %d",
-                                             lazyForks,
-                                             lazyForksEmptyBranches));
+      System.err.println(String.format("max_subparsers %d", max)); 
+      System.err.println(String.format("follow %d", nfollow)); 
+      System.err.println(String.format("lazy_forks %d %d",
+                          lazyForks,
+                          lazyForksEmptyBranches));
 
       int empty = 0;
-
       for (Integer i : emptyConditionals.keySet()) {
         if (emptyConditionals.get(i)) {
           empty++;
         }
       }
-
-      runtime.errConsole().pln(String.format("empty_conditionals %d %d",
-                                             emptyConditionals.size(),
-                                             empty)); 
-      
-      runtime.errConsole().flush();
+      System.err.println(String.format("empty_conditionals %d %d",
+                          emptyConditionals.size(),
+                          empty)); 
     }
 
-    if (actions.hasContext()) {
-      actions.getInitialContext().free();
+    if (subparsers.size() > 0) {
+      throw new RuntimeException("need to handle remaining error subparsers");
     }
 
     if (accepted.size() == 0) {
-      // No accepted subparsers.
       return null;
     } else {
       // Merge the accepted subparsers.
       accepted = merge(accepted);
-
       if (accepted.size() == 1) {
         return (Node) accepted.get(0).stack.value;
       } else {
@@ -943,10 +872,12 @@ public class ForkMergeParser {
           root.add(subparser.presenceCondition.addRef());
           root.add(subparser.stack.value);
 
-          // Clean up subparser scope and presenceCondition.
+          // Free presence conditions.
           subparser.lookahead.presenceCondition.delRef();
           subparser.presenceCondition.delRef();
-          subparser.scope.free();
+          if (hasParsingContext) {
+            subparser.scope.free();
+          }
         }
 
         return root;
@@ -955,103 +886,120 @@ public class ForkMergeParser {
   }
 
   /**
+   * Handle a subparser in an error state.
+   *
+   * @return true to keep the subparser, false to throw it away.
+   */
+  public boolean handleError(Subparser subparser) {
+    if (showErrors) {
+      error("parse error on "
+            + (subparser.lookahead.token.syntax.kind()
+               == Kind.EOF ? "EOF"
+               : "\"" + subparser.lookahead.token.syntax + "\"")
+            + " at "
+            + subparser.lookahead.token.syntax.getLocation());
+    }
+
+    if (NEW_ERROR_HANDLING) {
+      // Move to the next token or start conditional.
+      subparser.lookahead.token
+        = subparser.lookahead.token.getNext();
+      while (subparser.lookahead.token.syntax.kind()
+             == Kind.CONDITIONAL
+             && subparser.lookahead.token.syntax.toConditional().tag
+             != ConditionalTag.START) {
+        Conditional conditional
+          = subparser.lookahead.token.syntax.toConditional();
+
+        switch (conditional.tag()) {
+        case START:
+          // Done
+          break;
+        case NEXT:
+          subparser.lookahead.token
+            = skipConditional(subparser.lookahead.token);
+          break;
+        case END:
+          subparser.lookahead.token
+            = subparser.lookahead.token.getNext();
+          break;
+        default:
+          throw new UnsupportedOperationException();
+        }
+      }
+
+      return true;
+    } else {
+      // Free presence conditions.
+      subparser.lookahead.presenceCondition.delRef();
+      subparser.presenceCondition.delRef();
+      if (hasParsingContext) {
+        subparser.scope.free();
+      }
+
+      return false;
+    }
+  }
+
+  /**
    * Parse the syntax stream.
    *
    * @return The AST.
    */
-  public Object parseNaively() throws IOException {
-
-    // Initialize the first subparser.
-
+  public Object parseNaively() {
+    // Create initial subparser.
     OrderedSyntax startOfFile = new OrderedSyntax(stream);
-
     Subparser firstSubparser =
       new Subparser(new Lookahead(startOfFile,
-                                  presenceConditionManager.new PresenceCondition(true)), 
+                                  presenceConditionManager
+                                  .new PresenceCondition(true)), 
                     new StackFrame(STARTSTATE, 0, null, null),
                     presenceConditionManager.new PresenceCondition(true),
-                    actions.getInitialContext());
-
+                    initialParsingContext);
     firstSubparser.lookahead.token = firstSubparser.lookahead.token.getNext();
 
-
-    // Initialize the set of subparsers.  Use the default initial
-    // capacity.
-    
+    // Initialize subparser set.
     PriorityQueue<Subparser> subparsers
       = new PriorityQueue<Subparser>(11, subparserComparator);
-
     subparsers.add(firstSubparser);
 
-
-    // Use a choice node in case there are multiple accepting
-    // subparsers.
-
+    // Create AST root node.
     GNode root = GNode.create(CHOICE_NODE_NAME);
 
     if (parserStatistics) {
-
       // Initialize statistics collection.
-
       iterations = 0;
       nsubparsers = new HashMap<Integer, Integer>();
       nfollow = 0;
     }
 
-
-    // The main parsing loop.
-
+    // Main parsing loop.
     while (true) {
-
       if (killswitch && subparsers.size() >= killswitchCutoff) {
         if (parserStatistics) {
-          runtime.errConsole().pln(String.format("killswitch_subparsers %d",
-                                                 subparsers.size())).flush();
+          System.err.println(String.format("killswitch_subparsers %d",
+                                           subparsers.size()));
         }
-        throw
-          new RuntimeException(String
-                               .format("kill-switch tripped because "
-                                       + "subparsers reached %d",
-                                       subparsers.size()));
+        throw new RuntimeException(String
+                                   .format("kill-switch tripped because "
+                                           + "subparsers reached %d",
+                                           subparsers.size()));
       }
 
       if (parserStatistics) {
-
-        // Collect statistics on the number of subparsers.
-
         iterations++;
         if (! nsubparsers.containsKey(subparsers.size())) {
           nsubparsers.put(subparsers.size(), 0);
         }
         nsubparsers.put(subparsers.size(),
                         nsubparsers.get(subparsers.size()) + 1);
-
-        // System.err.println("subparsers: " + subparsers.size());
-        // LinkedList<Subparser> bob = new LinkedList<Subparser>();
-        // while (! subparsers.isEmpty()) {
-        //   Subparser p = subparsers.poll();
-
-        //   System.err.println(p + ": " + p.a + ":" + p.presenceCondition);
-
-        //   bob.add(p);
-        // }
-
-        // for (Subparser p : bob) {
-        //   subparsers.add(p);
-        // }
-        // System.err.println();
       }
 
-
-      // Get the earliest token.  The list of subparsers is ordered,
-      // so we can get the earliest token from the first subparser in
-      // the list.  Each subparser should be on an ordinary token or a
-      // start conditional.
-
+      // Get earliest token.  Since subparsers is ordered, we just get
+      // the first subparser in the list's token.
       OrderedSyntax earliestToken = subparsers.peek().lookahead.token;
 
-      // System.err.println("earliest: " + earliestToken);
-
+      // Each subparser should be on a token or conditional directive.
       assert earliestToken.syntax.kind() == Kind.CONDITIONAL
         && (earliestToken.syntax.toConditional().tag()
             == ConditionalTag.START
@@ -1062,37 +1010,19 @@ public class ForkMergeParser {
         || earliestToken.syntax.kind() == Kind.LANGUAGE
         || earliestToken.syntax.kind() == Kind.EOF;
 
-
-      // Prepare a list of processed subparsers to add to the set of
-      // subparsers after the parsing iteration is done
-
+      // Initialize the list of processed subparsers, added back to the
+      // subparser set after each iteration of the parsing loop.
       LinkedList<Subparser> processedParsers = new LinkedList<Subparser>();
 
-
-      // For all subparsers on the earliest token.  Pull each
-      // subparser off of the priority queue and add it to the
-      // processedParsers list.  This list is then added back to the
-      // priority queue after processing.
-
-      while (subparsers.size() > 0
-             && (subparsers.peek().lookahead.token.order - earliestToken.order) == 0) {
-
-        // Pull off the earliest subparser.
-
+      // Process each subparser on that is at earliestToken.
+      while (subparsers.size() > 0 && (subparsers.peek().lookahead.token.order
+                                       - earliestToken.order) == 0) {
+        // Process on subparser.
         Subparser subparser = subparsers.poll();
 
-        // System.err.println("\n" + subparser + ":" + subparser.lookahead.token.syntax);
-
-
-        // Carry out one parsing iteration for one subparser.
-
-
-        // Apply the parsing presenceCondition to tokens in the follow set.
-        // This will reclassify tokens and handle implicit
-        // conditionals, e.g. due to C typedef ambiguities.
-
-        if (actions.hasContext()
-            && subparser.lookahead.token.syntax.kind() == Kind.LANGUAGE) {
+        // Reclassify tokens according to parsing context.
+        if (hasParsingContext && subparser.lookahead.token.syntax.kind()
+            == Kind.LANGUAGE) {
 
           // Create new list, add token.  Need to fork immediately if
           // there are new tokens here.
@@ -1203,10 +1133,12 @@ public class ForkMergeParser {
 
             subparser.lookahead.presenceCondition.delRef();
             subparser.presenceCondition.delRef();
-            subparser.scope.free();
+            if (hasParsingContext) {
+              subparser.scope.free();
+            }
 
             if (showAccepts) {
-              runtime.errConsole().pln("ACCEPT").flush();
+              System.err.println("ACCEPT");
             }
 
             break;
@@ -1218,13 +1150,15 @@ public class ForkMergeParser {
 
             subparser.lookahead.presenceCondition.delRef();
             subparser.presenceCondition.delRef();
-            subparser.scope.free();
+            if (hasParsingContext) {
+              subparser.scope.free();
+            }
 
             if (showErrors) {
-              runtime.error("parse error on "
-                            + (subparser.lookahead.token.syntax.kind() == Kind.EOF ?
-                               "EOF" : "\"" + subparser.lookahead.token.syntax + "\"")
-                            + " at " + subparser.lookahead.token.syntax.getLocation());
+              error("parse error on "
+                    + (subparser.lookahead.token.syntax.kind() == Kind.EOF ?
+                       "EOF" : "\"" + subparser.lookahead.token.syntax + "\"")
+                    + " at " + subparser.lookahead.token.syntax.getLocation());
             }
 
             break;
@@ -1403,7 +1337,9 @@ public class ForkMergeParser {
 
             subparser.lookahead.presenceCondition.delRef();
             subparser.presenceCondition.delRef();
-            subparser.scope.free();
+            if (hasParsingContext) {
+              subparser.scope.free();
+            }
 
             break;
 
@@ -1429,34 +1365,26 @@ public class ForkMergeParser {
             // Can only be #if or #endif.
             throw new RuntimeException();
           }
-
-
         } else {
           // The subparser can only be on LANGUAGE, EOF, and
           // CONDITIONAL tokens.
-
           throw new RuntimeException();
         }
       }
 
-
       // Add the updated subparsers into the priority queue of
       // subparsers.
-
       for (Subparser subparser : processedParsers) {
         subparsers.add(subparser);
       }
-
 
       if (subparsers.size() == 0) {
         // Done
         break;
       }
 
-
       // Merge subparsers.  We only need check the earliest subparsers for
       // a merge.
-
       if (subparsers.size() > 1) {
         stagedMerge(subparsers);
       }
@@ -1465,20 +1393,19 @@ public class ForkMergeParser {
 
     if (parserStatistics) {
       int max = 0;
-      runtime.errConsole().pln(String.format("iterations %d", iterations));
+      System.err.println(String.format("iterations %d", iterations));
       for (Integer size : nsubparsers.keySet()) {
         if (size > max) max = size;
 
-        runtime.errConsole().pln(String.format("subparsers %d %d",
-                                               size, nsubparsers.get(size)));
+        System.err.println(String.format("subparsers %d %d",
+                                         size, nsubparsers.get(size)));
       }
-      runtime.errConsole().pln(String.format("max_subparsers %d", max)); 
-      runtime.errConsole().pln(String.format("follow %d", nfollow)); 
-      runtime.errConsole().flush();
+      System.err.println(String.format("max_subparsers %d", max)); 
+      System.err.println(String.format("follow %d", nfollow)); 
     }
 
-    if (actions.hasContext()) {
-      actions.getInitialContext().free();
+    if (hasParsingContext) {
+      initialParsingContext.free();
     }
 
     return root;
@@ -1496,70 +1423,47 @@ public class ForkMergeParser {
    * @return The follow set of the given token.
    */
   public Map<Integer, Lookahead> follow(OrderedSyntax a,
-                                        PresenceCondition presenceCondition)
-    throws IOException {
+                                        PresenceCondition presenceCondition) {
     Map<Integer, Lookahead> result = new HashMap<Integer, Lookahead>();
 
     presenceCondition.addRef();
-
     if (parserStatistics) {
       nfollow++;
     }
-
     while (true) {
-
-      // Get the first token of a.
-
+      // Call FIRST.
       PresenceCondition emptyCondition = first(result, a, presenceCondition);
 
-
-      // Update the presence condition to be the condition of the
-      // empty branches.
-
+      // Continue searching with the empty branches' condition.
       presenceCondition.delRef();
       presenceCondition = emptyCondition;
 
-
-      // If there are no empty branches, we need not continue.  We are
-      // done finding the follow set.
-
       if (presenceCondition.isFalse()) {
+        // Done.
         presenceCondition.delRef();
-
         return result;
       }
 
-
-      // Get next token after stepping out of conditionals.
-
+      // Get next token, stepping out of conditionals.
       do {
         switch (a.syntax.kind()) {
         case LANGUAGE:
-
-          // Get the next token from the input.
-
           a = a.getNext();
           break;
 
         case CONDITIONAL:
-
-          // Get the next token after the conditional.
-
           Conditional conditional = a.syntax.toConditional();
 
           switch (conditional.tag()) {
           case START:
             a = skipConditional(a);
             break;
-
           case NEXT:
             a = skipConditional(a);
             break;
-
           case END:
             a = a.getNext();
             break;
-
           default:
             throw new UnsupportedOperationException();
           }
@@ -1569,9 +1473,7 @@ public class ForkMergeParser {
           throw new RuntimeException("FMLR only takes language " +
                                      "and conditional tokens.");
         }
-
         // Until a does not end a branch.
-        
       } while (a.syntax.kind() == Kind.CONDITIONAL &&
                (a.syntax.toConditional().tag() == ConditionalTag.NEXT
                 || a.syntax.toConditional().tag() == ConditionalTag.END));
@@ -1596,37 +1498,25 @@ public class ForkMergeParser {
    * non-false if the follow method should continue looking for
    * tokens.
    */
-  private PresenceCondition first(Map<Integer, Lookahead> result, OrderedSyntax a,
-                        PresenceCondition presenceCondition) throws IOException {
-
+  private PresenceCondition first(Map<Integer, Lookahead> result,
+                                  OrderedSyntax a,
+                                  PresenceCondition presenceCondition) {
     presenceCondition.addRef();
-
     while (true) {
       switch (a.syntax.kind()) {
       case EOF:
-        // Fall through
       case LANGUAGE:
-
-        // Add the token to the follow set.  If it is already there,
-        // just update the presence condition.
-
+        // Add token to the follow set, or update an existing token's
+        // presence condition.
         if (! result.containsKey(a.getSequenceNumber())) {
-
-          // Add a new token to the follow-set.
-
           result.put(a.getSequenceNumber(),
                      new Lookahead(a, presenceCondition.addRef()));
-
         } else {
-
-          // Update the presence condition.
-
           Lookahead n = result.get(a.getSequenceNumber());
           PresenceCondition union = n.presenceCondition.or(presenceCondition);
           n.presenceCondition.delRef();
           n.presenceCondition = union;
         }
-
         presenceCondition.delRef();
         return presenceConditionManager.new PresenceCondition(false);
 
@@ -1635,103 +1525,57 @@ public class ForkMergeParser {
 
         switch (conditional.tag()) {
         case NEXT:
-          // Fall through
         case END:
-
-          // If the token ends a branch, i.e. NEXT or END, then we
-          // need to keep looking for a first token after the end of
-          // the conditional.
-
+          // Continue looking past the conditional
           return presenceCondition;
 
         case START:
+          // Holds the union of empty branch conditions.
+          PresenceCondition emptyConditions
+            = presenceConditionManager.new PresenceCondition(false);
 
-          // Save the presence conditions of all empty branches.
-          // This is necessary to attribute the correct presence
-          // condition to the first token following a conditional
-          // with empty branches.
-          //
-          // This is equivalent to the "cont" variable in the
-          // FOLLOW/FIRST algorithm description.
+          // Holds the union of non-empty branches.
+          PresenceCondition union
+            = a.syntax.toConditional().presenceCondition.addRef();
 
-          PresenceCondition emptyConditions = presenceConditionManager.new PresenceCondition(false);
-
-
-          // The union of the branches conditions.  Used to determine
-          // whether there is an implicit else branch or not.
-
-          PresenceCondition union = a.syntax.toConditional().presenceCondition.addRef();
-
-
-          // Loop through each branch of the conditional, find the
-          // first token of each.
-
+          // Find the first token of each branch.
           while (! (a.syntax.kind() == Kind.CONDITIONAL
                     && a.syntax.toConditional().tag()
                     == ConditionalTag.END)) {
+            PresenceCondition nestedPresenceCondition = presenceCondition
+              .and(a.syntax.toConditional().presenceCondition);
 
-            // Get the presence condition of the branch.  It is
-            // conjoined with the presence condition in which it is
-            // nested.
-
-            PresenceCondition nestedPresenceCondition
-              = presenceCondition.and(a.syntax.toConditional().presenceCondition);
-
-
-            // a is on the conditional starting the branch.  Get the
-            // first the token after the one starting the branch.  It
-            // will either be the first token in the branch, or the
-            // token that ends the branch.
-
+            // Move into the branch.
             a = a.getNext();
 
-
             if (nestedPresenceCondition.isFalse()) {
-
-              // If the nestedPresenceCondition is false, the branch is
-              // an infeasible path, so skip the branch.
-
+              // Branch is not feasible.
             } else {
-
-              // Get the first token in the branch if there is one.  If
-              // not, then the branch is empty, and we need to find the
-              // first token after the conditional.
-
-              PresenceCondition emptyBranch = first(result, a, nestedPresenceCondition);
+              // Recursively find first token.
+              PresenceCondition emptyBranch
+                = first(result, a, nestedPresenceCondition);
 
               if (! emptyBranch.isFalse()) {
-
-                // Save the presence condition of the empty branch.
-
+                // Save the empty branch's presence condition.
                 PresenceCondition or = emptyConditions.or(emptyBranch);
                 emptyConditions.delRef();
                 emptyConditions = or;
               }
-
               emptyBranch.delRef();
             }
-
             nestedPresenceCondition.delRef();
 
-            // Skip ahead to the next branch or stop when we find the
-            // #endif
-
+            // Go to the next branch or #endif.
             while (true) {
-
-              // If we have reached the next branch or are at the end
-              // of the conditional, then leave the loop.
-
               if (a.syntax.kind() == Kind.CONDITIONAL
                   && (a.syntax.toConditional().tag() == ConditionalTag.NEXT
                       || a.syntax.toConditional().tag()
                       == ConditionalTag.END)) {
+                // Done.
                 break;
               }
 
-
-              // a is now a language token or a start conditional.
-              // Move to the next token.
-
+              // On token or start conditional.  Move to next token.
               if (a.syntax.kind() == Kind.CONDITIONAL) {
                 assert a.syntax.toConditional().tag() == ConditionalTag.START
                   || a.syntax.toConditional().tag() == ConditionalTag.NEXT;
@@ -1741,74 +1585,41 @@ public class ForkMergeParser {
               }
             }
 
-
-            // Move to the next branch or #endif.
-
             if (a.syntax.kind() == Kind.CONDITIONAL
                 && a.syntax.toConditional().tag() == ConditionalTag.END) {
-
+              // Done.
               break;
-
-            } else {
-
-              // It must be a NEXT conditional.
-
+            } else {  // Should be an #elif or #else.
               assert a.syntax.toConditional().tag() == ConditionalTag.NEXT;
 
-
-              // Update the union of branch presence conditions.
-
-              PresenceCondition newUnion = union.or(a.syntax.toConditional().presenceCondition);
+              // Update the union of non-empty branch conditions.
+              PresenceCondition newUnion
+                = union.or(a.syntax.toConditional().presenceCondition);
               union.delRef();
               union = newUnion;
             }
           }
 
-
-          // Discover whether there is an implicit-else or not.  To do
-          // this, we check the union of all branches conditions
-          // against the presence condition (presenceCondition) of the
-          // current subparser.
-          //
-          // union.not() is the condition of the implicit else.  If it
-          // is always false under the current presence condition,
-          // then there is no implicit else.
-
+          // Check for implicit else (negation of non-empty branches).
           PresenceCondition elseBranch = presenceCondition.andNot(union);
           union.delRef();
-
-
           if (! elseBranch.isFalse()) {
-
-            // Save the presence condition of the empty, implicit
-            // else.
-
+            // Add implicit else to union of empty branches.
             PresenceCondition or = emptyConditions.or(elseBranch);
             emptyConditions.delRef();
             emptyConditions = or;
           }
-
           elseBranch.delRef();
             
-
-
-          // Record whether the conditional is empty.
-
           if (parserStatistics) {
             // Count empty conditionals.  The logic below ensures that
             // if there is at least one time when a conditional is
             // non-empty, the conditional is not marked as empty.
             // This is a more conservative way to count empty
             // conditionals.
-
-            if (emptyConditions.isFalse()) {
-              // Not empty.
-
+            if (emptyConditions.isFalse()) {  // Not empty.
               emptyConditionals.put(a.getSequenceNumber(), false);
-
-            } else {
-              // Empty.
-              
+            } else {  // Empty.
               if (emptyConditionals.containsKey(a.getSequenceNumber())) {
                 emptyConditionals.put(a.getSequenceNumber(),
                                       true && emptyConditionals
@@ -1819,27 +1630,18 @@ public class ForkMergeParser {
             }
           }
 
-
           if (emptyConditions.isFalse()) {
-
-            // No branch is empty.
-
+            // No empty branches.
             presenceCondition.delRef();
-
             return emptyConditions;
           }
 
-          // Set the presence condition to be that of the empty
-          // branches.
-
+          // Continue searching with the empty branch conditions.
           presenceCondition.delRef();
           presenceCondition = emptyConditions;
 
-
-          // Move a to the next token after the conditional's #endif.
-
+          // Move past the #endif.
           a = a.getNext();
-
           break;
 
         default:
@@ -1883,130 +1685,190 @@ public class ForkMergeParser {
     followCache.put(t.getSequenceNumber(), follow);
   }
 
+  /** This holds merged subparsers temporarily. */
+  private List<Subparser> processed = new LinkedList<Subparser>();
+
+  /** This holds subparsers that need to be merged. */
+  private List<Subparser> subset = new ArrayList<Subparser>();
+
   /**
-   * Merge subparsers in the ordered list.  This method checks an
-   * internal flag, MERGE_ALL, to determine whether to merge only the
-   * subparsers on the earliest token or all subparsers in the list.
-   * This policy reflects a trade-off between faster merging versus
-   * fewer subparsers.
+   * Merge subparsers in the ordered list.
    *
    * @param subparsers The ordered list of subparsers to check for and
    * perform merges.  This method assumes there is more than one
    * subparser.
    */
-  private List<Subparser> processed = new LinkedList<Subparser>();
-  private List<Subparser> subset = new ArrayList<Subparser>();
   private void stagedMerge(PriorityQueue<Subparser> subparsers) {
-    if (MERGE_ALL) {
-      // Check for the need to merge and then execute the merge for
-      // all sets of subparsers on the same token.
-      while (! subparsers.isEmpty()) {
-        Subparser first = subparsers.poll();
+    int initialCount = subparsers.size();
 
-        if (subparsers.isEmpty()
-            || (first.lookahead.token.order - subparsers.peek().lookahead.token.order) != 0) {
-          // There is only one subparser at the earliest token.  No way
-          // to merge, so put it back in the priority queue.
-          processed.add(first);
-
-        } else {
-          // Get the earliest token.
-          OrderedSyntax earliestToken = first.lookahead.token;
-
-          // Get the list of earliest subparsers to compare pair-wise
-          // for mergeability.
-          subset.add(first);
-
-          // Pull the earliest subparsers off of the main set of
-          // subparsers.
-          while (! subparsers.isEmpty()
-                 && (subparsers.peek().lookahead.token.order - earliestToken.order) == 0) {
-            subset.add(subparsers.poll());
-          }
-
-          // Merge the subset.
-          subset = merge(subset);
-
-          // Add the processed and merged subparsers back to the main
-          // set of subparsers.
-          processed.addAll(subset);
-          subset.clear();
-        }
-      }
-
-      for (Subparser subparser : processed) {
-        subparsers.add(subparser);
-      }
-
-    } else {
-      // Check for the need to merge and then execute the merge only for
-      // the set of subparsers on the earliest token
-
+    // Merge each subset of subparsers on the same token.
+    while (! subparsers.isEmpty()) {
       Subparser first = subparsers.poll();
 
-      if ((first.lookahead.token.order - subparsers.peek().lookahead.token.order) != 0) {
-        // There is only one subparser at the earliest token.  No way
-        // to merge, so put it back in the priority queue.
-        subparsers.add(first);
-
+      if (subparsers.isEmpty()
+          || (first.lookahead.token.order
+              - subparsers.peek().lookahead.token.order) != 0) {
+        // Only one subparser in the subset.  Don't merge.
+        processed.add(first);
       } else {
-        // Get the list of earliest subparsers to compare pair-wise
-        // for mergeability.
-        subset.add(first);
-
         // Get the earliest token.
         OrderedSyntax earliestToken = first.lookahead.token;
 
-        // Pull the earliest subparsers off of the main set of subparsers.
-        while (subparsers.size() > 0
-               && (subparsers.peek().lookahead.token.order - earliestToken.order) == 0) {
+        // Get subparsers on earliest token.
+        subset.add(first);
+        while (! subparsers.isEmpty()
+               && (subparsers.peek().lookahead.token.order
+                   - earliestToken.order) == 0) {
           subset.add(subparsers.poll());
         }
 
-        // Merge the subset.
+        // Merge subparsers.
         subset = merge(subset);
-
-        // Add the processed and merged subparsers back to the main
-        // set of subparsers.
-        for (Subparser subparser : subset) {
-          subparsers.add(subparser);
-        }
+        processed.addAll(subset);
         subset.clear();
       }
     }
+
+    for (Subparser subparser : processed) {
+      subparsers.add(subparser);
+    }
+
+    if (showFM && subparsers.size() < initialCount) {
+      System.err.println("merged " + initialCount + " to " + subparsers.size());
+    }
+
     processed.clear();
   }
+
+  /** This holds error subparsers. */
+  private LinkedList<Subparser> errorParsers = new LinkedList<Subparser>();
+
+  /**
+   * Merge any error subparsers into non-error subparsers.
+   *
+   * @param subset The subparsers to merge.  They should all be on the
+   * same token
+   * @return A subset of subparsers that has either no error
+   * subparsers or is all error subparsers.
+   */
+  private List<Subparser> mergeErrors(List<Subparser> subset) {
+    for (int i = 0; i < subset.size(); i++) {
+      if (ParsingAction.ERROR == subset.get(i).lookahead.action) {
+        errorParsers.add(subset.get(i));
+        subset.remove(i);
+        i--;
+      }
+    }
+
+    if (errorParsers.size() > 0) {
+      if (subset.size() == 0) {
+        subset.addAll(errorParsers);
+      } else {
+        for (Subparser e : errorParsers) {
+          StackFrame mergeFrame = null;
+          Subparser mergeParser = null;
+
+          for (Subparser s : subset) {
+            StackFrame estate = e.stack;
+            StackFrame sstate = s.stack;
+
+            if (sstate.getHeight() > estate.getHeight()) {
+              sstate = sstate.get(sstate.getHeight() - estate.getHeight() + 1);
+            } else {
+              estate = estate.get(estate.getHeight() - sstate.getHeight() + 1);
+            }
+
+            while (sstate != estate) {
+              sstate = sstate.next;
+              estate = estate.next;
+            }
+
+            if (null == mergeFrame
+                || mergeFrame.getHeight() < sstate.getHeight()) {
+              mergeFrame = sstate;
+              mergeParser = s;
+            }
+          }
+
+          // Merge the semantic values.
+          GNode conditionalNode = GNode.create(CHOICE_NODE_NAME);
+          if (null != mergeFrame.value) {
+            conditionalNode.add(mergeParser.presenceCondition.addRef());
+            conditionalNode.add(mergeFrame.value);
+          }
+          conditionalNode.add(e.presenceCondition.addRef());
+          conditionalNode.add(new Error("parsing error", true));
+          mergeFrame.value = conditionalNode;
+
+          // OR the presence conditions.
+          PresenceCondition or
+            = mergeParser.presenceCondition.or(e.presenceCondition);
+          mergeParser.presenceCondition.delRef();
+          mergeParser.presenceCondition = or;
+
+          // Update the subparser's head.
+          mergeParser.lookahead.presenceCondition.delRef();
+          if (! mergeParser.lookahead.isSet()) {
+            mergeParser.lookahead.presenceCondition = or.addRef();
+          } else {
+            // Clear the subparser's multi-head.
+            ((LookaheadSet) mergeParser.lookahead).free();
+            mergeParser.lookahead
+              = new Lookahead(mergeParser.lookahead.token, or.addRef());
+          }
+
+          e.lookahead.presenceCondition.delRef();
+          e.presenceCondition.delRef();
+          if (hasParsingContext) {
+            e.scope.free();
+          }
+        }
+      }
+      errorParsers.clear();
+    }
+
+    return subset;
+  }
+
+  /** This holds merged subparsers. */
+  private LinkedList<Subparser> mergedParsers = new LinkedList<Subparser>();
 
   /**
    * Merge a set of subparsers.  This method assumes that all the
    * subparsers in the input set are on the same token already.
    *
-   * @param subset The subparsers to merge.  They all should be on the
-   * @param The merged set of subparsers.
+   * @param subset The subparsers to merge.  They should all be on the
    * same token.
+   * @param The merged set of subparsers.
    */
-  private LinkedList<Subparser> mergedParsers = new LinkedList<Subparser>();
   private List<Subparser> merge(List<Subparser> subset) {
-    // Check each pair of the earliest subparsers for mergeability.
+    if (NEW_ERROR_HANDLING) {
+      // First merge errors.
+      subset = mergeErrors(subset);
+
+      // Stop merging if all subparsers are errors.  Since mergeErrors
+      // ensures that all or no subparsers are error subparsers, only
+      // check the first one.
+      if (ParsingAction.ERROR == subset.get(0).lookahead.action) {
+        return subset;
+      }
+    }
+
+    // Try to merge each pair of subparsers.
     for (int outer = 0; outer < subset.size(); outer++) {
       Subparser subparser = subset.get(outer);
 
       for (int inner = 0; inner < subset.size(); inner++) {
         Subparser compareParser = subset.get(inner);
 
-        // Can't merge with self.
         if (subparser == compareParser) continue;
+        assert subparser.lookahead.token.order
+          == compareParser.lookahead.token.order;
 
-        assert subparser.lookahead.token.order == compareParser.lookahead.token.order;
-
-        // See if the subparsers can merge.  Two subparsers can merge
-        // if the following hold: (1) they are on the same token (we
-        // already know this since only checking earliest subparsers),
-        // (2), the token is classified the same way under the parsing
-        // presenceCondition, (3) they have the same parsing state, (4) they
-        // have mergeable parsing presenceConditions, and (5) they aren't
-        // pointing to the exact same stack frame, because this means
-        // the subparsers were just forked.
+        // Check merge criteria: (1) at the same token, (2) tokens are
+        // same type, (3) have the same parsing state, (4) their
+        // presence conditions are not mutually exclusive, and (5) the
+        // subparsers weren't just forked.
         boolean sameTokenType
           = (subparser.lookahead.token.syntax.kind() == Kind.LANGUAGE
              && subparser.lookahead.token.syntax.toLanguage().tag()
@@ -2014,17 +1876,13 @@ public class ForkMergeParser {
           || subparser.lookahead.token.syntax.kind() != Kind.LANGUAGE;
 
         if (sameTokenType
-            && actions.isComplete(subparser.stack.symbol)
-            && subparser.scope.mayMerge(compareParser.scope)
+            && semanticValues.isComplete(subparser.stack.symbol)
+            && (! hasParsingContext
+                || subparser.scope.mayMerge(compareParser.scope))
             && subparser.stack.isMergeable(compareParser.stack)
             && subparser.stack != compareParser.stack) {
-
-          // Save the subparser for later merging.
+          // Move subparser to merge list.
           mergedParsers.addLast(compareParser);
-
-
-          // Remove the merged parser from the set of active
-          // subparsers.
           subset.remove(inner);
           inner--;
 
@@ -2035,26 +1893,10 @@ public class ForkMergeParser {
         }
       }
 
+      // Merge subparsers.  
       if (mergedParsers.size() > 0) {
-        // Merge the subparsers.  Create a merged subparser with a new
-        // (1) semantic value, (2) presence condition, and (3) parsing
-        // presenceCondition.  The construction of each follows below.  As an
-        // optimization, the current parserElement subparser is
-        // replaced in-memory with the new subparser.
-
-        // (1) Combine their semantic values.  This acheived by creating
-        // a new stack fragment that is as deep as the split in the
-        // stack.  Each frame in the new stack fragment has a semantic
-        // value that is a conditional containing the semantic values
-        // from each of the merged subparsers' stacks.
-
-        // Find the distance down the GSS of the highest common
-        // descendent of all subparsers.  The GSS is an up-tree
-        // instead of a DAG, which is why the following algorithm will
-        // work.
-
+        // Find the least common ancestor stack frame.
         int maxDist = 0;
-
         StackFrame s = subparser.stack;
 
         for (Subparser mergedParser : mergedParsers) {
@@ -2072,86 +1914,73 @@ public class ForkMergeParser {
           }
         }
 
-        // Create the new AST CHOICE_NODE_NAME nodes to store the
-        // combined semantic values and their presence conditions.
-        // This creates a new stack fragment that duplicates the
-        // current parserElement's stack down maxDist stack element.
-        // Each new stack element contains a CHOICE_NODE_NAME node with
-        // the original semantic value and the subparser's presence
-        // condition.
-
-        // Duplicate the stack fragment down to maxDist.
-
-        // Replace the top stack frame for the merged subparser.
+        // Duplicate the stack frames up to the least common ancestor.
         subparser.stack = new StackFrame(subparser.stack.state,
                                          subparser.stack.symbol,
                                          subparser.stack.value,
                                          subparser.stack.next);
-
-        // Duplicate the rest of the stack.
         StackFrame u = subparser.stack;
-
         for (int i = 0; i < maxDist - 1; i++) {
           u.next = new StackFrame(u.next.state, u.next.symbol,
                                   u.next.value, u.next.next);
           u = u.next;
         }
 
-        // Combine all the merged parser's semantic values.
+        // Combine each stack frame's semantic values, updating the
+        // presence condition along the way.
         for (Subparser mergedParser : mergedParsers) {
-          subparser.stack.merge(subparser.presenceCondition, mergedParser.stack,
-                            mergedParser.presenceCondition, maxDist);
+          subparser.stack.merge(subparser.presenceCondition,
+                                mergedParser.stack,
+                                mergedParser.presenceCondition,
+                                maxDist);
+
+          PresenceCondition or =
+            subparser.presenceCondition.or(mergedParser.presenceCondition);
+          subparser.presenceCondition.delRef();
+          subparser.presenceCondition = or;
         }
 
+        // // Combine the subparsers' presence conditions.
+        // PresenceCondition disjunction = subparser.presenceCondition;
+        // for (Subparser mergedParser : mergedParsers) {
+        //   PresenceCondition or
+        //     = disjunction.or(mergedParser.presenceCondition);
+        //   disjunction.delRef();
+        //   disjunction = or;
+        // }
+        // subparser.presenceCondition = disjunction;
 
-        // (2) Find the logical disjunction of all the merged
-        // subparsers' presence conditions.
-        PresenceCondition disjunction = subparser.presenceCondition;
-
-        for (Subparser mergedParser : mergedParsers) {
-          PresenceCondition or = disjunction.or(mergedParser.presenceCondition);
-
-          disjunction.delRef();
-          disjunction = or;
-        }
-
-        // Update the subparser with the new, combined presence
-        // condition.
-        subparser.presenceCondition = disjunction;
-
+        // Update the subparser's head.
         subparser.lookahead.presenceCondition.delRef();
-
         if (! subparser.lookahead.isSet()) {
-          subparser.lookahead.presenceCondition = disjunction.addRef();
-
+          subparser.lookahead.presenceCondition =
+            subparser.presenceCondition.addRef();
         } else {
-          // Replace a lookahead set with just a regular lookahead.
-          // If one or more subparsers already contains a set (due to
-          // shared reductions or lazy forking) then the set contains
-          // the follow-set with the presence conditions only for the
-          // current subparser.  We avoid have incorrect presence
-          // conditions by replacing the lookahead with a new one that
-          // isn't a set.  Then, the follow-set for the token will be
-          // computed as normal
-
+          // Clear the subparser's multi-head.
           ((LookaheadSet) subparser.lookahead).free();
-          subparser.lookahead = new Lookahead(subparser.lookahead.token, disjunction.addRef());
+          subparser.lookahead =
+            new Lookahead(subparser.lookahead.token,
+                          subparser.presenceCondition.addRef());
         }
 
-        // (3) Use the parsing presenceConditions merge method to construct the
-        // new parsing presenceCondition.
-        for (Subparser mergedParser : mergedParsers) {
-          subparser.scope.merge(mergedParser.scope);
+        // Merge parsing contexts.
+        if (hasParsingContext) {
+          for (Subparser mergedParser : mergedParsers) {
+            subparser.scope.merge(mergedParser.scope);
+          }
         }
 
-        // Lastly, clean up the merged subparsers memory use.
+        // Free presence conditions and multi-head sets.
         for (Subparser mergedParser : mergedParsers) {
           mergedParser.lookahead.presenceCondition.delRef();
-          if (mergedParser.lookahead.isSet()) ((LookaheadSet) mergedParser.lookahead).free();
+          if (mergedParser.lookahead.isSet()) {
+            ((LookaheadSet) mergedParser.lookahead).free();
+          }
           mergedParser.presenceCondition.delRef();
-          mergedParser.scope.free();
+          if (hasParsingContext) {
+            mergedParser.scope.free();
+          }
         }
-
         mergedParsers.clear();
       }
     }
@@ -2170,18 +1999,16 @@ public class ForkMergeParser {
     LinkedList<Subparser> processedParsers = new LinkedList<Subparser>();
 
     for (Lookahead n : tokenSet) {
-      Subparser forkedSubparser = new Subparser(n,
-                                                subparser.stack,
-                                                n.presenceCondition.addRef(),
-                                                subparser.scope.fork());
-      if (FAST_FINISH_EOF
-          && Kind.EOF
-          == forkedSubparser.lookahead.token.syntax.kind()) {
-        fastFinish(forkedSubparser);
-      } else {
-        processedParsers
-          .addLast(forkedSubparser);
-      }
+      Subparser forkedSubparser
+        = new Subparser(n,
+                        subparser.stack,
+                        n.presenceCondition.addRef(),
+                        hasParsingContext ? subparser.scope.fork() : null);
+      processedParsers.addLast(forkedSubparser);
+    }
+
+    if (showFM && processedParsers.size() > 1) {
+      System.err.println("forked 1 into " + processedParsers.size() + " parsers");
     }
 
     return processedParsers;
@@ -2199,131 +2026,82 @@ public class ForkMergeParser {
    */
   private Collection<Lookahead> partition(Collection<Lookahead> tokenSet,
                                           Subparser subparser) {
-
     Collection<Lookahead> partition = new LinkedList<Lookahead>();
-
-    // Partition the reduces into sets based on what production they
-    // are reducing, i.e. shared reductions.
     HashMap<Integer, Lookahead> sharedReductions = null;
-
-    // Partition the shifts into a single set for later lazy forking.
     Lookahead shifts = null;
 
-    // Partition the token set.
     for (Lookahead n : tokenSet) {
       getAction(n, subparser.stack);
-
-      if (optimizeSharedReductions
-          && ParsingAction.REDUCE == n.getAction()) {
-
-        // Partition ordinary tokens in the follow set by the
-        // production they are reducing.
-
+      if (optimizeSharedReductions && ParsingAction.REDUCE == n.getAction()) {
+        // Group tokens that reduce the same production.
         if (null == sharedReductions) {
           sharedReductions = new HashMap<Integer, Lookahead>();
         }
-
         if (sharedReductions.containsKey(n.getActionData())) {
-
           Lookahead element = sharedReductions.get(n.getActionData());
           LookaheadSet set;
 
-          // If there was only one token with this reduction
-          // so far, then make a new lookahead set.
-
+          // Add the token to the shared reduce set.
           if (element.isSet()) {
             set = (LookaheadSet) element;
-
           } else {
-            // Create the lookahead set.
             set = new LookaheadSet(subparser.lookahead.token,
                                    element.presenceCondition.addRef(),
                                    element.getAction(),
                                    element.getActionData()); 
             set.add(element);
-
-            // Add the set of lookaheads to the shared reductions.
             sharedReductions.put(n.getActionData(), set);
           }
-
-          // Add the new token to the shared reduction set.
           set.add(n);
 
           // Update the set's presence condition.
-          PresenceCondition union = set.presenceCondition.or(n.presenceCondition);
+          PresenceCondition union
+            = set.presenceCondition.or(n.presenceCondition);
           set.presenceCondition.delRef();
           set.presenceCondition = union;
-
         } else {
-          // This is the first token that is reducing this production.
           sharedReductions.put(n.getActionData(), n);
         }
-
-
       } else if (optimizeLazyForking
                  && ParsingAction.SHIFT == n.getAction()) {
-
+        // Add the token to the set of shifts.
         if (null == shifts) {
-          // No tokens have been added yet.
           shifts = n;
-
         } else {
           LookaheadSet set;
 
           if (shifts.isSet()) {
-            // We already have a set.
             set = (LookaheadSet) shifts;
-
           } else {
-            // There is more than one shifting token, but we have only
-            // seen one.  Create a new set to house both of them.
             Lookahead element = shifts;
-
-            // Create the lookahead set.
             set = new LookaheadSet(subparser.lookahead.token,
                                    element.presenceCondition.addRef(),
                                    element.getAction(),
                                    element.getActionData()); 
             set.add(element);
-
             shifts = set;
           }
-
-          // Add the new token to the set of shifting tokens.
           set.add(n);
 
           // Update the set's presence condition.
-          PresenceCondition union = set.presenceCondition.or(n.presenceCondition);
+          PresenceCondition union
+            = set.presenceCondition.or(n.presenceCondition);
           set.presenceCondition.delRef();
           set.presenceCondition = union;
         }
-
       } else {
-
-        // Add the ordinary token by itself to the partition.  For
-        // naive FMLR, no partitioning is really done; all tokens are
-        // partitioned into their own trivial subsets.
-
+        // No optimization, so no partition.
         partition.add(n);
       }
     }
-
-
-    // Add the shared reductions to the partition.
 
     if (null != sharedReductions) {
       partition.addAll(sharedReductions.values());
     }
 
-
-    // Add the shifts to the partition.
-
     if (null != shifts) {
       partition.add(shifts);
     }
-
-
-    // Return the partition.
 
     return partition;
   }
@@ -2336,7 +2114,6 @@ public class ForkMergeParser {
    *
    * @param tokenSet The set that is being lazily forked.
    * @return The partitioned set of tokens.
-   * @throws IOException because it may read tokens from input.
    * @throws InvalidCastException if subparser.lookahead is not a LookaheadSet
    * object.
    * @throws IllegalStateException if any next token does not cause a
@@ -2344,32 +2121,18 @@ public class ForkMergeParser {
    * is turned off but this method is called.  Additionally it is
    * thrown if tokenSet.token.syntax is not a START conditional.
    */
-  private Collection<Lookahead> lazyFork(LookaheadSet tokenSet)
-    throws IOException {
-
+  private Collection<Lookahead> lazyFork(LookaheadSet tokenSet) {
     if (tokenSet.token.syntax.kind() != Kind.CONDITIONAL
         || tokenSet.token.syntax.toConditional().tag() != ConditionalTag.START
         || ! optimizeLazyForking) {
       throw new IllegalStateException();
     }
-
-
-    // Get the sequence numbers for the START conditional and the
-    // first token after the END of this conditional.  Only the tokens
-    // within this ranged will be forked.  The range includes the
-    // START but is exclusive of the after token, i.e. in range
-    // notation: [min, maxExclusive).
-
+    // Only fork tokens within this conditional.
     int min = tokenSet.token.getSequenceNumber();
     OrderedSyntax after = skipConditional(tokenSet.token);
     int maxExclusive = after.getSequenceNumber();
 
-
-    // Move to the next ordinary token or start conditional
-    // (#if).  If the next token ends a branch (#elif or
-    // #endif), move to the next ordinary token or start
-    // conditional after the conditional.
-
+    // Move to the next token or #if.
     while (after.syntax.kind() == Kind.CONDITIONAL
            && after.syntax.toConditional().tag
            != ConditionalTag.START) {
@@ -2377,85 +2140,48 @@ public class ForkMergeParser {
 
       switch (conditional.tag()) {
       case START:
-        // No need to move.
+        // Done.
         break;
-
       case NEXT:
         after = skipConditional(after);
         break;
-
       case END:
         after = after.getNext();
         break;
-
       default:
-        // No such conditional tag.
+        // Done.
         throw new UnsupportedOperationException();
       }
     }
 
-
-    // Partition the set into two: (1) the _set_ of tokens (even if
-    // there's only one, to ensure it can merge with other subparsers
-    // at that conditional) that fall inside the current conditional
-    // [min, maxExclusive) and (2) the _token_ (ordinary or START
-    // conditional.  Make sure that (2), the token, has a presence
-    // condition that is the union of all the remaining tokens for
-    // correctness.
-
+    // The tokens between [min, maxExclusive).
     Collection<Lookahead> forkedSet = new LinkedList<Lookahead>();
 
+    // The token at maxExclusive.
     Lookahead remainder = null;
 
     for (Lookahead n : tokenSet.set) {
-
       if (min < n.token.getSequenceNumber()
           && n.token.getSequenceNumber() < maxExclusive) {
-
-        // The token is inside the current conditional.  Add to the
-        // set of return tokens.
-
         forkedSet.add(n);
-
       } else {
-
-        // The token is not inside the current conditional.  Create
-        // the remainder token and union the presence conditions of
-        // the tokens outside the conditional.
-
         if (null == remainder) {
-
-          // This is the first token of the remainder.
-
           remainder = new Lookahead(after, n.presenceCondition.addRef());
-
         } else {
-
-          // There is more than one token that is not in the current
-          // conditional.  Update the remainder's presence condition.
-
-          PresenceCondition union = remainder.presenceCondition.or(n.presenceCondition);
-
+          // Union presence conditions of all tokens not being forked.
+          PresenceCondition union
+            = remainder.presenceCondition.or(n.presenceCondition);
           remainder.presenceCondition.delRef();
           remainder.presenceCondition = union;
         }
-
-        // Clean up these tokens.  The follow set will be called on
-        // the remainder again anyway.
-
+        // Free token presence condition.
         n.presenceCondition.delRef();
       }
     }
 
-
-    // Add the remainder token to the set of return tokens.
-
     if (null != remainder) {
       forkedSet.add(remainder);
     }
-
-
-    // Collect statistics on empty branches.
 
     if (parserStatistics) {
       lazyForks++;
@@ -2474,65 +2200,44 @@ public class ForkMergeParser {
    * @param a The conditional start or next token.
    * @return The first token after the end of the conditional.
    */
-  private OrderedSyntax skipConditional(OrderedSyntax a)
-    throws IOException {
-
+  private OrderedSyntax skipConditional(OrderedSyntax a) {
     if (a.syntax.toConditional().tag() != ConditionalTag.START
         && a.syntax.toConditional().tag() != ConditionalTag.NEXT) {
       throw new RuntimeException("skipConditional must take a " +
                                  "start or next conditional token.");
     }
 
-    // Check the cache to see if we already found the next token for
-    // this start or next conditional.
-
     if (skipConditionalCache.containsKey(a.getSequenceNumber())) {
       return skipConditionalCache.get(a.getSequenceNumber());
     }
 
-
-    // Save the input's sequence number for later caching.
-
+    // Sequence number is key to cache.
     int sequenceNumber = a.getSequenceNumber();
 
-
-    // Move to the first token after the start of the conditional and
-    // carefully past it, matching #ifs and #endif and keeping track
-    // of other nested conditionals.
-
+    // Move past the conditional, landing on #endif.
     int nesting = 1;
-
     do {
       a = a.getNext();
-
       if (a.syntax.kind() == Kind.CONDITIONAL) {
         switch (a.syntax.toConditional().tag()) {
         case START:
           nesting++;
           break;
-
         case END:
           nesting--;
           break;
         }
       }
-                    
     } while (nesting > 0);
 
-
-    // Now we are on the #endif.  Return the next token after the end
-    // of the conditional.
-
+    // Get the next token after #endif.
     OrderedSyntax returnToken = a.getNext();
-
-    // Cache the token.
 
     skipConditionalCache.put(sequenceNumber, returnToken);
 
     return returnToken;
   }
 
-  
   /**
    * Shift the subparser.
    *
@@ -2545,19 +2250,17 @@ public class ForkMergeParser {
     int symbol = token.tag().getID();
 
     if (showActions) {
-      runtime.errConsole().pln("shifting " + token.tag() + "("
-                               + token.getTokenText() + ")").flush();
+      System.err.println("shifting " + token.tag() + "("
+                         + token.getTokenText() + ")");
     }
-    
-    // Layout has no semantic value, but keep them when printing the
-    // AST as C source.
-    if (! runtime.test("printSource")
-        && Actions.ValueType.LAYOUT
-        == actions.getValueType(symbol)) {
+
+    // Don't keep layout unless printing source.
+    if (! saveLayoutTokens && SemanticValues.ValueType.LAYOUT
+        == semanticValues.getValueType(symbol)) {
       token = null;
     }
 
-    // Push the new state onto the stack.
+    // Push new stack frame.
     subparser.stack = new StackFrame(yystate, symbol, token, subparser.stack);
   }
 
@@ -2569,19 +2272,18 @@ public class ForkMergeParser {
    */
   private void reduce(Subparser subparser) {
     int production = subparser.lookahead.getActionData();
-    int yylen = ForkMergeParserTables.yyr2.table[production];
-    int symbol = ForkMergeParserTables.yyr1.table[production];
-    String nodeName = ForkMergeParserTables.yytname.table[symbol];;
+    int yylen = tables.yyr2[production];
+    int symbol = tables.yyr1[production];
+    String nodeName = semanticValues.changeName(symbol) ?
+      semanticValues.newName(symbol) : tables.yytname[symbol];
 
     if (showActions) {
-      runtime.errConsole().pln("reducing " + nodeName).flush();
+      System.err.println("reducing " + nodeName);
     }
 
     // Get the semantic values from the stack.
-
     StackFrame topState = subparser.stack;
     Pair<Object> values = Pair.<Object>empty();
-  
     for (int i = 0; i < yylen; i++) {
       // Don't bother adding null semantic values as children.
       if (null != topState.value) {
@@ -2590,87 +2292,60 @@ public class ForkMergeParser {
       topState = topState.next;
     }
 
-
-    // Get the goto parsing state.
-
-    int yystate;
-
-    yystate = ForkMergeParserTables
-      .yypgoto.table[symbol - ForkMergeParserTables.YYNTOKENS] + topState.state;
-
-    if (0 <= yystate && yystate <= ForkMergeParserTables.YYLAST
-        && ForkMergeParserTables.yycheck.table[yystate] == topState.state) {
-
-      yystate = ForkMergeParserTables.yytable.table[yystate];
-
+    // Get the GOTO  state.
+    int yystate = tables.yypgoto[symbol - tables.YYNTOKENS] + topState.state;
+    if (0 <= yystate && yystate <= tables.YYLAST
+        && tables.yycheck[yystate] == topState.state) {
+      yystate = tables.yytable[yystate];
     } else {
-      yystate= ForkMergeParserTables
-        .yydefgoto.table[symbol - ForkMergeParserTables.YYNTOKENS];
+      yystate= tables
+        .yydefgoto[symbol - tables.YYNTOKENS];
     }
 
-
-    // Construct the new semantic value.
-
-    Actions.ValueType valueType = actions.getValueType(symbol);
+    // Create the new semantic value.
+    SemanticValues.ValueType valueType = semanticValues.getValueType(symbol);
     Object value;
-    
     switch (valueType) {
     case ACTION:
-      // Semantic action nonterminals have no semantic value and
-      // should be empty.  Not until new implementation of semantic
-      // actions.
-
-      if (Pair.<Object>empty() == values) {
-        value = null;
-        break;
-
-      } else {
+      if (Pair.<Object>empty() != values) {
         throw new UnsupportedOperationException("semantic actions " + 
                                                 "nonterminals should " +
                                                 "have no semantic value");
       }
-    
+      // Fall-through
     case LAYOUT:
-      // Layout nonterminals have no semantic values.
-
+      if (saveLayoutTokens) {
+        value = semanticValues.getValue(symbol, nodeName, values);
+        break;
+      } else {
+        // Fall-through
+      }
+    case VOID:
       value = null;
       break;
-
     case PASS_THROUGH:
+      // Pass-through when there is one child.
       if (Pair.<Object>empty() == values) {
         value = null;
-
       } else if (values.tail() == Pair.<Object>empty()) {
-
-        // If there is one child, then pass-through.
-
         value = values.head();
         break;
-
       } else {
-        // Pass-through nonterminals only get passed-through when they
-        // have one child.
-
-        // Fall through to the default case.
+        // Fall through to regular NODE.
       }
-      
     case NODE:
-      value = actions.getValue(symbol, nodeName, values);
+      value = semanticValues.getValue(symbol, nodeName, values);
       break;
-
     case LIST:
       if (values == Pair.<Object>empty()) {
         value = GNode.create(nodeName);
-
       } else {
         if (nodeName.equals(((Node) values.head()).getName())) {
           value = ((Node) values.head());
           values = values.tail();
-
         } else {
           value = GNode.create(nodeName);
         }
-
         for (Object o : values) {
           GNode conditionalNode = GNode.create(CHOICE_NODE_NAME);
           conditionalNode.add(subparser.presenceCondition.addRef());
@@ -2679,18 +2354,18 @@ public class ForkMergeParser {
         }
       }
       break;
-
     default:
       throw new UnsupportedOperationException("unsupported node type");
     }
 
-    // Push the new state onto the stack.
+    // Push the new state.
     subparser.stack = new StackFrame(yystate, symbol, value, topState);
 
-    // Dispatch the semantic action if there is one.
-    actions.dispatch(symbol, subparser);
+    if (hasSemanticActions) {
+      // Handle semantic action.
+      semanticActions.dispatch(symbol, subparser);
+    }
   }
-
 
   /**
    * Get the parsing action for a token.  This method is adopted from
@@ -2700,90 +2375,59 @@ public class ForkMergeParser {
    * @param s The state to use to find the action.
    */
   private void getAction(Lookahead x, StackFrame s) {
+    if (ParsingAction.ERROR == x.action) return;
+
     if (x.token.syntax.kind() == Kind.LANGUAGE
         || x.token.syntax.kind() == Kind.EOF) {
-      int yyn;
-      int yystate;
-      
-      yystate = s.state;
-      
-      yyn = ForkMergeParserTables.yypact.table[yystate];
-      
+      // Get the parsing state.
+      int yystate = s.state;
+      int yyn = tables.yypact[yystate];
 
-      if (ForkMergeParserTables.YYPACT_NINF == yyn) {
-        // Decide to reduce without looking at the next token.  This
-        // is a Bison thing.
-
-        yyn = ForkMergeParserTables.yydefact.table[yystate];
-
+      if (tables.YYPACT_NINF == yyn) {
+        // Reduce without token.  A Bison optimization.
+        yyn = tables.yydefact[yystate];
         if (0 == yyn) {
-
           x.setAction(ParsingAction.ERROR, NODEFAULT);
-
         } else {
-
           x.setAction(ParsingAction.REDUCE, yyn);
         }
-
-      } else {
-        // Find the parsing action for the next token.
-
-        // Get the token's Bison symbol number.
-
+      } else {  // Lookup the parsing action.
+        // Get the token number.
         int yytoken;
-  
         if (x.token.syntax.kind() == Kind.EOF) {
-          yytoken = ForkMergeParserTables.YYEOF;
-
+          yytoken = tables.YYEOF;
         } else if (x.token.syntax.kind() == Kind.LANGUAGE) {
           Language<? extends LanguageTag> token = x.token.syntax.toLanguage();
           String str = token.getTokenText();
           LanguageTag tokentype = token.tag();
-
           yytoken = token.tag().getID();
         } else {
           yytoken = -1;
         }
-  
 
-        // Index into action table, state row + token column.
-
+        // Get the parsing action.
         yyn += yytoken;
-
-
-        // Lookup the parsing action.
-        
-        if (yyn < 0 || ForkMergeParserTables.YYLAST < yyn
-            || ForkMergeParserTables.yycheck.table[yyn] != yytoken) {
-
-          yyn = ForkMergeParserTables.yydefact.table[yystate];
-
+        if (yyn < 0 || tables.YYLAST < yyn || tables.yycheck[yyn] != yytoken) {
+          yyn = tables.yydefact[yystate];
           if (0 == yyn) {
             x.setAction(ParsingAction.ERROR, NODEFAULT);
-
           } else {
             x.setAction(ParsingAction.REDUCE, yyn);
           }
-
         } else {
-          yyn = ForkMergeParserTables.yytable.table[yyn];
-          
+          yyn = tables.yytable[yyn];
           if (yyn <= 0) {
-            if (0 == yyn || ForkMergeParserTables.YYTABLE_NINF == yyn) {
+            if (0 == yyn || tables.YYTABLE_NINF == yyn) {
               x.setAction(ParsingAction.ERROR, INVALID);
-
             } else {
               yyn = -yyn;
               x.setAction(ParsingAction.REDUCE, yyn);
             }
-
           } else {
             yystate = yyn;
-            
-            if (ForkMergeParserTables.YYFINAL == yystate) {
+            if (tables.YYFINAL == yystate) {
               x.setAction(ParsingAction.ACCEPT, -1);
               x.action = ParsingAction.ACCEPT;
-
             } else {
               x.setAction(ParsingAction.SHIFT, yystate);
             }
@@ -2797,58 +2441,8 @@ public class ForkMergeParser {
     }
   }
 
-  void fastFinish(Subparser subparser) {
-    // We know that EOF is that last token and that its
-    // follow-set always contains only EOF itself.  Finish
-    // up the parsing until we reach an ACCEPT or ERROR,
-    // one of which must happen eventually on EOF.
-    boolean done = false;
-    do {
-      getAction(subparser.lookahead, subparser.stack);
-      switch (subparser.lookahead.getAction()) {
-      case REDUCE:
-        reduce(subparser);
-        subparser.lookahead.clearAction();
-        break;
-
-      case ACCEPT:
-        accepted.add(subparser);
-
-        if (showAccepts) {
-          runtime.errConsole().pln("ACCEPT (fast finish)").flush();
-        }
-
-        done = true;
-        break;
-
-      case ERROR:
-
-        // Clean up subparser scope and presenceCondition.  We will not add
-        // it back to the main set of subparsers.
-
-        subparser.lookahead.presenceCondition.delRef();
-        subparser.presenceCondition.delRef();
-        subparser.scope.free();
-
-        if (showErrors) {
-          runtime.error("parse error on "
-                        + (subparser.lookahead.token.syntax.kind() == Kind.EOF ?
-                           "EOF" : "\"" + subparser.lookahead.token.syntax + "\"")
-                        + " at " + subparser.lookahead.token.syntax.getLocation());
-        }
-
-        done = true;
-        break;
-
-      case SHIFT:
-        throw new RuntimeException("fatal: can never shift on EOF");
-      }
-    } while (! done);
-  }
-
   /** A subparser. */
   public static class Subparser {
-
     /** The lookahead symbol, either a token or a conditional. **/
     public Lookahead lookahead;
     
@@ -2859,18 +2453,19 @@ public class ForkMergeParser {
     public PresenceCondition presenceCondition;
 
     /** The C typedef/var symbol table. */
-    public Actions.Context scope;
+    public ParsingContext scope;
 
     /**
      * Create a new subparser.
      *
-     * @param a The next token.
-     * @param s The active state stack element.
+     * @param lookahead The next token.
+     * @param stack The active state stack element.
      * @param presenceCondition The presence condition.
      * @param scope The parsing presenceCondition.
      */
-    public Subparser(Lookahead lookahead, StackFrame stack, PresenceCondition presenceCondition,
-                     Actions.Context scope) {
+    public Subparser(Lookahead lookahead, StackFrame stack,
+                     PresenceCondition presenceCondition,
+                     ParsingContext scope) {
       this.lookahead = lookahead;
       this.stack = stack;
       this.presenceCondition = presenceCondition;
@@ -2882,7 +2477,6 @@ public class ForkMergeParser {
      *
      * @return The presence condition.
      */
-
     public PresenceCondition getPresenceCondition() {
       return presenceCondition;
     }
@@ -2901,7 +2495,7 @@ public class ForkMergeParser {
     
     /** The parsing action data. */
     private int actionData;
-    
+
     /**
      * Create a new instance.
      *
@@ -2910,7 +2504,8 @@ public class ForkMergeParser {
      * @param conditional The conditional in which the token is
      * contained.  Used for lazy forking.
      */
-    public Lookahead(OrderedSyntax token, PresenceCondition presenceCondition) {
+    public Lookahead(OrderedSyntax token,
+                     PresenceCondition presenceCondition) {
       this.token = token;
       this.presenceCondition = presenceCondition;
 
@@ -2977,9 +2572,8 @@ public class ForkMergeParser {
      */
     public String toString() {
       return "(" + token.syntax.toString() + ", " + action + ", "
-        + actionData + ", " + token.getParentConditional()
-        + ", " + presenceCondition
-        + ")";
+        + actionData + ", " + token.getParentConditional() + ", "
+        + presenceCondition + ")";
     }
 
     /**
@@ -2992,17 +2586,22 @@ public class ForkMergeParser {
     public boolean isSet() {
       return false;
     }
+
+    /** Force an error.  Used by semantic * actions. */
+    public void setError() {
+      this.setAction(ParsingAction.ERROR, INVALID);
+    }
   }
 
   static class LookaheadSet extends Lookahead {
     public LinkedList<Lookahead> set;
 
-    public LookaheadSet(OrderedSyntax token, PresenceCondition presenceCondition, ParsingAction action,
+    public LookaheadSet(OrderedSyntax token,
+                        PresenceCondition presenceCondition,
+                        ParsingAction action,
                         int actionData) {
       super(token, presenceCondition);
-
       this.setAction(action, actionData);
-
       this.set = new LinkedList<Lookahead>();
     }
 
@@ -3034,6 +2633,14 @@ public class ForkMergeParser {
     public String toString() {
       return super.toString() + ":" + set;
     }
+
+    /** Force an error.  Used by semantic actions. */
+    public void setError() {
+      this.setAction(ParsingAction.ERROR, INVALID);
+      for (Lookahead l : set) {
+        l.setError();
+      }
+    }
   }
     
   /**
@@ -3048,7 +2655,7 @@ public class ForkMergeParser {
     public final Syntax syntax;
     
     /** The stream from which to pull syntax */
-    private final Stream stream;
+    private final Iterator<Syntax> stream;
     
     /** The ordered sequence number */
     private int order;
@@ -3056,10 +2663,7 @@ public class ForkMergeParser {
     /** The next ordered token */
     private OrderedSyntax next;
 
-    /**
-     * The sequence number of the conditional in which this token
-     * lies.
-     */
+    /** The sequence number of the containing conditional */
     private int parentConditional;
     
     /**
@@ -3069,9 +2673,8 @@ public class ForkMergeParser {
      *
      * @param stream The stream from which to pull new tokens.
      */
-    public OrderedSyntax(Stream stream) {
+    public OrderedSyntax(Iterator<Syntax> stream) {
       this(null, 0, 0, stream);
-
       nestedConditionals.push(0);
     }
     
@@ -3083,7 +2686,7 @@ public class ForkMergeParser {
      * @param order The sequence number of the token.
      */
     private OrderedSyntax(Syntax syntax, int order, int parentConditional,
-                          Stream stream) {
+                          Iterator<Syntax> stream) {
       this.syntax = syntax; 
       this.order = order;
       this.parentConditional = parentConditional;
@@ -3098,12 +2701,9 @@ public class ForkMergeParser {
      * @param newSyntax The new syntax object.
      * @param old The old OrderedSyntax object to duplicate sequence
      * and next token information from.
-     * @throws IOException This constructor must call getNext(), which
      * throws IOException.
      */
-    public OrderedSyntax(Syntax newSyntax, OrderedSyntax old)
-      throws IOException {
-
+    public OrderedSyntax(Syntax newSyntax, OrderedSyntax old) {
       this.stream = old.stream;
       this.syntax = newSyntax;
       this.parentConditional = parentConditional;
@@ -3112,9 +2712,8 @@ public class ForkMergeParser {
       // Prime the pump, by reading the next token.  This is
       // necessary, because if both the original and the copy of the
       // token have "null" as their next token, they will both call
-      // stream.scan(), which will advance the read two tokens ahead.
+      // stream.next(), which will advance the read two tokens ahead.
       // Really they both want the same next token.
-
       old.getNext();
       this.next = old.next;
     }
@@ -3124,9 +2723,8 @@ public class ForkMergeParser {
      *
      * @param syntax The new syntax object.
      * @return A new OrderedSyntax object.
-     * @throws IOException because it calls getNext().
      */
-    public OrderedSyntax copy(Syntax syntax) throws IOException {
+    public OrderedSyntax copy(Syntax syntax) {
       return new OrderedSyntax(syntax, this);
     }
 
@@ -3136,21 +2734,18 @@ public class ForkMergeParser {
      *
      * @return The next token.
      */
-    public OrderedSyntax getNext() throws IOException {
+    public OrderedSyntax getNext() {
       if (null == this.next) {
-        this.next = new OrderedSyntax(this.stream.scan(), this.order + 1,
+        this.next = new OrderedSyntax(this.stream.next(), this.order + 1,
                                       nestedConditionals.peek(), this.stream);
-
         if (this.next.syntax.kind() == Kind.CONDITIONAL) {
           switch (this.next.syntax.toConditional().tag()) {
           case START:
             nestedConditionals.push(this.next.order);
             this.next.parentConditional = this.next.order;
             break;
-
           case NEXT:
             break;
-
           case END:
             nestedConditionals.pop();
             break;
@@ -3188,7 +2783,8 @@ public class ForkMergeParser {
      * @return The string representation.
      */
     public String toString() {
-      return this.order + ":" + this.syntax.toString() + this.syntax.getClass();
+      return this.order + ":" + this.syntax.toString()
+        + this.syntax.getClass();
     }
   }
 
@@ -3209,6 +2805,12 @@ public class ForkMergeParser {
     /** The height of the stack.  Maintained internally. */
     private int height;
 
+    /** True when the semantic value has a conditional after it. */
+    private boolean conditionalAfter;
+
+    /** True when the semantic value has a conditional in it. */
+    private boolean conditionalInside;
+
     /**
      * Make a new state.
      *
@@ -3221,6 +2823,8 @@ public class ForkMergeParser {
       this.value = value;
       this.symbol = symbol;
       this.next = next;
+      this.conditionalAfter = false;
+      this.conditionalInside = false;
 
       if (null == next) {
         height = 1;
@@ -3228,7 +2832,7 @@ public class ForkMergeParser {
         height = next.height + 1;
       }
     }
-    
+
     /**
      * Get the ith state down the stack, "1" returning this state.
      *
@@ -3239,7 +2843,6 @@ public class ForkMergeParser {
       StackFrame state;
       
       state = this;
-      
       while (i > 1) {
         state = state.next;
         i--;
@@ -3255,7 +2858,6 @@ public class ForkMergeParser {
      */
     public int getHeight() {
       assert checkHeight() == height;
-
       return height;
     }
 
@@ -3286,55 +2888,105 @@ public class ForkMergeParser {
      * from shared stack elements get referenced twice.
      *
      * @param other The other state stack.
-     * @param otherPresenceCondition the presenceCondition of the other state stack's
-     * semantic value.
+     * @param otherPresenceCondition the presenceCondition of the
+     * other state stack's semantic value.
      * @param dist The distance down the stack to merge.
      */
-    public void merge(PresenceCondition thisPresenceCondition, StackFrame other,
-                      PresenceCondition otherPresenceCondition, int dist) {
+    public void merge(PresenceCondition thisPresenceCondition,
+                      StackFrame other,
+                      PresenceCondition otherPresenceCondition,
+                      int dist) {
       if (dist == 0) return;
 
       int flags
         = (null != this.value ? 1 : 0)
         | (null != other.value ? 2 : 0);
 
+      // System.err.println("MERGE BEFORE");
+      // System.err.println(this.value);
+      // System.err.println(thisPresenceCondition);
+      // System.err.println(other.value);
+      // System.err.println(otherPresenceCondition);
+
       switch (flags) {
       case 0:
         // Both are null.  Do nothing.
         break;
-
       case 1:
         // other.value is null, but this.value is not.  There is
         // nothing to add to this semantic value, so do nothing.
         break;
-
       case 2:
         // this.value is null, but other.value is not.  Create a new
         // conditional to store the non-null other.value and its
         // presence condition.
-
         GNode conditionalNode = GNode.create(CHOICE_NODE_NAME);
 
         conditionalNode.add(otherPresenceCondition.addRef());
         conditionalNode.add(other.value);
-
         this.value = conditionalNode;
         break;
 
       case 3:
         // Neither are null.  Add other.value and its presence
         // condition.
-
         if (this.value == other.value) {
-
           // Both are already pointing to the same list node.  Don't
           // create a conditional.
+        } else if (FLATTEN_MERGED_CHOICE_NODES) {
+          // Flatten both values into a single conditional.
+          GNode cnode = GNode.create(CHOICE_NODE_NAME);
 
-        } else if (! ((Node) this.value).getName().equals(CHOICE_NODE_NAME)) {
+          if (((Node) this.value).getName().equals(CHOICE_NODE_NAME)) {
+            boolean on_cond = true;
+            PresenceCondition and = null;
 
+            for (Object o : (Node) this.value) {
+              if (on_cond) {
+                and = thisPresenceCondition.and((PresenceCondition) o);
+                ((PresenceCondition) o).delRef();
+              } else {
+                if (! and.isFalse()) {
+                  cnode.add(and);
+                  cnode.add(o);
+                } else {
+                  and.delRef();
+                }
+              }
+              on_cond = ! on_cond;
+            }
+          } else {
+            cnode.add(thisPresenceCondition.addRef());
+            cnode.add(this.value);
+          }
+
+          if (((Node) other.value).getName().equals(CHOICE_NODE_NAME)) {
+            boolean on_cond = true;
+            PresenceCondition and = null;
+
+            for (Object o : (Node) other.value) {
+              if (on_cond) {
+                and = otherPresenceCondition.and((PresenceCondition) o);
+              } else {
+                if (! and.isFalse()) {
+                  cnode.add(and);
+                  cnode.add(o);
+                } else {
+                  and.delRef();
+                }
+              }
+              on_cond = ! on_cond;
+            }
+          } else {
+            cnode.add(otherPresenceCondition.addRef());
+            cnode.add(other.value);
+          }
+
+          this.value = cnode;
+        // } else if (! ((Node) this.value).getName().equals(CHOICE_NODE_NAME)) {
+        } else {
           // Combine the two value, this and other, into a choice
           // node.
-
           GNode cnode = GNode.create(CHOICE_NODE_NAME);
 
           cnode.add(thisPresenceCondition.addRef());
@@ -3342,22 +2994,20 @@ public class ForkMergeParser {
           cnode.add(otherPresenceCondition.addRef());
           cnode.add(other.value);
           this.value = cnode;
-
-        } else {
-
-          // This value is already a conditional, so just add the
-          // other value.
-
-          ((Node) this.value).add(otherPresenceCondition.addRef());
-          ((Node) this.value).add(other.value);
+        // } else {  // causes a cycle in the AST in some cases
+        //   // This value is already a conditional, so just add the
+        //   // other value.
+        //   ((Node) this.value).add(otherPresenceCondition.addRef());
+        //   ((Node) this.value).add(other.value);
         }
-
         break;
-
       }
       
+      // System.err.println("MERGE AFTER");
+      // System.err.println(this.value);
+
       if (this.next != null) {
-        this.next.merge(thisPresenceCondition, other.next, otherPresenceCondition, dist - 1);
+        this.next.merge(thisPresenceCondition, other.next,otherPresenceCondition, dist - 1);
       }
     }
     
@@ -3372,7 +3022,7 @@ public class ForkMergeParser {
 
     /**
      * Check whether this parsing state can merge with another.
-v     *
+     *
      * @param other The other parsing state.
      * @return true if it can merge with this state.
      */
@@ -3409,5 +3059,9 @@ v     *
    */
   public static boolean isParseable(Syntax syntax) {
     return syntax.kind() == Kind.LANGUAGE || syntax.kind() == Kind.EOF;
+  }
+
+  private void error(String msg) {
+    System.err.println("error: " + msg);
   }
 }

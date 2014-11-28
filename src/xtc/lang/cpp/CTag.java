@@ -78,11 +78,11 @@ __VOLATILE(getID("__VOLATILE"), "__volatile"),
 __VOLATILE__(getID("__VOLATILE__"), "__volatile__"),
 
 IDENTIFIER(getID("IDENTIFIER"), null, true),
-INTEGERconstant(getID("INTEGERconstant"), null, false),
-OCTALconstant(getID("OCTALconstant"), null, false),
-HEXconstant(getID("HEXconstant"), null, false),
-FLOATINGconstant(getID("FLOATINGconstant"), null, false),
-PPNUM(getID("PPNUM"), null, false),
+INTEGERconstant(getID("INTEGERconstant"), null, false, PreprocessorTag.NUMBER),
+OCTALconstant(getID("OCTALconstant"), null, false, PreprocessorTag.NUMBER),
+HEXconstant(getID("HEXconstant"), null, false, PreprocessorTag.NUMBER),
+FLOATINGconstant(getID("FLOATINGconstant"), null, false, PreprocessorTag.NUMBER),
+PPNUM(getID("PPNUM"), null, false, PreprocessorTag.NUMBER),
 CHARACTERconstant(getID("CHARACTERconstant"), null, false),
 STRINGliteral(getID("STRINGliteral"), null, false),
 
@@ -139,6 +139,7 @@ ASSIGN(getID("ASSIGN"), "="),
 
 AT(getID("AT"), "@"),
 USD(getID("USD"), "$"),
+BACKSLASH(getID("BACKSLASH"), "\\"),
 TYPEDEFname(getID("TYPEDEFname"), null, true);
 
   private final int id;
@@ -188,8 +189,8 @@ TYPEDEFname(getID("TYPEDEFname"), null, true);
   }
 
   static int getID(String token) {
-    for (int id = 0; id < ForkMergeParserTables.YYNTOKENS; id++) {
-      if (ForkMergeParserTables.yytname.table[id].equals(token)) {
+    for (int id = 0; id < CParseTables.getInstance().YYNTOKENS; id++) {
+      if (CParseTables.getInstance().yytname[id].equals(token)) {
         return id;
       }
     }

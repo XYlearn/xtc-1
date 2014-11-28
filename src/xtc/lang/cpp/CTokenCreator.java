@@ -29,7 +29,7 @@ import xtc.lang.cpp.Syntax.Text;
  * A token creator implementation for C.
  *
  * @author Paul Gazzillo
- * @version $Revision: 1.5 $
+ * @version $Revision: 1.6 $
  */
 public class CTokenCreator implements TokenCreator {
 
@@ -45,23 +45,25 @@ public class CTokenCreator implements TokenCreator {
     return new Text<CTag>(CTag.IDENTIFIER, ident);
   }
 
-  public Language<?> pasteTokens(Language<?> t1, Language<?> t2)
-    throws IOException {
-
+  public Language<?> pasteTokens(Language<?> t1, Language<?> t2) {
     // Paste the tokens and run the resulting string through the
     // lexer.
-
     String str = t1.getTokenText() + t2.getTokenText();
     StringReader sr = new StringReader(str);
     CLexer lexer = new CLexer(sr);
+    Syntax pasted;
+    Syntax next;
 
-    Syntax pasted = lexer.yylex();
-    Syntax next = lexer.yylex();
-
+    try {
+      pasted = lexer.yylex();
+      next = lexer.yylex();
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new RuntimeException();
+    }
 
     // If the token-paste was successful, the next token will be an
     // EOF.
-
     if (next.kind() == Kind.EOF) {
       return pasted.toLanguage();
     } else {
