@@ -92,30 +92,29 @@ public abstract class Visitor {
   // ========================================================================
 
   /** The size of the method lookup cache. */
-  private static final int CACHE_SIZE = 300;
+  private  final int CACHE_SIZE = 300;
 
   /** The capacity of the method lookup cache. */
-  private static final int CACHE_CAPACITY = 400;
+  private  final int CACHE_CAPACITY = 400;
 
   /** The load factor of the method lookup cache. */
-  private static final float CACHE_LOAD = (float)0.75;
+  private  final float CACHE_LOAD = (float)0.75;
 
   /** The method lookup cache. */
-  private static final LinkedHashMap<CacheKey, Method> cache;
+  private  final LinkedHashMap<CacheKey, Method> cache;
 
   /** The pre-allocated cache key for looking up methods. */
-  private static final CacheKey key;
+  private  final CacheKey key;
 
   /** The pre-allocated array for passing the argument to invoke(). */
-  private static final Object[] arguments;
+  private  final Object[] arguments;
 
   /**
    * The pre-allocated array for passing the type argument to
    * getMethod().
    */
-  private static final Class<?>[] types;
-
-  static {
+  private final Class<?>[] types;
+  {
     cache     =
       new LinkedHashMap<CacheKey, Method>(CACHE_CAPACITY, CACHE_LOAD, true) {
         protected boolean removeEldestEntry(Map.Entry e) {
@@ -301,6 +300,7 @@ public abstract class Visitor {
   private static Method findMethod(Class<?> k, String name, Class paramT) {
     Method method = null;
 
+    Class<?>[] types= new Class<?>[] { null };;
     do {
       types[0] = paramT;
       try {
