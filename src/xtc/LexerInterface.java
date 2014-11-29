@@ -71,21 +71,28 @@ public class LexerInterface {
     private final static ErrorHandler defaultHandler = new PrintErrorHandler();
 
 
+    private static PresenceConditionManager presenceConditionManager = null;
+
+    public static void resetPresenceConditionManager() {
+        presenceConditionManager = null;
+    }
+
+
     /**
      * all files to be loaded before the main file (and all macros to be initialized)
      * are initialized through a virtual file "commandline".
-     * <p/>
+     * <p>
      * The file is read with a separate preprocessor, that's why we may return multiple here
      * continue with the second after the first is done.
      */
     public static List<Iterator<Syntax>> createLexer(String commandlineStr,
-                                           Reader in,
-                                           File file,
-                                           final ErrorHandler errorHandler,
-                                           List<String> iquote,
-                                           List<String> I,
-                                           List<String> sysdirs,
-                                           XtcMacroFilter macroFilter) throws FileNotFoundException {
+                                                     Reader in,
+                                                     File file,
+                                                     final ErrorHandler errorHandler,
+                                                     List<String> iquote,
+                                                     List<String> I,
+                                                     List<String> sysdirs,
+                                                     XtcMacroFilter macroFilter) throws FileNotFoundException {
 
 //        Reader in = new FileReader(file);
         List<Iterator<Syntax>> result = new ArrayList<Iterator<Syntax>>();
@@ -108,8 +115,9 @@ public class LexerInterface {
         // macros and includes.
 
         final MacroTable macroTable = new MacroTable(runtime, tokenCreator, macroFilter);
-        final PresenceConditionManager presenceConditionManager = new PresenceConditionManager();
         ExpressionParser expressionParser = ExpressionParser.fromRats();
+        if (presenceConditionManager == null)
+            presenceConditionManager = new PresenceConditionManager();
         ConditionEvaluator conditionEvaluator = new ConditionEvaluator(expressionParser,
                 presenceConditionManager,
                 macroTable);
@@ -139,7 +147,7 @@ public class LexerInterface {
             HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
                     tokenCreator, lexerTimer);
 
-            Iterator<Syntax> preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager,conditionEvaluator,
+            Iterator<Syntax> preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager, conditionEvaluator,
                     tokenCreator, runtime);
 
             result.add(preprocessor);
