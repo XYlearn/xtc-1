@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.HashMap;
 
 import xtc.XtcMacroFilter;
+import xtc.tree.VisitingException;
 import xtc.util.Pair;
 import xtc.util.Runtime;
 
@@ -905,7 +906,15 @@ public class Preprocessor implements Iterator<Syntax> {
         nestedConditionals.push(1);
       }
 
-      BDD bdd = evaluateExpression(tokens, "if");
+        BDD bdd;
+        try {
+            bdd = evaluateExpression(tokens, "if");
+        } catch (VisitingException e) {
+            if (e.getCause() instanceof ArithmeticException) {
+                runtime.error(presenceConditionManager.reference(), e.getCause().getMessage(), directive);
+                bdd=presenceConditionManager.B.one();
+            } else throw e;
+        }
       
       presenceConditionManager.push();
       presenceConditionManager.enter(bdd);

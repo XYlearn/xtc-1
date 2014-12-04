@@ -44,7 +44,7 @@ import net.sf.javabdd.BDD;
 public class PresenceConditionManager {
 
   /** The BDD factory. */
-  private BDDFactory B;
+  BDDFactory B;
 
   /** The variable name manager. */
   public Variables vars;
