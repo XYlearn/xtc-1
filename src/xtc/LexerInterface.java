@@ -147,8 +147,9 @@ public class LexerInterface {
             HeaderFileManager fileManager = new HeaderFileManager(in, file, iquote, I, sysdirs, runtime,
                     tokenCreator, lexerTimer);
 
-            Iterator<Syntax> preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager, conditionEvaluator,
+            Preprocessor preprocessor = new Preprocessor(fileManager, macroTable, presenceConditionManager, conditionEvaluator,
                     tokenCreator, runtime);
+            preprocessor.showErrors(true);
 
             result.add(preprocessor);
         }
