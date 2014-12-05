@@ -609,6 +609,12 @@ public class HeaderFileManager implements Iterator<Syntax> {
       }
       
       return null;
+    } else if (headerName.length()==0) {
+        if (showErrors) {
+            runtime.error(presenceConditionManager.reference(),
+                    "error: include with empty file name", where);
+        }
+        return null;
     } else if (headerName.charAt(0) == '/') {
       File path;
       
