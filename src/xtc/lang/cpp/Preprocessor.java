@@ -2096,7 +2096,9 @@ public class Preprocessor implements Iterator<Syntax> {
   private Syntax lineMarker(Directive directive, int s) {
     return EMPTY;
   }
-  
+
+  private int counter=0;
+
   // get around capture of ? to ? warning
   @SuppressWarnings("unchecked")
   /**
@@ -2138,15 +2140,30 @@ public class Preprocessor implements Iterator<Syntax> {
 
         List<Syntax> list = new LinkedList<Syntax>();
         list.add(tokenCreator.createIntegerConstant(lineNumber));
-        
+
         stackOfBuffers.push(new SingleExpansionBuffer(name, list));
         // Disable the macro so it can't be recursively expanded.
         macroTable.disable(name);
-        
+
         if (preprocessorStatistics) {
           System.err.format("object %s %s %d %d %d\n",
-                            name, getNestedLocation(),
-                            getMacroNestingDepth(), 1, 1);
+                  name, getNestedLocation(),
+                  getMacroNestingDepth(), 1, 1);
+        }
+        return EMPTY;
+      } else if (name.equals("__COUNTER__")) {
+        List<Syntax> list = new LinkedList<Syntax>();
+        list.add(tokenCreator.createIntegerConstant(counter));
+        counter++;
+
+        stackOfBuffers.push(new SingleExpansionBuffer(name, list));
+        // Disable the macro so it can't be recursively expanded.
+        macroTable.disable(name);
+
+        if (preprocessorStatistics) {
+          System.err.format("object %s %s %d %d %d\n",
+                  name, getNestedLocation(),
+                  getMacroNestingDepth(), 1, 1);
         }
         return EMPTY;
       } else if (name.equals("__BASE_FILE__")) {
